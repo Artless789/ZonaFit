@@ -1,0 +1,4 @@
+class SaleStatus:
+    OPEN = "OPEN"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"

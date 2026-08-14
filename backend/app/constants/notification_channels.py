@@ -1,0 +1,2 @@
+class NotificationChannel:
+    WHATSAPP = "WHATSAPP"

@@ -1,0 +1,401 @@
+@import "tailwindcss";
+@import "@fontsource/inter";
+
+/* ==================================================
+   ZONAFIT DESIGN TOKENS v1.0
+   Single source of truth: do not place visual values
+   directly inside feature components.
+   ================================================== */
+
+:root {
+  /* 1. BRAND */
+  --color-brand-primary: #DC2626;
+  --color-brand-primary-hover: #B91C1C;
+  --color-brand-primary-active: #991B1B;
+  --color-brand-secondary: #22C55E;
+  --color-brand-gradient: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);
+
+  /* 2. BACKGROUNDS */
+  --color-bg-page: #111214;
+  --color-bg-surface: #181A1D;
+  --color-bg-surface-hover: #202328;
+  --color-bg-elevated: #24272B;
+  --color-surface-dark: #181A1D;
+  --color-surface-darker: #111214;
+  --color-glass-overlay: rgba(255, 255, 255, 0.035);
+  --color-glass-highlight: rgba(255, 255, 255, 0.12);
+  --color-glass-border: rgba(255, 255, 255, 0.09);
+  --color-ambient-brand: rgba(220, 38, 38, 0.12);
+  --color-ambient-neutral: rgba(255, 255, 255, 0.055);
+  --color-overlay: rgba(3, 5, 8, 0.56);
+
+  /* 3. GLASS */
+  --glass-background: rgba(20, 22, 25, 0.45);
+  --glass-ambient-light: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.08) 0%, rgba(220, 38, 38, 0.015) 50%, transparent 80%);
+  --glass-shadow: 
+    0 16px 40px -8px rgba(0, 0, 0, 0.6),
+    0 6px 16px -4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.04),
+    inset -1px 0 0 0 rgba(0, 0, 0, 0.3),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.5),
+    inset 0 10px 20px -10px rgba(255, 255, 255, 0.06);
+  --glass-blur: 16px;
+
+  /* 4. TEXT */
+  --color-text-primary: #F2F3F5;
+  --color-text-secondary: #B8BDC5;
+  --color-text-muted: #858C96;
+  --color-text-disabled: #626872;
+  --color-text-white: #FFFFFF;
+
+  /* 5. BORDERS */
+  --color-border-light: rgba(255, 255, 255, 0.04);
+  --color-border-medium: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.12);
+
+  /* 6. STATUS */
+  --color-success: #22C55E;
+  --color-warning: #D97706;
+  --color-danger: #DC2626;
+  --color-info: #2563EB;
+
+  /* 7. TYPOGRAPHY */
+  --font-family: "Inter", sans-serif;
+  --font-size-xs: .75rem;
+  --font-size-sm: .875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 2rem;
+  --font-size-4xl: 3rem;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+
+  /* 8. SPACING */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* 9. RADIUS */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-full: 9999px;
+
+  /* 10. SHADOWS */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, .04);
+  --shadow-sm: 0 6px 18px rgba(15, 23, 42, .06);
+  --shadow-md: 0 12px 30px rgba(15, 23, 42, .10);
+  --shadow-lg: 0 20px 45px rgba(15, 23, 42, .12);
+  --shadow-xl: 0 30px 70px rgba(15, 23, 42, .16);
+
+  /* 11. LAYOUT */
+  --sidebar-width: 280px;
+  --navbar-height: 72px;
+  --content-max-width: 1600px;
+  --container-padding: 32px;
+
+  /* 12. ANIMATIONS */
+  --transition-fast: 150ms cubic-bezier(.4, 0, .2, 1);
+  --transition-base: 250ms cubic-bezier(.4, 0, .2, 1);
+  --transition-slow: 350ms cubic-bezier(.4, 0, .2, 1);
+
+  /* 13. Z-INDEX */
+  --z-base: 0;
+  --z-sidebar: 100;
+  --z-navbar: 200;
+  --z-dropdown: 300;
+  --z-drawer: 400;
+  --z-modal: 500;
+  --z-toast: 600;
+}
+
+/* ==================================================
+   LIGHT THEME OVERRIDES
+   ================================================== */
+:root.light {
+  --color-bg-page: #E9EEF5;
+  --color-bg-surface: rgba(255, 255, 255, 0.56);
+  --color-bg-surface-hover: rgba(255, 255, 255, 0.74);
+  --color-bg-elevated: rgba(255, 255, 255, 0.68);
+  --color-surface-dark: rgba(255, 255, 255, 0.42);
+  --color-surface-darker: rgba(226, 232, 240, 0.56);
+  --color-glass-overlay: rgba(255, 255, 255, 0.22);
+  --color-glass-highlight: rgba(255, 255, 255, 0.8);
+  --color-glass-border: rgba(255, 255, 255, 0.7);
+  --color-ambient-brand: rgba(220, 38, 38, 0.055);
+  --color-ambient-neutral: rgba(255, 255, 255, 0.72);
+  --color-overlay: rgba(15, 23, 42, 0.24);
+
+  --color-text-primary: #1E293B;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748B;
+  --color-text-disabled: #94A3B8;
+  --color-text-white: #FFFFFF;
+
+  --color-border-light: rgba(255, 255, 255, 0.62);
+  --color-border-medium: rgba(100, 116, 139, 0.16);
+  --color-border-strong: rgba(71, 85, 105, 0.22);
+
+  --glass-background: rgba(255, 255, 255, 0.46);
+  --glass-ambient-light: radial-gradient(ellipse at 12% 0%, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.08) 42%, transparent 72%);
+  --glass-shadow: 
+    0 22px 55px -24px rgba(15, 23, 42, 0.34),
+    0 10px 24px -14px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.92),
+    inset 0 -1px 0 0 rgba(148, 163, 184, 0.12);
+  --color-success: #15803D;
+}
+
+/* Semantic Tailwind bridge. Values continue to come only from :root tokens. */
+@theme inline {
+  --color-brand-primary: var(--color-brand-primary);
+  --color-brand-primary-hover: var(--color-brand-primary-hover);
+  --color-brand-primary-active: var(--color-brand-primary-active);
+  --color-brand-secondary: var(--color-brand-secondary);
+  --color-bg-page: var(--color-bg-page);
+  --color-bg-surface: var(--color-bg-surface);
+  --color-bg-surface-hover: var(--color-bg-surface-hover);
+  --color-bg-elevated: var(--color-bg-elevated);
+  --color-surface-dark: var(--color-surface-dark);
+  --color-surface-darker: var(--color-surface-darker);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-disabled: var(--color-text-disabled);
+  --color-text-white: var(--color-text-white);
+  --color-border-light: var(--color-border-light);
+  --color-border-medium: var(--color-border-medium);
+  --color-border-strong: var(--color-border-strong);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+  --color-info: var(--color-info);
+  --font-sans: var(--font-family);
+  --text-xs: var(--font-size-xs);
+  --text-sm: var(--font-size-sm);
+  --text-base: var(--font-size-base);
+  --text-lg: var(--font-size-lg);
+  --text-xl: var(--font-size-xl);
+  --text-2xl: var(--font-size-2xl);
+  --text-3xl: var(--font-size-3xl);
+  --text-4xl: var(--font-size-4xl);
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+  --radius-full: var(--radius-full);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-glass: var(--glass-shadow);
+  --shadow-glass-large: var(--shadow-lg);
+  --shadow-glass-up: var(--shadow-md);
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: var(--font-family);
+    background: var(--color-bg-page);
+  }
+
+  body {
+    min-width: 320px;
+    min-height: 100vh;
+    margin: 0;
+    background: var(--color-bg-page);
+    color: var(--color-text-secondary);
+    line-height: var(--line-height-normal);
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* --------------------------------------------------
+     PREMIUM AMBIENT BACKGROUND (Liquid Glass Depth)
+     -------------------------------------------------- */
+  .ambient-light-1,
+  .ambient-light-2,
+  .ambient-light-3 {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 0; /* Placed in AmbientBackground which is already z-0, but explicit here too */
+  }
+
+  /* Light 1: Subtle Brand Red */
+  .ambient-light-1 {
+    background: radial-gradient(circle at 15% 15%, var(--color-ambient-brand) 0%, transparent 60%);
+    filter: blur(100px);
+    opacity: 0.72;
+    animation: ambientDrift1 25s ease-in-out infinite;
+  }
+
+  /* Light 2: Neutral Depth */
+  .ambient-light-2 {
+    background: radial-gradient(circle at 85% 85%, var(--color-ambient-neutral) 0%, transparent 58%);
+    filter: blur(120px);
+    opacity: 0.46;
+    animation: ambientDrift2 30s ease-in-out infinite;
+  }
+
+  /* Light 3: Deep Crimson (Organic Base) */
+  .ambient-light-3 {
+    background: radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--color-ambient-brand) 58%, transparent) 0%, transparent 65%);
+    filter: blur(120px);
+    opacity: 0.5;
+    animation: ambientDrift3 40s ease-in-out infinite alternate;
+  }
+
+  @keyframes ambientDrift1 {
+    0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.8; }
+    50% { transform: translate(6vw, 4vh) scale(1.1); opacity: 0.5; }
+  }
+
+  @keyframes ambientDrift2 {
+    0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+    50% { transform: translate(-5vw, -4vh) scale(1.05); opacity: 0.4; }
+  }
+
+  @keyframes ambientDrift3 {
+    0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
+    50% { transform: translate(-3vw, 6vh) scale(1.05); opacity: 0.3; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ambient-light-1,
+    .ambient-light-2,
+    .ambient-light-3 {
+      animation: none !important;
+      transform: none !important;
+    }
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-primary);
+    outline-offset: 2px;
+  }
+}
+
+.glass-card {
+  background: var(--glass-ambient-light), var(--glass-background);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  background-clip: padding-box;
+}
+
+.zonafit-floating-surface {
+  background: linear-gradient(135deg, var(--color-glass-overlay), transparent 58%), var(--glass-background);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur)) saturate(155%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(155%);
+}
+
+.zonafit-table-head {
+  background: var(--color-glass-overlay);
+  border-color: var(--color-border-light);
+}
+
+.zonafit-table-row {
+  border-color: var(--color-border-light);
+}
+
+.zonafit-table-row:hover {
+  background: var(--color-glass-overlay);
+}
+
+.glass-card table thead tr {
+  background: var(--color-glass-overlay);
+  border-color: var(--color-border-light);
+}
+
+.glass-card table tbody tr {
+  border-color: var(--color-border-light);
+}
+
+.glass-card table tbody tr:hover {
+  background: var(--color-glass-overlay);
+}
+
+.zonafit-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  padding: 0 var(--space-5);
+  color: var(--color-text-white);
+  background: var(--color-brand-gradient);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  transition: transform var(--transition-fast), box-shadow var(--transition-base), opacity var(--transition-fast);
+}
+
+.zonafit-action-button:hover:not(:disabled) {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.zonafit-action-button:active:not(:disabled) {
+  transform: translateY(0) scale(.98);
+}
+
+.zonafit-action-button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+@media (max-width: 767px) {
+  .app-content {
+    padding-left: 0 !important;
+  }
+}
