@@ -19,7 +19,8 @@ COPY frontend/ ./
 
 # Build arguments for Vite (defaults to relative "" for same-container serving)
 ARG VITE_API_URL=""
-ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_API_URL=${VITE_API_URL} \
+    NODE_OPTIONS="--max-old-space-size=768"
 
 # Compile frontend production assets (outputs to /app/frontend/dist)
 RUN npm run build
