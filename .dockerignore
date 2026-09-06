@@ -1,0 +1,53 @@
+# ==============================================================================
+# Merwil ZonaFit — Docker Ignore Configuration
+# ==============================================================================
+
+# Version Control & IDEs
+.git/
+.gitignore
+.github/
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment Files & Secrets (Injected via Hyperlift / Container Runtime)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python & Backend Dev Artifacts
+backend/venv/
+backend/venv*/
+backend/.pytest_cache/
+backend/__pycache__/
+backend/tests/
+backend/*.db
+backend/*.sqlite*
+backend/test_*.db
+backend/scratch/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.pytest_cache/
+
+# Node & Frontend Dev Artifacts
+frontend/node_modules/
+frontend/.next/
+frontend/.cache/
+frontend/dist/
+frontend/.npm/
+frontend/coverage/
+
+# Scratch & Temporary Logs
+scratch/
+tests/
+*.log
+*.tmp
+*.bak
+.agents/
+.playwright-mcp/
+desktop.ini
+.DS_Store
+Thumbs.db

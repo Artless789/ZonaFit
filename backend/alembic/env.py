@@ -11,15 +11,15 @@ from dotenv import load_dotenv
 # access to the values within the .ini file in use.
 config = context.config
 load_dotenv()
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_NAME = os.getenv("DB_NAME")
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    DB_HOST = os.getenv("DB_HOST") or "localhost"
+    DB_PORT = os.getenv("DB_PORT") or "5432"
+    DB_NAME = os.getenv("DB_NAME") or "zonafit"
+    DB_USER = os.getenv("DB_USER") or "zonafit_app"
+    DB_PASSWORD = os.getenv("DB_PASSWORD") or ""
+    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-DATABASE_URL = (
-f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-)
 config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 # Interpret the config file for Python logging.

@@ -18,6 +18,7 @@ class Settings:
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
     SMTP_USER: str = os.getenv("SMTP_USER", "")
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    APPLICATION_PORT: int = int(os.getenv("APPLICATION_PORT", os.getenv("PORT", "8000")))
 
     # ── Meta WhatsApp Cloud API / Embedded Signup ───────────────────────────────
     META_APP_ID: str = os.getenv("META_APP_ID", os.getenv("WHATSAPP_APP_ID", ""))

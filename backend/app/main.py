@@ -98,11 +98,16 @@ app.add_middleware(
 register_exception_handlers(app)
 
 
-@app.get("/")
-def root():
-    return {
-        "message": "Bienvenido a Merwil ZonaFit API"
-    }
+from pathlib import Path
+_frontend_dist_env = os.getenv("FRONTEND_DIST", "/app/frontend/dist")
+_frontend_dist_path = Path(_frontend_dist_env)
+
+if not _frontend_dist_path.is_dir():
+    @app.get("/")
+    def root():
+        return {
+            "message": "Bienvenido a Merwil ZonaFit API"
+        }
 
 @app.get("/health")
 def health_check():
@@ -159,3 +164,56 @@ app.include_router(users.router, dependencies=active_sub_dep)
 app.include_router(notifications.templates_router, dependencies=active_sub_dep)
 app.include_router(notifications.notifications_router, dependencies=active_sub_dep)
 app.include_router(whatsapp.router, dependencies=active_sub_dep)
+
+# ── Static Files & Frontend SPA Routing (Production Container) ─────────────────
+if _frontend_dist_path.is_dir():
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+
+    _assets_dir = _frontend_dist_path / "assets"
+    if _assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(_assets_dir)), name="assets")
+
+    _videos_dir = _frontend_dist_path / "videos"
+    if _videos_dir.is_dir():
+        app.mount("/videos", StaticFiles(directory=str(_videos_dir)), name="videos")
+
+    _app_index = _frontend_dist_path / "app" / "index.html"
+    _web_index = _frontend_dist_path / "index.html"
+
+    # API prefix set to return 404 JSON rather than SPA fallback on nonexistent API endpoints
+    _API_PREFIXES = (
+        "auth", "clients", "membership-plans", "memberships", "payments",
+        "categories", "products", "sales", "sale-details", "inventory-movements",
+        "invoices", "invoice-details", "dashboard", "reports", "audit-logs",
+        "accounts-receivables", "cash-registers", "users", "notifications",
+        "whatsapp", "whatsapp_webhook", "gym-settings", "superadmin",
+        "subscriptions", "health", "readiness", "docs", "redoc", "openapi.json"
+    )
+
+    if _app_index.is_file():
+        @app.get("/app/{full_path:path}", include_in_schema=False)
+        async def serve_app(full_path: str):
+            target = _frontend_dist_path / "app" / full_path
+            if full_path and target.is_file():
+                return FileResponse(target)
+            return FileResponse(_app_index)
+
+        @app.get("/app", include_in_schema=False)
+        async def serve_app_root():
+            return FileResponse(_app_index)
+
+    if _web_index.is_file():
+        @app.get("/", include_in_schema=False)
+        async def serve_root():
+            return FileResponse(_web_index)
+
+        @app.get("/{full_path:path}", include_in_schema=False)
+        async def serve_fallback(full_path: str):
+            first_segment = full_path.split("/")[0] if full_path else ""
+            if first_segment in _API_PREFIXES:
+                return JSONResponse(status_code=404, content={"detail": "Not Found"})
+            file_path = _frontend_dist_path / full_path
+            if full_path and file_path.is_file():
+                return FileResponse(file_path)
+            return FileResponse(_web_index)

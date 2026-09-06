@@ -2,8 +2,8 @@ import axios from 'axios';
 import { sessionManager } from '../shared/session/sessionManager';
 import { SyncManager } from '../shared/offline/syncManager';
 
-// Get base URL from env, or default to standard local API port
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Get base URL from env, or default to relative path in production (same container) and localhost in development
+const API_URL = import.meta.env.VITE_API_URL !== undefined ? import.meta.env.VITE_API_URL : (import.meta.env.PROD ? '' : 'http://localhost:8000');
 
 export const api = axios.create({
   baseURL: API_URL,
