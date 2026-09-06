@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 
 from app.exceptions.base_exception import BaseAppException
 
@@ -39,6 +40,7 @@ def register_exception_handlers(app: FastAPI):
             status_code=exc.status_code,
             content={
                 "success": False,
+                "detail": str(exc.detail),
                 "error": {
                     "type": "HTTPException",
                     "message": str(exc.detail),
@@ -60,7 +62,7 @@ def register_exception_handlers(app: FastAPI):
                 "error": {
                     "type": "RequestValidationError",
                     "message": "Invalid request parameters",
-                    "details": exc.errors(),
+                    "details": jsonable_encoder(exc.errors()),
                     "status_code": 422,
                     "path": str(request.url.path),
                 },

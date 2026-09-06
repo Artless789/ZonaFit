@@ -26,6 +26,7 @@ class ClientUpdate(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     notes: Optional[str] = None
+    photo_url: Optional[str] = None
     is_active: Optional[bool] = None
 
 

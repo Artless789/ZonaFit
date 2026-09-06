@@ -1,24 +1,63 @@
 import { useState } from 'react';
-import { useNavigate, Navigate, Link } from 'react-router-dom';
+import { useNavigate, Navigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { Input } from '../components/shared/Input';
-import { Button } from '../components/shared/Button';
-import { GlassCard } from '../components/shared/GlassCard';
-import { useToast } from '../components/shared/Toast';
-export function Login() {
+import { Input } from '@shared/ui/Input';
+import { Button } from '@shared/ui/Button';
+import { Card } from '@shared/ui/Card';
+import { useToast } from '@shared/ui/Toast';
+
+export function Login({ isApp = false }: { isApp?: boolean }) {
   const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const planId = searchParams.get('planId');
+  const redirect = searchParams.get('redirect');
   const { toast } = useToast();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // If already logged in, redirect based on role
+  // If already logged in, redirect based on role or selected plan
   if (isAuthenticated && user) {
     if (user.role === 'SUPERADMIN') {
+      if (isApp) {
+        window.location.assign('/superadmin');
+        return null;
+      }
       return <Navigate to="/superadmin" replace />;
+    }
+
+    if (!user.onboarding_completed) {
+      if (isApp) {
+        window.location.assign('/onboarding');
+        return null;
+      }
+      return <Navigate to="/onboarding" replace />;
+    }
+    
+    // If a planId was selected, take user directly to checkout
+    if (planId) {
+      if (isApp) {
+        window.location.assign(`/subscription/checkout?planId=${planId}`);
+        return null;
+      }
+      return <Navigate to={`/subscription/checkout?planId=${planId}`} replace />;
+    }
+
+    if (redirect) {
+      if (isApp) {
+        window.location.assign(redirect);
+        return null;
+      }
+      return <Navigate to={redirect} replace />;
+    }
+
+    // Normal user goes to App Dashboard
+    if (!isApp) {
+      window.location.assign('/app/dashboard');
+      return null;
     }
     return <Navigate to="/dashboard" replace />;
   }
@@ -32,9 +71,19 @@ export function Login() {
       toast({ type: 'success', title: 'Bienvenido', message: 'Inicio de sesión exitoso.' });
       
       if (profile.role === 'SUPERADMIN') {
-        navigate('/superadmin');
+        if (isApp) window.location.assign('/superadmin');
+        else navigate('/superadmin');
+      } else if (!profile.onboarding_completed) {
+        if (isApp) window.location.assign('/onboarding');
+        else navigate('/onboarding');
+      } else if (planId) {
+        // Redirigir al checkout con el plan seleccionado
+        window.location.assign(`/subscription/checkout?planId=${planId}`);
+      } else if (redirect) {
+        window.location.assign(redirect);
       } else {
-        navigate('/dashboard');
+        if (!isApp) window.location.assign('/app/dashboard');
+        else navigate('/dashboard');
       }
     } catch (error: any) {
       toast({ 
@@ -47,18 +96,26 @@ export function Login() {
     }
   };
 
+  const goToRegister = () => {
+    const target = planId ? `/register?planId=${planId}` : '/register';
+    if (isApp) window.location.assign(target);
+    else navigate(target);
+  };
+
+  const goToForgotPassword = () => {
+    if (isApp) window.location.assign('/forgot-password');
+    else navigate('/forgot-password');
+  };
+
   return (
     <div className="min-h-screen bg-transparent flex items-center justify-center p-4 relative z-10 overflow-hidden font-sans">
-
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="w-full max-w-md z-10"
       >
-        <GlassCard className="p-10 shadow-xl border-border-strong/10">
-          
-          {/* Official Logo Integration */}
+        <Card variant="glass" padding="xl" className="shadow-xl">
           <div className="flex justify-center mb-8 relative">
             <div className="absolute inset-0 bg-white/20 blur-xl rounded-full scale-150 -z-10 opacity-50 pointer-events-none"></div>
             <img 
@@ -95,12 +152,13 @@ export function Login() {
             />
 
             <div className="flex justify-end mt-2 mb-4">
-              <Link
-                to="/forgot-password"
+              <button
+                type="button"
+                onClick={goToForgotPassword}
                 className="text-sm font-medium text-brand-secondary hover:text-brand-primary transition-colors"
               >
                 ¿Olvidaste tu contraseña?
-              </Link>
+              </button>
             </div>
 
             <Button 
@@ -118,7 +176,7 @@ export function Login() {
                 ¿No tienes cuenta?{' '}
                 <button 
                   type="button"
-                  onClick={() => navigate('/register')}
+                  onClick={goToRegister}
                   className="text-brand-primary font-medium hover:text-white transition-colors"
                 >
                   Crear gimnasio
@@ -126,7 +184,7 @@ export function Login() {
               </p>
             </div>
           </form>
-        </GlassCard>
+        </Card>
       </motion.div>
     </div>
   );

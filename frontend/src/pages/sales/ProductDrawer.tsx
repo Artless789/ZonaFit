@@ -1,14 +1,16 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Drawer } from '../../components/shared/Drawer';
-import { Input } from '../../components/shared/Input';
-import { Select } from '../../components/shared/Select';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { useToast } from '../../components/shared/Toast';
-import { productSchema } from '../../schemas/productSchema';
-import type { Product } from '../../types/product';
-import type { Category } from '../../types/category';
+import { Drawer } from '@shared/ui/Drawer';
+import { Input } from '@shared/ui/Input';
+import { NumericInput } from '@shared/ui/NumericInput';
+import { Select } from '@shared/ui/Select';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { DollarSign } from 'lucide-react';
+import { useToast } from '@shared/ui/Toast';
+import { productSchema } from '@shared/schemas/productSchema';
+import type { Product } from '@shared/types/product';
+import type { Category } from '@shared/types/category';
 import { useProducts } from '../../hooks/useProducts';
 
 interface ProductDrawerProps {
@@ -27,6 +29,7 @@ export function ProductDrawer({ isOpen, onClose, product, categories }: ProductD
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isDirty },
   } = useForm<any>({
     resolver: zodResolver(productSchema),
@@ -135,44 +138,74 @@ export function ProductDrawer({ isOpen, onClose, product, categories }: ProductD
           />
 
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Precio de Compra (Costo)"
-              type="number"
-              placeholder="0"
-              error={!!errors.purchase_price}
-              helperText={errors.purchase_price?.message as string}
-              disabled={isSaving}
-              {...register('purchase_price')}
+            <Controller
+              name="purchase_price"
+              control={control}
+              render={({ field }) => (
+                <NumericInput
+                  label="Precio de Compra (Costo)"
+                  placeholder="0"
+                  leftIcon={<DollarSign size={16} />}
+                  error={!!errors.purchase_price}
+                  helperText={errors.purchase_price?.message as string}
+                  disabled={isSaving}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              )}
             />
-            <Input
-              label="Precio de Venta"
-              type="number"
-              placeholder="0"
-              error={!!errors.sale_price}
-              helperText={errors.sale_price?.message as string}
-              disabled={isSaving}
-              {...register('sale_price')}
+            <Controller
+              name="sale_price"
+              control={control}
+              render={({ field }) => (
+                <NumericInput
+                  label="Precio de Venta"
+                  placeholder="0"
+                  leftIcon={<DollarSign size={16} />}
+                  error={!!errors.sale_price}
+                  helperText={errors.sale_price?.message as string}
+                  disabled={isSaving}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              )}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Stock Actual"
-              type="number"
-              placeholder="0"
-              error={!!errors.stock}
-              helperText={errors.stock?.message as string}
-              disabled={isSaving}
-              {...register('stock')}
+            <Controller
+              name="stock"
+              control={control}
+              render={({ field }) => (
+                <NumericInput
+                  label="Stock Actual"
+                  placeholder="0"
+                  error={!!errors.stock}
+                  helperText={errors.stock?.message as string}
+                  disabled={isSaving}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              )}
             />
-            <Input
-              label="Stock Mínimo (Alerta)"
-              type="number"
-              placeholder="5"
-              error={!!errors.minimum_stock}
-              helperText={errors.minimum_stock?.message as string}
-              disabled={isSaving}
-              {...register('minimum_stock')}
+            <Controller
+              name="minimum_stock"
+              control={control}
+              render={({ field }) => (
+                <NumericInput
+                  label="Stock Mínimo (Alerta)"
+                  placeholder="5"
+                  error={!!errors.minimum_stock}
+                  helperText={errors.minimum_stock?.message as string}
+                  disabled={isSaving}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              )}
             />
           </div>
 

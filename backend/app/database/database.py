@@ -5,17 +5,18 @@ import os
 
 from app.database.base import Base
 
-load_dotenv()
+from pathlib import Path
+env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_NAME = os.getenv("DB_NAME")
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-
-DATABASE_URL = (
-    f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    DB_HOST = os.getenv("DB_HOST") or os.getenv("\ufeffDB_HOST") or "localhost"
+    DB_PORT = os.getenv("DB_PORT") or "5432"
+    DB_NAME = os.getenv("DB_NAME") or "zonafit"
+    DB_USER = os.getenv("DB_USER") or "zonafit_app"
+    DB_PASSWORD = os.getenv("DB_PASSWORD") or ""
+    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 engine = create_engine(
     DATABASE_URL,

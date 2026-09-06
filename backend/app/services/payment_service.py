@@ -1,3 +1,5 @@
+from decimal import Decimal
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database_transaction import DatabaseTransaction
@@ -41,6 +43,33 @@ class PaymentService:
         if not membership:
             raise NotFoundException("Membership not found.")
 
+        # Calculate already paid amount
+        already_paid = (
+            db.query(func.coalesce(func.sum(Payment.amount), Decimal("0.00")))
+            .filter(
+                Payment.membership_id == membership.id,
+                Payment.gym_id == current_user.gym_id,
+                Payment.status == PaymentStatus.PAID,
+                Payment.is_active == True,
+            )
+            .scalar()
+        ) or Decimal("0.00")
+
+        remaining_balance = membership.price - Decimal(str(already_paid))
+
+        if payment_data.amount is not None:
+            pay_amount = Decimal(str(payment_data.amount))
+        else:
+            pay_amount = remaining_balance
+
+        if pay_amount <= Decimal("0.00"):
+            raise ValueError("El monto a pagar debe ser mayor a cero.")
+
+        if pay_amount > remaining_balance:
+            raise ValueError(
+                f"El monto a pagar ({pay_amount}) no puede superar el saldo pendiente ({remaining_balance})."
+            )
+
         # Verify Cash Register if payment is CASH
         active_register = None
         if payment_data.payment_method.upper() == "CASH":
@@ -51,7 +80,7 @@ class PaymentService:
         payment = Payment(
             gym_id=current_user.gym_id,
             membership_id=membership.id,
-            amount=membership.price,
+            amount=pay_amount,
             payment_method=payment_data.payment_method,
             reference=payment_data.reference,
             status=PaymentStatus.PAID,
@@ -66,7 +95,7 @@ class PaymentService:
                     db=db,
                     current_user=current_user,
                     register=active_register,
-                    amount=membership.price,
+                    amount=pay_amount,
                     type="IN",
                     category="MEMBERSHIP_PAYMENT",
                     description=f"Pago membresía #{membership.id}",

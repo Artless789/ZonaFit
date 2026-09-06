@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { MembershipPlan, MembershipPlanCreate, MembershipPlanUpdate } from '../types/membershipPlan';
+import type { MembershipPlan, MembershipPlanCreate, MembershipPlanUpdate } from '@shared/types/membershipPlan';
 
 
 // Define PaginationResponse in a shared file or here for now

@@ -6,6 +6,8 @@ from sqlalchemy import (
     Text,
     DateTime,
     ForeignKey,
+    Index,
+    text,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -13,6 +15,16 @@ from app.database.base import Base
 
 class CashRegister(Base):
     __tablename__ = "cash_registers"
+
+    __table_args__ = (
+        Index(
+            "uq_gym_active_cash_register",
+            "gym_id",
+            unique=True,
+            postgresql_where=text("status = 'OPEN'"),
+            sqlite_where=text("status = 'OPEN'"),
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
 
@@ -73,6 +85,11 @@ class CashRegister(Base):
     )
 
     closing_notes = Column(
+        Text,
+        nullable=True,
+    )
+
+    reconciliation_data = Column(
         Text,
         nullable=True,
     )

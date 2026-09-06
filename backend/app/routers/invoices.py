@@ -4,6 +4,9 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
 from app.database.database import get_db
+from app.exceptions.business_exception import BusinessException
+from app.exceptions.not_found_exception import NotFoundException
+from app.exceptions.conflict_exception import ConflictException
 from app.models.user import User
 from app.schemas.invoice import (
     InvoiceCreate,
@@ -37,10 +40,21 @@ def create_invoice(
             current_user,
             invoice,
         )
-    except ValueError as e:
+    except NotFoundException as e:
         raise HTTPException(
-            status_code=400,
-            detail=str(e),
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e.message),
+        )
+    except ConflictException as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e.message),
+        )
+    except (BusinessException, ValueError) as e:
+        msg = getattr(e, "message", str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=msg,
         )
 
 

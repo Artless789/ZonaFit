@@ -49,6 +49,7 @@ class SaleDetailService:
                 Product.gym_id == current_user.gym_id,
                 Product.is_active == True,
             )
+            .with_for_update()
             .first()
         )
 
@@ -153,17 +154,23 @@ class SaleDetailService:
 
         sale = detail.sale
 
-        product = detail.product
-
         with DatabaseTransaction(db):
-            sale.total -= detail.subtotal
-
-            InventoryMovementService.reverse_sale_output(
-                db=db,
-                current_user=current_user,
-                product=product,
-                quantity=detail.quantity,
-                reason=f"Delete Sale Detail #{detail.id}",
+            # Fetch product with lock for concurrency safety
+            product = (
+                db.query(Product)
+                .filter(Product.id == detail.product_id)
+                .with_for_update()
+                .first()
             )
+            
+            if product:
+                InventoryMovementService.reverse_sale_output(
+                    db=db,
+                    current_user=current_user,
+                    product=product,
+                    quantity=detail.quantity,
+                    reason=f"Delete Sale Detail #{detail.id}",
+                )
 
+            sale.total -= detail.subtotal
             db.delete(detail)

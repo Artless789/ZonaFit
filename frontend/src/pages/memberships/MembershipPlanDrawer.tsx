@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Drawer } from '../../components/shared/Drawer';
-import { Input } from '../../components/shared/Input';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { useToast } from '../../components/shared/Toast';
-import { membershipPlanSchema } from '../../schemas/membershipPlanSchema';
-import type { MembershipPlan } from '../../types/membershipPlan';
+import { Drawer } from '@shared/ui/Drawer';
+import { Input } from '@shared/ui/Input';
+import { NumericInput } from '@shared/ui/NumericInput';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { DollarSign } from 'lucide-react';
+import { useToast } from '@shared/ui/Toast';
+import { membershipPlanSchema, type MembershipPlanFormValues } from '@shared/schemas/membershipPlanSchema';
+import type { MembershipPlan } from '@shared/types/membershipPlan';
 import { useMembershipPlans } from '../../hooks/useMembershipPlans';
 
 interface MembershipPlanDrawerProps {
@@ -24,8 +26,9 @@ export function MembershipPlanDrawer({ isOpen, onClose, plan }: MembershipPlanDr
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isDirty },
-  } = useForm<any>({
+  } = useForm<MembershipPlanFormValues>({
     resolver: zodResolver(membershipPlanSchema),
     defaultValues: {
       name: '',
@@ -55,7 +58,7 @@ export function MembershipPlanDrawer({ isOpen, onClose, plan }: MembershipPlanDr
     }
   }, [isOpen, plan, reset]);
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: MembershipPlanFormValues) => {
     try {
       if (isEditing) {
         await updateMutation.mutateAsync({ id: plan.id, data });
@@ -102,6 +105,9 @@ export function MembershipPlanDrawer({ isOpen, onClose, plan }: MembershipPlanDr
               disabled={isSaving}
               {...register('description')}
             />
+            {errors.description && (
+              <span className="text-xs text-danger">{errors.description.message as string}</span>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -112,16 +118,27 @@ export function MembershipPlanDrawer({ isOpen, onClose, plan }: MembershipPlanDr
               error={!!errors.duration_days}
               helperText={(errors.duration_days?.message as string)}
               disabled={isSaving}
-              {...register('duration_days')}
+              {...register('duration_days', { valueAsNumber: true })}
             />
-            <Input
-              label="Precio Final"
-              type="number"
-              placeholder="Ej. 100000"
-              error={!!errors.price}
-              helperText={(errors.price?.message as string)}
-              disabled={isSaving}
-              {...register('price')}
+            <Controller
+              name="price"
+              control={control}
+              render={({ field }) => (
+                <NumericInput
+                  label="Precio Final"
+                  placeholder="Ej. 100000"
+                  leftIcon={<DollarSign size={16} />}
+                  error={!!errors.price}
+                  helperText={(errors.price?.message as string)}
+                  disabled={isSaving}
+                  value={field.value}
+                  onChange={(e) => {
+                    const rawVal = e.target.value;
+                    field.onChange(rawVal === '' ? 0 : (parseFloat(rawVal) || 0));
+                  }}
+                  onBlur={field.onBlur}
+                />
+              )}
             />
           </div>
           

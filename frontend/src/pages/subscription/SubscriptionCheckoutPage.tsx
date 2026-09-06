@@ -1,15 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { subscriptionService, PlanInfo } from '../../services/subscriptionService';
-import { GlassCard } from '../../components/shared/GlassCard';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { Button } from '../../components/shared/Button';
-import { Badge } from '../../components/shared/Badge';
-import { EmptyState } from '../../components/shared/EmptyState';
-import { ErrorState } from '../../components/shared/ErrorState';
-import { Skeleton } from '../../components/shared/Skeleton';
-import { CheckCircle2, XCircle, AlertCircle, Clock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { SUBSCRIPTION_QUERY_KEY } from '@shared/subscription/useLicenseStatus';
+import { useAuth } from '../../context/AuthContext';
+
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { Button } from '@shared/ui/Button';
+import { Badge } from '@shared/ui/Badge';
+import { EmptyState } from '@shared/ui/EmptyState';
+import { ErrorState } from '@shared/ui/ErrorState';
+import { Spinner } from '@shared/ui/Spinner';
+import { CheckCircle2, XCircle, AlertCircle, Clock, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { useNavigate, useSearchParams, useLocation, Navigate } from 'react-router-dom';
+import { formatCurrency } from '@shared/utils/formatters';
 
 declare global {
   interface Window {
@@ -19,19 +22,48 @@ declare global {
 
 export function SubscriptionCheckoutPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated, isLoading: isLoadingAuth } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const planIdParam = searchParams.get('planId');
+  const transactionIdParam = searchParams.get('id') || searchParams.get('transaction_id') || searchParams.get('transactionId');
+  const verifiedRef = useRef<string | null>(null);
+
   const queryClient = useQueryClient();
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'IDLE' | 'PENDING' | 'APPROVED' | 'DECLINED' | 'ERROR' | 'VOIDED'>('IDLE');
 
   const { data: subscription, isLoading: isLoadingSub, error: errorSub, refetch: refetchSub } = useQuery({
-    queryKey: ['mySubscription'],
-    queryFn: subscriptionService.getMySubscription
+    queryKey: SUBSCRIPTION_QUERY_KEY,
+    queryFn: subscriptionService.getMySubscription,
+    enabled: isAuthenticated
   });
 
   const { data: plans, isLoading: isLoadingPlans, error: errorPlans, refetch: refetchPlans } = useQuery({
     queryKey: ['availablePlans'],
-    queryFn: subscriptionService.getPlans
+    queryFn: subscriptionService.getPlans,
+    enabled: isAuthenticated
   });
+
+  // Preselect plan from URL param if valid and not yet selected
+  useEffect(() => {
+    if (planIdParam && plans && plans.length > 0) {
+      const id = parseInt(planIdParam, 10);
+      const exists = plans.some((p: PlanInfo) => p.id === id);
+      if (exists) {
+        setSelectedPlanId(id);
+      }
+    }
+  }, [planIdParam, plans]);
+
+  const handleSelectPlan = (planId: number) => {
+    setSelectedPlanId(planId);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('planId', planId.toString());
+      return next;
+    }, { replace: true });
+  };
 
   const { mutate: verifyPayment, isPending: isVerifying } = useMutation({
     mutationFn: ({ transactionId }: { transactionId: string }) => 
@@ -39,7 +71,7 @@ export function SubscriptionCheckoutPage() {
     onSuccess: (data) => {
       setPaymentStatus(data.status as any);
       if (data.status === 'APPROVED') {
-        queryClient.invalidateQueries({ queryKey: ['mySubscription'] });
+        queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_QUERY_KEY });
       }
     },
     onError: () => {
@@ -47,30 +79,58 @@ export function SubscriptionCheckoutPage() {
     }
   });
 
+  // Automatically verify payment if redirected back by Wompi (e.g. 3DS or PSE callback)
+  useEffect(() => {
+    if (transactionIdParam && subscription && paymentStatus === 'IDLE' && !isVerifying && verifiedRef.current !== transactionIdParam) {
+      verifiedRef.current = transactionIdParam;
+      setPaymentStatus('PENDING');
+      verifyPayment({ transactionId: transactionIdParam });
+    }
+  }, [transactionIdParam, subscription, paymentStatus, isVerifying, verifyPayment]);
+
   const { mutate: initPayment, isPending: isInitializing } = useMutation({
     mutationFn: subscriptionService.initPayment,
     onSuccess: (data) => {
-      // Abre el widget de Wompi
-      const checkout = new window.WidgetCheckout({
-        currency: data.currency,
-        amountInCents: data.amount_in_cents,
-        reference: data.reference,
-        publicKey: data.public_key,
-        signature: { integrity: data.signature }
-      });
-
-      checkout.open(function (result: any) {
-        const transaction = result.transaction;
-        if (transaction && transaction.status) {
-          if (transaction.id) {
-            verifyPayment({ transactionId: transaction.id });
-          } else {
-            setPaymentStatus(transaction.status);
-          }
-        } else {
+      try {
+        if (!window.WidgetCheckout) {
+          console.error('El widget de Wompi no está cargado.');
           setPaymentStatus('ERROR');
+          return;
         }
-      });
+
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const checkoutConfig: any = {
+          currency: data.currency,
+          amountInCents: data.amount_in_cents,
+          reference: data.reference,
+          publicKey: data.public_key,
+          signature: { integrity: data.signature },
+        };
+
+        if (!isLocalhost) {
+          checkoutConfig.redirectUrl = `${window.location.origin}/app/subscription/checkout`;
+        }
+
+        // Abre el widget de Wompi
+        const checkout = new window.WidgetCheckout(checkoutConfig);
+
+        checkout.open(function (result: any) {
+          const transaction = result?.transaction;
+          if (transaction && transaction.status) {
+            if (transaction.id) {
+              verifyPayment({ transactionId: transaction.id });
+            } else {
+              setPaymentStatus(transaction.status);
+            }
+          } else {
+            // El usuario cerró el widget o canceló la transacción antes de pagar
+            setPaymentStatus('IDLE');
+          }
+        });
+      } catch (err) {
+        console.error('Error al instanciar el widget de Wompi:', err);
+        setPaymentStatus('ERROR');
+      }
     },
     onError: () => {
       setPaymentStatus('ERROR');
@@ -78,33 +138,44 @@ export function SubscriptionCheckoutPage() {
   });
 
   const handlePay = () => {
-    if (!subscription || !selectedPlanId) return;
+    if (!subscription || !selectedPlanId || isInitializing || isVerifying) return;
     setPaymentStatus('PENDING');
     initPayment({ subscriptionId: subscription.id, planId: selectedPlanId });
   };
 
   const resetFlow = () => {
     setPaymentStatus('IDLE');
+    if (transactionIdParam) {
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        next.delete('id');
+        next.delete('transaction_id');
+        next.delete('transactionId');
+        return next;
+      }, { replace: true });
+    }
   };
 
-  if (isLoadingSub || isLoadingPlans) {
+  if (isLoadingAuth || isLoadingSub || isLoadingPlans) {
     return (
-      <div className="p-8 max-w-4xl mx-auto space-y-6">
-        <Skeleton className="h-10 w-1/3 mb-8" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Skeleton className="h-64 rounded-xl" />
-          <Skeleton className="h-64 rounded-xl" />
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-transparent">
+        <Spinner className="w-12 h-12 mb-4" />
+        <p className="text-text-secondary text-sm animate-pulse">Cargando detalles de suscripción...</p>
       </div>
     );
   }
 
+  if (!isAuthenticated) {
+    const redirectUrl = location.pathname + location.search;
+    return <Navigate to={`/login?planId=${planIdParam || ''}&redirect=${encodeURIComponent(redirectUrl)}`} replace />;
+  }
+
   if (errorSub || errorPlans) {
     return (
-      <div className="p-8 max-w-4xl mx-auto">
+      <div className="min-h-screen p-8 max-w-4xl mx-auto flex flex-col justify-center">
         <ErrorState
           title="Error al cargar planes"
-          description="Ocurrió un problema de red. Por favor, intenta de nuevo."
+          description="Ocurrió un problema de red al consultar tu suscripción. Por favor, intenta de nuevo."
           onRetry={() => {
             refetchSub();
             refetchPlans();
@@ -116,24 +187,24 @@ export function SubscriptionCheckoutPage() {
 
   if (subscription?.is_lifetime) {
     return (
-      <div className="p-8 max-w-4xl mx-auto">
-        <GlassCard className="p-8 text-center border-success/30 bg-success/10 flex flex-col items-center">
+      <div className="min-h-screen p-8 max-w-4xl mx-auto flex flex-col justify-center">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-8 text-center border-success/30 bg-success/10 flex flex-col items-center">
           <CheckCircle2 className="w-16 h-16 text-success mb-4" />
           <h2 className="text-2xl font-bold text-text-primary mb-2">Suscripción Sin Vencimiento</h2>
           <p className="text-success mb-6">
             Tu cuenta tiene acceso vitalicio a ZonaFit. No necesitas realizar pagos.
           </p>
-          <Button onClick={() => navigate('/dashboard')} variant="outline">
+          <Button onClick={() => window.location.assign('/app/dashboard')} variant="outline">
             Ir al Dashboard
           </Button>
-        </GlassCard>
+        </div>
       </div>
     );
   }
 
-  if (!plans || plans.length === 0) {
+  if (!plans || !Array.isArray(plans) || plans.length === 0) {
     return (
-      <div className="p-8 max-w-4xl mx-auto">
+      <div className="min-h-screen p-8 max-w-4xl mx-auto flex flex-col justify-center">
         <EmptyState
           title="No hay planes disponibles"
           description="En este momento no hay planes configurados en la plataforma. Contacta al administrador."
@@ -145,25 +216,25 @@ export function SubscriptionCheckoutPage() {
 
   if (paymentStatus === 'APPROVED') {
     return (
-      <div className="p-8 max-w-4xl mx-auto">
-        <GlassCard className="p-8 text-center flex flex-col items-center border-success/30 bg-success/5">
+      <div className="min-h-screen p-8 max-w-4xl mx-auto flex flex-col justify-center">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-8 text-center flex flex-col items-center border-success/30 bg-success/5 shadow-glass-large">
           <CheckCircle2 className="w-16 h-16 text-success mb-4" />
-          <h2 className="text-3xl font-bold text-text-primary mb-2">Pago Aprobado</h2>
-          <p className="text-text-secondary mb-8">
-            Tu suscripción se ha activado exitosamente. Ya puedes disfrutar de ZonaFit.
+          <h2 className="text-3xl font-bold text-text-primary mb-2">¡Pago Aprobado con Éxito!</h2>
+          <p className="text-text-secondary mb-8 max-w-md">
+            Tu suscripción se ha activado correctamente para tu gimnasio. Ya tienes acceso completo a todas las funciones de ZonaFit.
           </p>
-          <ActionGlowButton onClick={() => navigate('/dashboard')}>
+          <ActionGlowButton onClick={() => window.location.assign('/app/dashboard')} className="px-8 py-3 font-semibold">
             Ingresar a la Plataforma
           </ActionGlowButton>
-        </GlassCard>
+        </div>
       </div>
     );
   }
 
   if (paymentStatus === 'DECLINED' || paymentStatus === 'ERROR' || paymentStatus === 'VOIDED') {
     return (
-      <div className="p-8 max-w-4xl mx-auto">
-        <GlassCard className="p-8 text-center flex flex-col items-center border-danger/30 bg-danger/5">
+      <div className="min-h-screen p-8 max-w-4xl mx-auto flex flex-col justify-center">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-8 text-center flex flex-col items-center border-danger/30 bg-danger/5 shadow-glass-large">
           {paymentStatus === 'DECLINED' ? (
             <XCircle className="w-16 h-16 text-danger mb-4" />
           ) : (
@@ -172,25 +243,43 @@ export function SubscriptionCheckoutPage() {
           <h2 className="text-3xl font-bold text-text-primary mb-2">
             {paymentStatus === 'DECLINED' ? 'Pago Rechazado' : 'Error procesando el pago'}
           </h2>
-          <p className="text-text-secondary mb-8">
+          <p className="text-text-secondary mb-8 max-w-md">
             {paymentStatus === 'DECLINED'
-              ? 'Tu entidad financiera ha rechazado la transacción.'
-              : 'Ocurrió un error inesperado o la transacción fue anulada.'}
+              ? 'Tu entidad financiera ha rechazado la transacción. Puedes probar con otro medio de pago.'
+              : 'Ocurrió un error inesperado o la transacción fue anulada. Tu cuenta sigue intacta.'}
           </p>
-          <Button onClick={resetFlow} variant="primary">
+          <Button onClick={resetFlow} variant="primary" className="px-6 py-2.5">
             Intentar nuevamente
           </Button>
-        </GlassCard>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <div className="mb-10 text-center">
+    <div className="min-h-screen p-4 sm:p-8 max-w-5xl mx-auto flex flex-col">
+      {/* Top Header */}
+      <header className="flex justify-between items-center py-4 mb-6 border-b border-border-light/20">
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="ZonaFit Logo" className="w-8 object-contain" />
+          <span className="text-lg font-bold text-white tracking-tight">ZONAFIT</span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-brand-primary/15 text-brand-primary border border-brand-primary/30 flex items-center gap-1 font-medium">
+            <ShieldCheck size={12} /> Checkout Seguro
+          </span>
+        </div>
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-sm text-text-muted hover:text-white"
+        >
+          <ArrowLeft size={16} /> Volver
+        </Button>
+      </header>
+
+      <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold text-text-primary mb-3">Elige tu plan comercial</h1>
-        <p className="text-text-secondary text-lg">
-          Selecciona el plan que mejor se adapte a tu gimnasio para activar tu cuenta.
+        <p className="text-text-secondary text-base">
+          Selecciona el plan que mejor se adapte a tu gimnasio para activar tu membresía.
         </p>
       </div>
 
@@ -200,14 +289,14 @@ export function SubscriptionCheckoutPage() {
           return (
             <div
               key={plan.id}
-              onClick={() => setSelectedPlanId(plan.id)}
+              onClick={() => handleSelectPlan(plan.id)}
               className={`relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 ${
                 isSelected
                   ? 'ring-2 ring-brand-primary transform scale-[1.02]'
                   : 'hover:ring-1 hover:ring-border-strong'
               }`}
             >
-              <GlassCard className={`h-full p-6 flex flex-col ${isSelected ? 'bg-brand-primary/10 border-brand-primary/30' : ''}`}>
+              <div className={`rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 h-full p-6 flex flex-col ${isSelected ? 'bg-brand-primary/10 border-brand-primary/30' : ''}`}>
                 <div className="mb-4">
                   <Badge variant={plan.billing_interval === 'YEARLY' ? 'success' : 'default'} className="mb-3">
                     {plan.billing_interval === 'YEARLY' ? 'Anual' : 'Mensual'}
@@ -217,7 +306,7 @@ export function SubscriptionCheckoutPage() {
 
                 <div className="flex items-baseline mb-4">
                   <span className="text-3xl font-bold text-text-primary">
-                    ${plan.price.toLocaleString()}
+                    {formatCurrency(plan.price)}
                   </span>
                   <span className="text-text-muted ml-2">{plan.currency}</span>
                 </div>
@@ -235,7 +324,7 @@ export function SubscriptionCheckoutPage() {
                     {isSelected ? 'Plan Seleccionado' : 'Seleccionar'}
                   </div>
                 </div>
-              </GlassCard>
+              </div>
             </div>
           );
         })}

@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { subscriptionService } from '../../services/subscriptionService';
-import { GlassCard } from '../../components/shared/GlassCard';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { Button } from '../../components/shared/Button';
-import { Badge } from '../../components/shared/Badge';
-import { Spinner } from '../../components/shared/Spinner';
-import { useToast } from '../../components/shared/Toast';
-import { Modal } from '../../components/shared/Modal';
+import { SUBSCRIPTION_QUERY_KEY } from '@shared/subscription/useLicenseStatus';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { Button } from '@shared/ui/Button';
+import { Badge } from '@shared/ui/Badge';
+import { Spinner } from '@shared/ui/Spinner';
+import { useToast } from '@shared/ui/Toast';
+import { Modal } from '@shared/ui/Modal';
 import { CreditCard, CalendarClock, ShieldAlert, Receipt, CheckCircle2, History, XCircle, RefreshCw } from 'lucide-react';
+import { formatCurrency } from '@shared/utils/formatters';
 
 function parseSubscriptionDate(value: string): Date {
   return new Date(/(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? value : `${value}Z`);
@@ -23,7 +24,7 @@ export function SubscriptionManagementPage() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
   const { data: subscription, isLoading: isLoadingSub } = useQuery({
-    queryKey: ['subscription', 'me'],
+    queryKey: SUBSCRIPTION_QUERY_KEY,
     queryFn: subscriptionService.getMySubscription
   });
 
@@ -36,7 +37,7 @@ export function SubscriptionManagementPage() {
     mutationFn: subscriptionService.cancelSubscription,
     onSuccess: () => {
       toast({ type: 'success', title: 'Suscripción cancelada', message: 'Tu suscripción no se renovará.' });
-      queryClient.invalidateQueries({ queryKey: ['subscription', 'me'] });
+      queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_QUERY_KEY });
       setIsCancelModalOpen(false);
     },
     onError: () => {
@@ -48,12 +49,20 @@ export function SubscriptionManagementPage() {
     mutationFn: subscriptionService.reactivateSubscription,
     onSuccess: () => {
       toast({ type: 'success', title: 'Suscripción reactivada', message: 'Tu suscripción se renovará automáticamente.' });
-      queryClient.invalidateQueries({ queryKey: ['subscription', 'me'] });
+      queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_QUERY_KEY });
     },
     onError: () => {
       toast({ type: 'error', title: 'Error', message: 'No se pudo procesar la solicitud.' });
     }
   });
+
+  const handleNavigateToCheckout = () => {
+    if (window.location.pathname.startsWith('/demo')) {
+      navigate('/demo/subscription/checkout');
+    } else {
+      navigate('/subscription/checkout');
+    }
+  };
 
   if (isLoadingSub) {
     return (
@@ -67,14 +76,14 @@ export function SubscriptionManagementPage() {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
         <h1 className="text-3xl font-bold text-white tracking-tight mb-2 text-glow">Gestión de Suscripción</h1>
-        <GlassCard className="p-8 text-center flex flex-col items-center gap-6">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-8 text-center flex flex-col items-center gap-6">
           <Receipt className="w-16 h-16 text-text-muted" />
           <h2 className="text-2xl font-bold text-white">Sin Plan Activo</h2>
           <p className="text-text-secondary max-w-md mx-auto">No tienes ninguna suscripción configurada. Elige un plan para activar todas las funcionalidades de ZonaFit.</p>
-          <ActionGlowButton onClick={() => navigate('/subscription/checkout')}>
+          <ActionGlowButton onClick={handleNavigateToCheckout}>
             Ver Planes
           </ActionGlowButton>
-        </GlassCard>
+        </div>
       </div>
     );
   }
@@ -86,12 +95,8 @@ export function SubscriptionManagementPage() {
     });
   };
 
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 0
-    }).format(amount / 100);
+  const formatCurrencyLocal = (amount: number) => {
+    return formatCurrency(amount / 100);
   };
 
   const isCancelled = !!subscription.cancellation_requested_at;
@@ -107,7 +112,7 @@ export function SubscriptionManagementPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Resumen del Plan Actual */}
-        <GlassCard className="p-6 md:col-span-2 relative overflow-hidden">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 md:col-span-2 relative overflow-hidden">
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-primary/10 rounded-full blur-2xl pointer-events-none"></div>
           
           <div className="flex justify-between items-start mb-6">
@@ -137,7 +142,7 @@ export function SubscriptionManagementPage() {
                 <Receipt size={16} /> Valor
               </span>
               <span className="text-white font-medium">
-                {subscription.plan ? `${formatCurrency(subscription.plan.price * 100, subscription.plan.currency)} / ${subscription.plan.billing_interval === 'MONTHLY' ? 'mes' : 'año'}` : 'Gratis'}
+                {subscription.plan ? `${formatCurrencyLocal(subscription.plan.price * 100)} / ${subscription.plan.billing_interval === 'MONTHLY' ? 'mes' : 'año'}` : 'Gratis'}
               </span>
             </div>
 
@@ -155,7 +160,7 @@ export function SubscriptionManagementPage() {
           </div>
 
           <div className="mt-8 flex gap-3">
-            <ActionGlowButton onClick={() => navigate('/subscription/checkout')}>
+            <ActionGlowButton onClick={handleNavigateToCheckout}>
               Cambiar Plan
             </ActionGlowButton>
             
@@ -171,10 +176,10 @@ export function SubscriptionManagementPage() {
               </Button>
             )}
           </div>
-        </GlassCard>
+        </div>
 
         {/* Método de Pago */}
-        <GlassCard className="p-6 flex flex-col">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex flex-col">
           <p className="text-sm text-text-muted uppercase tracking-wider mb-4">Método de Pago</p>
           
           <div className="flex-grow flex flex-col justify-center items-center text-center">
@@ -198,18 +203,18 @@ export function SubscriptionManagementPage() {
                 <p className="text-text-secondary text-sm">No tienes una tarjeta vinculada para cobro automático.</p>
                 
                 {subscription.status !== 'TRIAL' && (
-                  <Button variant="outline" className="mt-6 w-full text-sm" onClick={() => navigate('/subscription/checkout')}>
+                  <Button variant="outline" className="mt-6 w-full text-sm" onClick={handleNavigateToCheckout}>
                     Agregar Tarjeta
                   </Button>
                 )}
               </>
             )}
           </div>
-        </GlassCard>
+        </div>
       </div>
 
       {/* Historial de Pagos */}
-      <GlassCard className="p-6">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6">
         <div className="flex items-center gap-3 mb-6">
           <History size={20} className="text-brand-primary" />
           <h2 className="text-xl font-bold text-white">Historial de Facturación</h2>
@@ -237,7 +242,7 @@ export function SubscriptionManagementPage() {
                       {new Date(payment.created_at).toLocaleDateString('es-CO')}
                     </td>
                     <td className="py-3 px-4 text-sm font-medium text-white">
-                      {formatCurrency(payment.amount_in_cents, payment.currency)}
+                      {formatCurrencyLocal(payment.amount_in_cents)}
                     </td>
                     <td className="py-3 px-4 text-sm text-text-secondary font-mono text-xs">
                       {payment.reference}
@@ -262,7 +267,7 @@ export function SubscriptionManagementPage() {
             <p className="text-text-secondary">No hay pagos registrados aún.</p>
           </div>
         )}
-      </GlassCard>
+      </div>
 
       {/* Modal de Cancelación */}
       <Modal isOpen={isCancelModalOpen} onClose={() => setIsCancelModalOpen(false)} title="Cancelar Suscripción">

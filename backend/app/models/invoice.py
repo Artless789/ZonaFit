@@ -101,3 +101,12 @@ class Invoice(Base):
     @property
     def client_id(self):
         return self.sale.client_id if self.sale else None
+
+    @property
+    def payment_method(self):
+        if self.sale and self.sale.payments:
+            for p in self.sale.payments:
+                if p.is_active and p.status == "PAID":
+                    return p.payment_method
+            return self.sale.payments[0].payment_method
+        return "CASH"

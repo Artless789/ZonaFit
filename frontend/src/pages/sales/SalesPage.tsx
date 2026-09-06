@@ -7,11 +7,11 @@ import { InventoryTable } from './InventoryTable';
 import { ProductDrawer } from './ProductDrawer';
 import { CategoryModal } from './CategoryModal';
 import { POSView } from './POSView';
-import type { Product } from '../../types/product';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { Skeleton } from '../../components/shared/Skeleton';
-import { useToast } from '../../components/shared/Toast';
-import { cn } from '../../utils/cn';
+import type { Product } from '@shared/types/product';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { Skeleton } from '@shared/ui/Skeleton';
+import { useToast } from '@shared/ui/Toast';
+import { cn } from '@shared/utils/cn';
 
 export function SalesPage() {
   const { toast } = useToast();

@@ -44,3 +44,47 @@ class DashboardResponse(BaseModel):
 
     # Cartera pendiente
     receivables: List[DashboardReceivable]
+
+class DailyIncome(BaseModel):
+    date: str
+    day: int
+    amount: Decimal
+    transaction_count: int
+
+class ConceptIncome(BaseModel):
+    concept: str
+    label: str
+    amount: Decimal
+    percentage: float
+    transaction_count: int
+
+class MethodIncome(BaseModel):
+    method: str
+    label: str
+    amount: Decimal
+    percentage: float
+    transaction_count: int
+
+class RecentPaymentItem(BaseModel):
+    id: int
+    amount: Decimal
+    payment_method: str
+    payment_method_label: str
+    concept: str
+    concept_description: str
+    client_name: Optional[str] = None
+    created_at: datetime
+    day: int
+
+class IncomeDetailsResponse(BaseModel):
+    month_name: str
+    month: int
+    year: int
+    total_income: Decimal
+    total_transactions: int
+    average_ticket: Decimal
+    highest_day: Optional[DailyIncome] = None
+    by_concept: List[ConceptIncome]
+    by_method: List[MethodIncome]
+    daily_history: List[DailyIncome]
+    recent_payments: List[RecentPaymentItem]

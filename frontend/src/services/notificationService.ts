@@ -1,6 +1,6 @@
 import { api } from './api';
-import type { Notification, NotificationSendRequest, NotificationTemplate, NotificationTemplateCreate, NotificationTemplateUpdate } from '../types/notification';
-import type { PaginatedResponse } from '../types/pagination';
+import type { Notification, NotificationSendRequest, NotificationTemplate, NotificationTemplateCreate, NotificationTemplateUpdate } from '@shared/types/notification';
+import type { PaginatedResponse } from '@shared/types/pagination';
 
 export const notificationService = {
   // Notifications History & Send

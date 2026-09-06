@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.core.database_transaction import DatabaseTransaction
 from app.exceptions.conflict_exception import ConflictException
@@ -68,10 +69,13 @@ class ProductService:
             minimum_stock=product_data.minimum_stock,
         )
 
-        with DatabaseTransaction(db):
-            db.add(product)
-            db.flush()
-            db.refresh(product)
+        try:
+            with DatabaseTransaction(db):
+                db.add(product)
+                db.flush()
+                db.refresh(product)
+        except IntegrityError:
+            raise ConflictException("SKU already exists.")
 
         return product
 
@@ -141,11 +145,27 @@ class ProductService:
     ):
         update_data = product_data.model_dump(exclude_unset=True)
 
-        with DatabaseTransaction(db):
-            for key, value in update_data.items():
-                setattr(product, key, value)
-            db.flush()
-            db.refresh(product)
+        if "sku" in update_data and update_data["sku"] != product.sku:
+            existing_product = (
+                db.query(Product)
+                .filter(
+                    Product.gym_id == product.gym_id,
+                    Product.sku == update_data["sku"],
+                    Product.id != product.id,
+                )
+                .first()
+            )
+            if existing_product:
+                raise ConflictException("SKU already exists.")
+
+        try:
+            with DatabaseTransaction(db):
+                for key, value in update_data.items():
+                    setattr(product, key, value)
+                db.flush()
+                db.refresh(product)
+        except IntegrityError:
+            raise ConflictException("SKU already exists.")
 
         return product
 

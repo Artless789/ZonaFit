@@ -1,7 +1,7 @@
 import { FileText, Edit2, Ban } from 'lucide-react';
-import type { NotificationTemplate } from '../../types/notification';
-import { Badge } from '../../components/shared/Badge';
-import { cn } from '../../utils/cn';
+import type { NotificationTemplate } from '@shared/types/notification';
+import { Badge } from '@shared/ui/Badge';
+import { cn } from '@shared/utils/cn';
 
 interface TemplatesTableProps {
   templates: NotificationTemplate[];

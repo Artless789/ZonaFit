@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { GymSettings, GymSettingsCreate, GymSettingsUpdate } from '../types/gymSettings';
+import type { GymSettings, GymSettingsCreate, GymSettingsUpdate } from '@shared/types/gymSettings';
 
 export const gymSettingsService = {
   getSettings: async (): Promise<GymSettings> => {

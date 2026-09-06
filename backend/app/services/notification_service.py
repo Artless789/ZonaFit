@@ -148,14 +148,22 @@ class NotificationService:
         )
 
     @staticmethod
-    def send_and_update(notification_id: int) -> None:
+    def send_and_update(notification_id: int, db: Optional[Session] = None) -> None:
         """
-        Background task: opens its own DB session, sends the notification via
+        Background task: sends the notification via
         the appropriate channel, and updates the record to SENT or FAILED.
 
-        Designed to run as a FastAPI BackgroundTask after the response is sent.
+        Designed to run as a FastAPI BackgroundTask after the response is sent,
+        or directly within tests with an injected DB session.
         """
-        db: Session = SessionLocal()
+        should_close = False
+        if db is None:
+            try:
+                db = SessionLocal()
+                should_close = True
+            except Exception as e:
+                logger.error(f"[Notification] Failed to create db session in background task: {e}")
+                return
 
         try:
             notification = (
@@ -168,21 +176,32 @@ class NotificationService:
                 return
 
             try:
-                WhatsAppSender.send_text(
+                res = WhatsAppSender.send_text(
                     to_phone=notification.recipient,
                     body=notification.message_body,
+                    db=db,
+                    gym_id=notification.gym_id,
                 )
                 notification.status = NotificationStatus.SENT
                 notification.sent_at = datetime.now(timezone.utc)
+                notification.delivery_status = "SENT"
+                if isinstance(res, dict):
+                    msgs = res.get("messages", [])
+                    if msgs and isinstance(msgs, list) and len(msgs) > 0:
+                        notification.provider_message_id = msgs[0].get("id")
+                    if "_integration_id" in res:
+                        notification.integration_id = res.get("_integration_id")
 
             except (ValueError, RuntimeError) as exc:
                 notification.status = NotificationStatus.FAILED
+                notification.delivery_status = "FAILED"
                 notification.error_detail = str(exc)
 
             db.commit()
 
         finally:
-            db.close()
+            if should_close and db is not None:
+                db.close()
 
     @staticmethod
     def get_all(
@@ -223,9 +242,9 @@ class NotificationService:
         return paginate(query=query, params=params)
 
     @staticmethod
-    def whatsapp_configured() -> bool:
-        """Returns True if WhatsApp credentials are set in the environment."""
-        return WhatsAppSender.is_configured()
+    def whatsapp_configured(db: Optional[Session] = None, gym_id: Optional[int] = None) -> bool:
+        """Returns True if WhatsApp is configured for the gym or via global environment."""
+        return WhatsAppSender.is_configured(db=db, gym_id=gym_id)
 
     @staticmethod
     def get_by_id(

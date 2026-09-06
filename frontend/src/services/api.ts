@@ -1,19 +1,55 @@
 import axios from 'axios';
+import { sessionManager } from '../shared/session/sessionManager';
+import { SyncManager } from '../shared/offline/syncManager';
 
 // Get base URL from env, or default to standard local API port
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export const api = axios.create({
   baseURL: API_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
+// Single-flight refresh token promise mutex to guarantee AT MOST ONE /auth/refresh HTTP request in flight at any time
+let refreshPromise: Promise<string> | null = null;
+
+export const performTokenRefresh = async (): Promise<string> => {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const res = await axios.post<{ access_token: string }>(
+        `${API_URL}/auth/refresh`,
+        {},
+        { withCredentials: true }
+      );
+      const newToken = res.data?.access_token;
+      if (!newToken) {
+        throw new Error('No access token returned from refresh endpoint');
+      }
+      sessionManager.setToken(newToken);
+      return newToken;
+    } catch (err) {
+      sessionManager.clearToken();
+      window.dispatchEvent(new Event('auth-unauthorized'));
+      throw err;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+};
+
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
+    const token = sessionManager.getToken();
+    if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -23,11 +59,35 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // Determine a user-friendly message based on status
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Evitar interceptor para endpoints de auth específicos
+    if (!originalRequest || originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh')) {
+      return Promise.reject(error);
+    }
+
     let userMessage = 'Ha ocurrido un error inesperado. Por favor, inténtalo nuevamente.';
     
     if (!error.response) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        // Offline: intentar encolar si es una operación permitida
+        const method = originalRequest.method?.toUpperCase() || '';
+        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+          const url = originalRequest.url || '';
+          if (SyncManager.isEndpointAllowed(url)) {
+            let payload = originalRequest.data;
+            if (typeof payload === 'string') {
+                try { payload = JSON.parse(payload); } catch { /* Ignore non-JSON */ }
+            }
+            // Encolar y rechazar con mensaje amistoso
+            await SyncManager.enqueue(url, method as 'POST' | 'PUT' | 'PATCH' | 'DELETE', payload);
+            error.userMessage = 'Estás sin conexión. La operación fue guardada y se sincronizará automáticamente.';
+            error.isOfflineQueued = true;
+            return Promise.reject(error);
+          }
+        }
+      }
       userMessage = 'Error de conexión. Verifica tu conexión a internet e inténtalo nuevamente.';
     } else {
       const status = error.response.status;
@@ -35,9 +95,32 @@ api.interceptors.response.use(
 
       switch (status) {
         case 401:
-          localStorage.removeItem('token');
-          window.dispatchEvent(new Event('auth-unauthorized'));
-          userMessage = 'Tu sesión ha expirado o es inválida.';
+          if (!originalRequest._retry) {
+            originalRequest._retry = true;
+
+            // Bloque H: NO intentar refresh sin conexión.
+            if (typeof navigator !== 'undefined' && !navigator.onLine) {
+              userMessage = 'No hay conexión a Internet. La sesión no pudo validarse.';
+              break;
+            }
+
+            try {
+              const newToken = await performTokenRefresh();
+              if (!originalRequest.headers) {
+                originalRequest.headers = {} as Record<string, string>;
+              }
+              originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+              return api(originalRequest);
+            } catch (refreshError) {
+              userMessage = 'Tu sesión ha expirado o es inválida.';
+              error.userMessage = userMessage;
+              return Promise.reject(refreshError);
+            }
+          } else {
+            sessionManager.clearToken();
+            window.dispatchEvent(new Event('auth-unauthorized'));
+            userMessage = 'Tu sesión ha expirado o es inválida.';
+          }
           break;
         case 403:
           if (detail === 'SUBSCRIPTION_REQUIRED') {

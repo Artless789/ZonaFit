@@ -27,9 +27,12 @@ from app.constants.membership_status import MembershipStatus
 from decimal import Decimal
 from datetime import datetime, timezone
 
+from app.core.idempotency import IdempotentRoute
+
 router = APIRouter(
     prefix="/clients",
     tags=["Clients"],
+    route_class=IdempotentRoute
 )
 
 
@@ -70,11 +73,29 @@ def create_client(
         phone=client.phone,
         email=client.email,
         notes=client.notes,
+        photo_url=client.photo_url,
     )
 
     db.add(new_client)
     db.commit()
     db.refresh(new_client)
+
+    from app.services.audit_service import AuditService
+    AuditService.log(
+        db=db,
+        gym_id=current_user.gym_id,
+        action="CLIENT_CREATED",
+        entity_type="CLIENT",
+        user_id=current_user.id,
+        entity_id=new_client.id,
+        new_values={
+            "full_name": new_client.full_name,
+            "document": new_client.document,
+            "email": new_client.email,
+        },
+        ip_address=None,
+    )
+    db.commit()
 
     return new_client
 
@@ -136,35 +157,7 @@ def get_clients(
     )
 
 
-# ==========================
-# Obtener foto de cliente
-# ==========================
 
-@router.get("/photo/{filename}")
-def get_client_photo(
-    filename: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    # RLS: the photo_url format is /clients/photo/{filename}
-    # We must ensure the client with this photo_url belongs to the current user's gym
-    client = (
-        db.query(Client)
-        .filter(
-            Client.gym_id == current_user.gym_id,
-            Client.photo_url == f"/clients/photo/{filename}",
-        )
-        .first()
-    )
-
-    if not client:
-        raise HTTPException(status_code=404, detail="Photo not found or unauthorized.")
-
-    file_path = os.path.join(UPLOAD_DIR, filename)
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="File not found on disk.")
-
-    return FileResponse(file_path)
 
 
 # ==========================
@@ -436,11 +429,16 @@ def delete_client(
 
 
 # ==========================
-# Upload client photo
+# Client photo management
 # ==========================
 
-UPLOAD_DIR = "uploads/clients"
+UPLOAD_DIR = os.path.join(os.getcwd(), "uploads", "clients")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
+ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
 
 @router.post(
     "/{client_id}/photo",
@@ -465,18 +463,22 @@ def upload_client_photo(
         raise HTTPException(status_code=404, detail="Client not found.")
 
     # Validate file type
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image.")
+    if not file.content_type or file.content_type.lower() not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail="File must be a valid image (JPEG, PNG, WEBP).",
+        )
 
-    if file.size and file.size > 5 * 1024 * 1024:
+    if file.size and file.size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="File too large. Maximum 5MB.")
 
-    # Generate safe filename
-    ext = file.filename.split(".")[-1].lower() if "." in file.filename else "jpg"
-    if not ext.isalnum():
+    # Generate safe extension
+    original_filename = file.filename or ""
+    ext = original_filename.split(".")[-1].lower() if "." in original_filename else "jpg"
+    if ext not in ALLOWED_EXTENSIONS:
         ext = "jpg"
         
-    filename = f"{uuid.uuid4()}.{ext}"
+    filename = f"{uuid.uuid4().hex}.{ext}"
     file_path = os.path.join(UPLOAD_DIR, filename)
 
     with open(file_path, "wb") as buffer:
@@ -487,9 +489,49 @@ def upload_client_photo(
         old_filename = client.photo_url.split("/")[-1]
         old_path = os.path.join(UPLOAD_DIR, old_filename)
         if os.path.exists(old_path):
-            os.remove(old_path)
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
 
     client.photo_url = f"/clients/photo/{filename}"
+    db.commit()
+    db.refresh(client)
+
+    return client
+
+
+@router.delete(
+    "/{client_id}/photo",
+    response_model=ClientResponse,
+)
+def delete_client_photo(
+    client_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    client = (
+        db.query(Client)
+        .filter(
+            Client.id == client_id,
+            Client.gym_id == current_user.gym_id,
+        )
+        .first()
+    )
+
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found.")
+
+    if client.photo_url and client.photo_url.startswith("/clients/photo/"):
+        old_filename = client.photo_url.split("/")[-1]
+        old_path = os.path.join(UPLOAD_DIR, old_filename)
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+
+    client.photo_url = None
     db.commit()
     db.refresh(client)
 
@@ -502,8 +544,10 @@ def get_client_photo(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename.")
+
     # RLS: the photo_url format is /clients/photo/{filename}
-    # We must ensure the client with this photo_url belongs to the current user's gym
     client = (
         db.query(Client)
         .filter(

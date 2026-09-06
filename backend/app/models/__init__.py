@@ -22,9 +22,13 @@ from .accounts_receivable import AccountsReceivable
 from .password_reset_token import PasswordResetToken
 from .cash_register import CashRegister
 from .cash_movement import CashMovement
+from .refresh_token import RefreshToken
+from .idempotency_key import IdempotencyKey
+from .whatsapp_integration import WhatsAppIntegration
 
 # Ensures Alembic can discover them
 __all__ = [
+    "WhatsAppIntegration",
     "User",
     "Gym",
     "GymSettings",
@@ -47,5 +51,7 @@ __all__ = [
     "InvoiceDetail",
     "PasswordResetToken",
     "CashRegister",
-    "CashMovement"
+    "CashMovement",
+    "RefreshToken",
+    "IdempotencyKey"
 ]

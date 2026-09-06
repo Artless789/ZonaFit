@@ -1,4 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowRight,
   CircleDollarSign,
@@ -13,21 +14,17 @@ import {
   CreditCard,
   UserCheck
 } from 'lucide-react';
-import { GlassCard } from '../../components/shared/GlassCard';
-import { Skeleton } from '../../components/shared/Skeleton';
-import { ErrorState } from '../../components/shared/ErrorState';
-import { SubscriptionStatusBanner } from '../../components/shared/SubscriptionStatusBanner';
-import { useDashboard } from '../../hooks/useDashboard';
-import { Badge } from '../../components/shared/Badge';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { Button } from '../../components/shared/Button';
-import { DashboardActivity } from '../../types/dashboard';
 
-const formatCurrency = (value: number | string | null | undefined) => new Intl.NumberFormat('es-CO', {
-  style: 'currency',
-  currency: 'COP',
-  maximumFractionDigits: 0,
-}).format(Number(value) || 0);
+import { Skeleton } from '@shared/ui/Skeleton';
+import { ErrorState } from '@shared/ui/ErrorState';
+import { SubscriptionStatusBanner } from '@shared/ui/SubscriptionStatusBanner';
+import { useDashboard } from '../../hooks/useDashboard';
+import { formatCurrency } from '@shared/utils/formatters';
+import { Badge } from '@shared/ui/Badge';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { Button } from '@shared/ui/Button';
+import { DashboardActivity } from '@shared/types/dashboard';
+import { IncomeDetailsDrawer } from './IncomeDetailsDrawer';
 
 const formatTime = (dateString: string) => {
   const date = new Date(dateString);
@@ -36,6 +33,11 @@ const formatTime = (dateString: string) => {
 
 export function DashboardPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isDemo = location.pathname.startsWith('/demo');
+  const getRoute = (path: string) => (isDemo ? `/demo${path}` : path);
+  const [isIncomeDetailsOpen, setIsIncomeDetailsOpen] = useState(false);
+
   const dashboard = useDashboard();
   const data = dashboard.data;
 
@@ -64,7 +66,7 @@ export function DashboardPage() {
       detail: `${data?.sales_today || 0} transacciones`,
       icon: ShoppingCart,
       tone: 'text-brand-primary bg-brand-primary/10',
-      link: '/sales'
+      link: getRoute('/sales')
     },
     {
       label: 'Ingresos del mes',
@@ -72,7 +74,7 @@ export function DashboardPage() {
       detail: 'Pagos recibidos',
       icon: CircleDollarSign,
       tone: 'text-success bg-success/10',
-      link: '/reports'
+      onClick: () => setIsIncomeDetailsOpen(true),
     },
     {
       label: 'Clientes activos',
@@ -80,7 +82,7 @@ export function DashboardPage() {
       detail: 'Afiliados con acceso',
       icon: Users,
       tone: 'text-info bg-info/10',
-      link: '/clients'
+      link: getRoute('/clients')
     },
     {
       label: 'Membresías por vencer',
@@ -88,7 +90,7 @@ export function DashboardPage() {
       detail: 'En los próximos 7 días',
       icon: CalendarCheck,
       tone: 'text-warning bg-warning/10',
-      link: '/memberships'
+      link: getRoute('/memberships')
     },
     {
       label: 'Total por cobrar',
@@ -96,7 +98,7 @@ export function DashboardPage() {
       detail: 'Cartera pendiente',
       icon: Wallet,
       tone: 'text-brand-primary bg-brand-primary/10',
-      link: '/credits'
+      link: getRoute('/credits')
     },
     {
       label: 'Créditos vencidos',
@@ -104,7 +106,7 @@ export function DashboardPage() {
       detail: 'Cuentas en mora',
       icon: TriangleAlert,
       tone: 'text-danger bg-danger/10',
-      link: '/credits'
+      link: getRoute('/credits')
     },
   ];
 
@@ -129,7 +131,7 @@ export function DashboardPage() {
             Consulta el estado de tu gimnasio y prioriza las tareas que requieren atención.
           </p>
         </div>
-        <ActionGlowButton onClick={() => navigate('/sales')} className="px-5 py-2.5 text-sm h-auto flex items-center gap-2">
+        <ActionGlowButton onClick={() => navigate(getRoute('/sales'))} className="px-5 py-2.5 text-sm h-auto flex items-center gap-2">
           Punto de Venta <ShoppingCart size={16} />
         </ActionGlowButton>
       </div>
@@ -144,8 +146,14 @@ export function DashboardPage() {
         <>
           {/* KPI Superiores */}
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Indicadores principales">
-            {metrics.map(({ label, value, detail, icon: Icon, tone, link }) => (
-              <GlassCard key={label} className="p-5 flex flex-col justify-between hover:border-brand-primary/30 transition-colors">
+            {metrics.map(({ label, value, detail, icon: Icon, tone, link, onClick }) => (
+              <div
+                key={label}
+                onClick={onClick}
+                className={`rounded-[var(--radius-xl)] bg-bg-surface/40 border border-border-light p-5 flex flex-col justify-between hover:border-border-medium hover:bg-bg-surface transition-all shadow-sm ${
+                  onClick ? 'cursor-pointer group hover:border-success/40' : ''
+                }`}
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-medium text-text-secondary">{label}</p>
@@ -156,17 +164,30 @@ export function DashboardPage() {
                     <Icon size={21} aria-hidden="true" />
                   </div>
                 </div>
-                <Link to={link} className="mt-4 flex items-center gap-1 text-xs font-semibold text-text-secondary hover:text-brand-primary transition-colors">
-                  Ver detalle <ArrowRight size={14} />
-                </Link>
-              </GlassCard>
+                {link ? (
+                  <Link to={link} className="mt-4 flex items-center gap-1 text-xs font-semibold text-text-secondary hover:text-brand-primary transition-colors">
+                    Ver detalle <ArrowRight size={14} />
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClick?.();
+                    }}
+                    className="mt-4 flex items-center gap-1 text-xs font-semibold text-success hover:text-emerald-400 transition-colors self-start cursor-pointer"
+                  >
+                    Ver detalle y gráficas <ArrowRight size={14} />
+                  </button>
+                )}
+              </div>
             ))}
           </section>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
             
             {/* Actividad de Hoy */}
-            <GlassCard className="p-6 xl:col-span-1 flex flex-col">
+            <div className="rounded-[var(--radius-xl)] bg-bg-surface/40 border border-border-light p-6 xl:col-span-1 flex flex-col">
               <div className="flex items-center gap-3 mb-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-bg-surface border border-border-light text-brand-primary">
                   <Clock size={20} />
@@ -213,12 +234,12 @@ export function DashboardPage() {
                   </div>
                 )}
               </div>
-            </GlassCard>
+            </div>
 
             <div className="xl:col-span-2 flex flex-col gap-6">
               
               {/* Membresías por Vencer */}
-              <GlassCard className="p-6">
+              <div className="rounded-[var(--radius-xl)] bg-bg-surface/40 border border-border-light p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/10 text-warning">
@@ -229,7 +250,7 @@ export function DashboardPage() {
                       <p className="text-xs text-text-muted">Próximas a vencer en 7 días</p>
                     </div>
                   </div>
-                  <Button variant="ghost" onClick={() => navigate('/memberships')} className="text-xs px-3 py-1.5">
+                  <Button variant="ghost" onClick={() => navigate(getRoute('/memberships'))} className="text-xs px-3 py-1.5">
                     Ver todas
                   </Button>
                 </div>
@@ -262,7 +283,7 @@ export function DashboardPage() {
                               )}
                             </td>
                             <td className="py-3 text-right">
-                              <Link to={`/memberships`} className="text-xs font-medium text-brand-primary hover:text-brand-primary-hover opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Link to={getRoute('/memberships')} className="text-xs font-medium text-brand-primary hover:text-brand-primary-hover opacity-0 group-hover:opacity-100 transition-opacity">
                                 Renovar <ArrowRight size={12} className="inline" />
                               </Link>
                             </td>
@@ -272,10 +293,10 @@ export function DashboardPage() {
                     </table>
                   </div>
                 )}
-              </GlassCard>
+              </div>
 
               {/* Cartera Pendiente */}
-              <GlassCard className="p-6">
+              <div className="rounded-[var(--radius-xl)] bg-bg-surface/40 border border-border-light p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-danger/10 text-danger">
@@ -286,7 +307,7 @@ export function DashboardPage() {
                       <p className="text-xs text-text-muted">Cuentas por cobrar y saldos vencidos</p>
                     </div>
                   </div>
-                  <Button variant="ghost" onClick={() => navigate('/credits')} className="text-xs px-3 py-1.5">
+                  <Button variant="ghost" onClick={() => navigate(getRoute('/credits'))} className="text-xs px-3 py-1.5">
                     Ir a Créditos
                   </Button>
                 </div>
@@ -321,7 +342,7 @@ export function DashboardPage() {
                               )}
                             </td>
                             <td className="py-3 text-right">
-                              <Link to={`/credits`} className="text-xs font-medium text-brand-primary hover:text-brand-primary-hover opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Link to={getRoute('/credits')} className="text-xs font-medium text-brand-primary hover:text-brand-primary-hover opacity-0 group-hover:opacity-100 transition-opacity">
                                 Abonar <ArrowRight size={12} className="inline" />
                               </Link>
                             </td>
@@ -331,12 +352,18 @@ export function DashboardPage() {
                     </table>
                   </div>
                 )}
-              </GlassCard>
+              </div>
 
             </div>
           </div>
         </>
       )}
+
+      <IncomeDetailsDrawer
+        isOpen={isIncomeDetailsOpen}
+        onClose={() => setIsIncomeDetailsOpen(false)}
+      />
     </div>
   );
 }
+

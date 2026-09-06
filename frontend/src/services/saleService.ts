@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Sale, SaleCreate, SaleUpdate, SaleDetail, SaleDetailCreate } from '../types/sale';
+import type { Sale, SaleCreate, SaleUpdate, SaleDetail, SaleDetailCreate } from '@shared/types/sale';
 import type { Paginated } from './membershipPlanService';
 
 export const saleService = {

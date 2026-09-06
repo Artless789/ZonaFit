@@ -14,9 +14,12 @@ from app.schemas.product import (
 )
 from app.services.product_service import ProductService
 
+from app.core.idempotency import IdempotentRoute
+
 router = APIRouter(
     prefix="/products",
     tags=["Products"],
+    route_class=IdempotentRoute
 )
 
 

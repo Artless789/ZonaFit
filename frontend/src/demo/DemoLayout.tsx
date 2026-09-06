@@ -3,7 +3,7 @@ import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { MOCK_USER } from './mockData';
 import { activateDemoMode, deactivateDemoMode } from './demoInterceptor';
-import { queryClient } from '../main';
+
 
 export function DemoLayout() {
   const [isReady, setIsReady] = useState(false);
@@ -15,7 +15,7 @@ export function DemoLayout() {
 
     // 2. Clear React Query cache so no real data leaks into demo
     //    and no demo data bleeds out after unmount.
-    queryClient.clear();
+    // queryClient.clear(); // COMMENTED OUT FOR DEBUGGING
 
     // 3. Ready to render mock UI
     setIsReady(true);
@@ -24,7 +24,7 @@ export function DemoLayout() {
       // Cleanup on unmount: remove demo mode flag and purge demo cache.
       // This runs when the user navigates away from /demo/* entirely.
       deactivateDemoMode();
-      queryClient.clear();
+      // queryClient.clear(); // COMMENTED OUT FOR DEBUGGING
     };
   }, []);
 

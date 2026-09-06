@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { auditService } from '../services/auditService';
-import { AuditLog } from '../types/audit';
+import { AuditLog } from '@shared/types/audit';
 import { Paginated } from '../services/membershipPlanService';
 
 export const useAuditLogs = (

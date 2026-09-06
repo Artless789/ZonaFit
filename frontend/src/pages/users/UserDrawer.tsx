@@ -1,22 +1,21 @@
-// @ts-nocheck
-import { Select, SelectItem } from '../../components/shared/Select';
-import React, { useEffect } from 'react';
+import { Select, SelectItem } from '@shared/ui/Select';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button } from '../../components/shared/Button';
-import { Drawer } from '../../components/shared/Drawer';
-import { TextInput, Text } from '@tremor/react';
-import toast from 'react-hot-toast';
+import { Button } from '@shared/ui/Button';
+import { Drawer } from '@shared/ui/Drawer';
+import { Input } from '@shared/ui/Input';
+import { useToast } from '@shared/ui/Toast';
 import { useUsers } from '../../hooks/useUsers';
-import type { User } from '../../types/user';
+import type { User } from '@shared/types/user';
 import { useAuth } from '../../context/AuthContext';
 
 const userSchema = z.object({
   full_name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   email: z.string().email('Correo inválido'),
   role: z.enum(['ADMIN', 'STAFF'], {
-    errorMap: () => ({ message: 'Selecciona un rol válido' })
+    message: 'Selecciona un rol válido'
   }),
   password: z.string().min(6, 'Mínimo 6 caracteres').optional().or(z.literal('')),
   is_active: z.boolean().optional(),
@@ -31,6 +30,7 @@ interface UserDrawerProps {
 }
 
 export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
+  const { toast } = useToast();
   const { createUser, updateUser } = useUsers();
   const { user: currentUser } = useAuth();
   const isEditing = !!user;
@@ -60,7 +60,6 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
     if (user) {
       setValue('full_name', user.full_name);
       setValue('email', user.email);
-      // Solo permite ADMIN o STAFF (protegemos OWNER en UI)
       setValue('role', (user.role === 'ADMIN' || user.role === 'STAFF') ? user.role : 'STAFF');
       setValue('is_active', user.is_active);
       setValue('password', '');
@@ -88,10 +87,10 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
             is_active: data.is_active,
           }
         });
-        toast.success('Usuario actualizado correctamente');
+        toast({ type: 'success', title: 'Usuario Actualizado', message: 'Datos guardados correctamente.' });
       } else {
         if (!data.password) {
-          toast.error('La contraseña es requerida para usuarios nuevos');
+          toast({ type: 'error', title: 'Error', message: 'La contraseña es requerida para usuarios nuevos.' });
           return;
         }
         await createUser.mutateAsync({
@@ -100,11 +99,11 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
           role: data.role,
           password: data.password,
         });
-        toast.success('Usuario creado correctamente');
+        toast({ type: 'success', title: 'Usuario Creado', message: 'El usuario fue creado exitosamente.' });
       }
       onClose();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Ocurrió un error al guardar');
+      toast({ type: 'error', title: 'Error', message: error.response?.data?.detail || 'Ocurrió un error al guardar' });
     }
   };
 
@@ -121,52 +120,45 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           
           {/* Notificación si intenta editar a alguien superior */}
-          {isEditing && (user.role === 'OWNER' || user.role === 'SUPERADMIN') && (
+          {isEditing && user && (user.role === 'OWNER' || user.role === 'SUPERADMIN') && (
             <div className="bg-warning/10 text-warning p-4 rounded-md text-sm">
               Este usuario es un {user.role}. No puedes editar su información desde este portal.
             </div>
           )}
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-text-secondary">
-              Nombre Completo <span className="text-danger">*</span>
-            </label>
-                          <TextInput
-                            {...register('full_name')}
-                            error={!!errors.full_name}
-                            errorMessage={errors.full_name?.message}
-                            placeholder="Ej. Carlos Díaz"
-                            disabled={isEditing && (user?.role === 'OWNER' || user?.role === 'SUPERADMIN')}
-                          />
-                        </div>
+            <Input
+              label="Nombre Completo *"
+              {...register('full_name')}
+              error={!!errors.full_name}
+              helperText={errors.full_name?.message}
+              placeholder="Ej. Carlos Díaz"
+              disabled={isEditing && user ? (user.role === 'OWNER' || user.role === 'SUPERADMIN') : false}
+            />
+          </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-text-secondary">
-              Correo Electrónico <span className="text-danger">*</span>
-            </label>
-                          <TextInput
-                            {...register('email')}
-                            type="email"
-                            error={!!errors.email}
-                            errorMessage={errors.email?.message}
-                            placeholder="carlos@ejemplo.com"
-                            disabled={isEditing && (user?.role === 'OWNER' || user?.role === 'SUPERADMIN')}
-                          />
-                        </div>
+            <Input
+              label="Correo Electrónico *"
+              {...register('email')}
+              type="email"
+              error={!!errors.email}
+              helperText={errors.email?.message}
+              placeholder="carlos@ejemplo.com"
+              disabled={isEditing && user ? (user.role === 'OWNER' || user.role === 'SUPERADMIN') : false}
+            />
+          </div>
 
           {!isEditing && (
             <div className="space-y-1">
-              <label className="text-sm font-medium text-text-secondary">
-                Contraseña <span className="text-danger">*</span>
-              </label>
-                            <TextInput
-                              {...register('password')}
-                              type="password"
-                              error={!!errors.password}
-                              errorMessage={errors.password?.message}
-                              placeholder="Mínimo 6 caracteres"
-                            />
-              <p className="text-xs text-text-muted mt-1">El usuario podrá cambiarla después usando "Recuperar contraseña".</p>
+              <Input
+                label="Contraseña *"
+                {...register('password')}
+                type="password"
+                error={!!errors.password}
+                helperText={errors.password?.message || 'El usuario podrá cambiarla después usando "Recuperar contraseña".'}
+                placeholder="Mínimo 6 caracteres"
+              />
             </div>
           )}
 
@@ -174,15 +166,15 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
             <label className="text-sm font-medium text-text-secondary">
               Rol <span className="text-danger">*</span>
             </label>
-                          <Select value={watchRole} 
-                            onValueChange={(val) => setValue('role', val as any)}
-                            disabled={isEditing && (user?.role === 'OWNER' || user?.role === 'SUPERADMIN')}
-                          >
-                            <SelectItem value="STAFF">STAFF (Personal Base)</SelectItem>
-                            {isOwnerOrSuper && (
-                              <SelectItem value="ADMIN">ADMIN (Administrador Sede)</SelectItem>
-                            )}
-                          </Select>
+            <Select value={watchRole} 
+              onValueChange={(val) => setValue('role', val as any)}
+              disabled={isEditing && user ? (user.role === 'OWNER' || user.role === 'SUPERADMIN') : false}
+            >
+              <SelectItem value="STAFF">STAFF (Personal Base)</SelectItem>
+              {isOwnerOrSuper && (
+                <SelectItem value="ADMIN">ADMIN (Administrador Sede)</SelectItem>
+              )}
+            </Select>
             {errors.role && <p className="text-danger text-sm mt-1">{errors.role.message}</p>}
             {!isOwnerOrSuper && (
               <p className="text-xs text-text-muted mt-1">Solo los propietarios pueden designar nuevos administradores.</p>
@@ -194,16 +186,16 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
               <label className="text-sm font-medium text-text-secondary mb-2 block">
                 Estado del Usuario
               </label>
-                            
-                            <Select value={watchIsActive ? 'active' : 'inactive'} 
-                              onValueChange={(val) => setValue('is_active', val === 'active')}
-                              disabled={isEditing && (user?.role === 'OWNER' || user?.role === 'SUPERADMIN' || currentUser?.id === user?.id)}
-                            >
-                              <SelectItem value="active">Activo (Puede iniciar sesión)</SelectItem>
-                              <SelectItem value="inactive">Inactivo (No puede iniciar sesión)</SelectItem>
-                            </Select>
-                            
-              {currentUser?.id === user?.id && (
+              
+              <Select value={watchIsActive ? 'active' : 'inactive'} 
+                onValueChange={(val) => setValue('is_active', val === 'active')}
+                disabled={isEditing && user ? (user.role === 'OWNER' || user.role === 'SUPERADMIN' || String(currentUser?.id) === String(user.id)) : false}
+              >
+                <SelectItem value="active">Activo (Puede iniciar sesión)</SelectItem>
+                <SelectItem value="inactive">Inactivo (No puede iniciar sesión)</SelectItem>
+              </Select>
+              
+              {user && String(currentUser?.id) === String(user.id) && (
                 <p className="text-xs text-warning mt-1">No puedes desactivar tu propia cuenta.</p>
               )}
             </div>
@@ -217,7 +209,7 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
           </Button>
           <Button 
             type="submit"
-            disabled={createUser.isPending || updateUser.isPending || (isEditing && (user?.role === 'OWNER' || user?.role === 'SUPERADMIN'))}
+            disabled={createUser.isPending || updateUser.isPending || (isEditing && user ? (user.role === 'OWNER' || user.role === 'SUPERADMIN') : false)}
           >
             {isEditing ? 'Guardar Cambios' : 'Crear Usuario'}
           </Button>

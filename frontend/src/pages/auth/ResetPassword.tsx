@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Lock, CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
+import { Card } from '@shared/ui/Card';
 import { authService } from '../../services/authService';
-import { GlassCard } from '../../components/shared/GlassCard';
 
 type ResetState = 'INITIAL' | 'LOADING' | 'VALID' | 'INVALID' | 'USED' | 'EXPIRED' | 'SUCCESS';
 
@@ -30,7 +30,7 @@ export function ResetPassword() {
         setEmail(response.email);
         setStatus('VALID');
       } catch (err: any) {
-        const errorMsg = err.response?.data?.detail || 'El enlace no es válido.';
+        const errorMsg = err.response?.data?.error?.message || err.response?.data?.detail || 'El enlace no es válido.';
         if (errorMsg.includes('utilizado')) {
           setStatus('USED');
         } else if (errorMsg.includes('expirado')) {
@@ -65,7 +65,7 @@ export function ResetPassword() {
       await authService.resetPassword(token!, password);
       setStatus('SUCCESS');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Error al restablecer la contraseña.');
+      setError(err.response?.data?.error?.message || err.response?.data?.detail || 'Error al restablecer la contraseña.');
     } finally {
       setIsSubmitting(false);
     }
@@ -164,7 +164,7 @@ export function ResetPassword() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="block w-full pl-10 px-4 py-3 bg-bg-surface/50 border border-white/10 rounded-xl text-text-primary placeholder-text-muted focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary transition-all duration-200"
+              className="block w-full pl-10 px-4 py-3 bg-bg-surface border border-border-strong rounded-[var(--radius-md)] text-text-primary placeholder-text-muted focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all duration-200"
               placeholder="Mínimo 8 caracteres"
             />
           </div>
@@ -186,7 +186,7 @@ export function ResetPassword() {
               minLength={8}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="block w-full pl-10 px-4 py-3 bg-bg-surface/50 border border-white/10 rounded-xl text-text-primary placeholder-text-muted focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary transition-all duration-200"
+              className="block w-full pl-10 px-4 py-3 bg-bg-surface border border-border-strong rounded-[var(--radius-md)] text-text-primary placeholder-text-muted focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all duration-200"
               placeholder="Confirmar nueva contraseña"
             />
           </div>
@@ -212,18 +212,24 @@ export function ResetPassword() {
       <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-brand-secondary/20 rounded-full mix-blend-screen filter blur-[100px] opacity-50 animate-blob animation-delay-2000"></div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 text-center">
-        <h1 className="text-4xl font-black text-white tracking-tighter mb-8 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-          ZONA<span className="text-brand-primary drop-shadow-[0_0_15px_rgba(33,150,243,0.5)]">FIT</span>
-        </h1>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-text-primary tracking-tight">
+        <div className="flex justify-center mb-6 relative">
+          <div className="absolute inset-0 bg-white/20 blur-xl rounded-full scale-150 -z-10 opacity-50 pointer-events-none"></div>
+          <img 
+            src="/logo.png" 
+            alt="ZonaFit Logo Oficial" 
+            className="w-20 object-contain drop-shadow-lg relative z-10"
+            style={{ aspectRatio: '1664/1776' }}
+          />
+        </div>
+        <h2 className="text-center text-3xl font-extrabold text-text-primary tracking-tight">
           Crea tu nueva contraseña
         </h2>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <GlassCard className="py-8 px-4 sm:rounded-2xl sm:px-10 border border-white/10 shadow-2xl backdrop-blur-xl">
+        <Card variant="glass" padding="xl" className="shadow-2xl">
           {renderContent()}
-        </GlassCard>
+        </Card>
       </div>
     </div>
   );

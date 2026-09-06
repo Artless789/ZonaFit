@@ -15,7 +15,8 @@ from app.schemas.notification_template import (
 )
 from app.schemas.pagination import PaginationParams, PaginationResponse
 from app.schemas.sort import SortParams
-from app.services.notification_service import NotificationService
+from app.models.client import Client
+from app.services.notification_service import NotificationService, is_valid_phone, normalize_phone_co
 from app.services.notification_template_service import NotificationTemplateService
 
 # ── Templates router ───────────────────────────────────────────────────────────
@@ -56,7 +57,7 @@ def list_templates(
 
 
 @templates_router.get(
-    "/{template_id}",
+    "/{template_id:int}",
     response_model=NotificationTemplateResponse,
     summary="Get notification template",
 )
@@ -92,7 +93,7 @@ def create_template(
 
 
 @templates_router.put(
-    "/{template_id}",
+    "/{template_id:int}",
     response_model=NotificationTemplateResponse,
     summary="Update notification template",
     description=(
@@ -156,22 +157,24 @@ def list_notifications(
 
 
 @notifications_router.get(
-    "/{notification_id}",
-    response_model=NotificationResponse,
-    summary="Get notification",
+    "/whatsapp-status",
+    summary="Check WhatsApp configuration status",
+    description="Returns whether the WhatsApp Business API is configured. No credentials are exposed.",
 )
-def get_notification(
-    notification_id: int,
+def whatsapp_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    entry = NotificationService.get_by_id(db, current_user, notification_id)
-    if not entry:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Notification not found.",
-        )
-    return entry
+    configured = NotificationService.whatsapp_configured(db=db, gym_id=current_user.gym_id)
+    return {
+        "configured": configured,
+        "channel": "WHATSAPP",
+        "message": (
+            "WhatsApp listo para enviar mensajes."
+            if configured
+            else "WhatsApp no configurado. Conecta tu cuenta de WhatsApp Business desde la configuración."
+        ),
+    }
 
 
 @notifications_router.post(
@@ -191,13 +194,37 @@ def send_notification(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
+    if not is_valid_phone(data.recipient):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El número de teléfono del destinatario no tiene un formato válido.",
+        )
+
+    if data.client_id:
+        client = (
+            db.query(Client)
+            .filter(
+                Client.id == data.client_id,
+                Client.gym_id == current_user.gym_id,
+                Client.is_active == True,
+            )
+            .first()
+        )
+        if not client:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Cliente no encontrado en este gimnasio.",
+            )
+
+    normalized_recipient = normalize_phone_co(data.recipient)
+
     notification = NotificationService.dispatch(
         db=db,
         gym_id=current_user.gym_id,
         client_id=data.client_id,
         event_type=data.event_type,
         channel=data.channel,
-        recipient=data.recipient,
+        recipient=normalized_recipient,
         message_body=data.message_body,
     )
 
@@ -210,20 +237,74 @@ def send_notification(
 
 
 @notifications_router.get(
-    "/whatsapp-status",
-    summary="Check WhatsApp configuration status",
-    description="Returns whether the WhatsApp Business API is configured. No credentials are exposed.",
+    "/history",
+    response_model=PaginationResponse[NotificationResponse],
+    summary="List notification history",
+    description="Alias endpoint for list_notifications.",
 )
-def whatsapp_status(
+def list_notification_history(
+    status_filter: Optional[str] = Query(
+        default=None, alias="status",
+        description="Filter by status: PENDING, SENT or FAILED.",
+    ),
+    event_type: Optional[str] = Query(default=None),
+    client_id: Optional[int] = Query(default=None),
+    params: PaginationParams = Depends(),
+    sort: SortParams = Depends(),
+    db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    configured = NotificationService.whatsapp_configured()
-    return {
-        "configured": configured,
-        "channel": "WHATSAPP",
-        "message": (
-            "WhatsApp listo para enviar mensajes."
-            if configured
-            else "WhatsApp no configurado. Agrega WHATSAPP_PHONE_NUMBER_ID y WHATSAPP_ACCESS_TOKEN al .env del servidor."
-        ),
-    }
+    return NotificationService.get_all(
+        db=db,
+        current_user=current_user,
+        params=params,
+        sort=sort,
+        status=status_filter,
+        event_type=event_type,
+        client_id=client_id,
+    )
+
+
+@notifications_router.get(
+    "/templates",
+    response_model=PaginationResponse[NotificationTemplateResponse],
+    summary="List notification templates alias",
+    description="Returns notification templates under notifications namespace.",
+)
+def list_notification_templates_alias(
+    event_type: Optional[str] = Query(default=None),
+    channel: Optional[str] = Query(default=None),
+    is_active: Optional[bool] = Query(default=None),
+    params: PaginationParams = Depends(),
+    sort: SortParams = Depends(),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    return NotificationTemplateService.get_all(
+        db=db,
+        current_user=current_user,
+        params=params,
+        sort=sort,
+        event_type=event_type,
+        channel=channel,
+        is_active=is_active,
+    )
+
+
+@notifications_router.get(
+    "/{notification_id:int}",
+    response_model=NotificationResponse,
+    summary="Get notification by ID",
+)
+def get_notification(
+    notification_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    entry = NotificationService.get_by_id(db, current_user, notification_id)
+    if not entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notification not found.",
+        )
+    return entry

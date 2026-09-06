@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,7 +15,7 @@ import {
   Banknote,
   X,
 } from 'lucide-react';
-import { cn } from '../../utils/cn';
+import { cn } from '@shared/utils/cn';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -44,12 +44,15 @@ export function Sidebar({
   onCloseMobile,
   onToggleCollapse,
 }: SidebarProps) {
+  const location = useLocation();
+  const isDemo = location.pathname.startsWith('/demo');
+
   return (
     <>
       {isMobileOpen && (
         <button
           type="button"
-          className="fixed inset-0 z-[var(--z-modal)] bg-text-primary/35 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-[var(--z-modal)] bg-black/60 backdrop-blur-md md:hidden"
           onClick={onCloseMobile}
           aria-label="Cerrar menú de navegación"
         />
@@ -78,7 +81,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={onCloseMobile}
-            className="rounded-[var(--radius-sm)] p-2 text-text-muted transition-colors hover:bg-bg-surface-hover hover:text-text-primary md:hidden"
+            className="rounded-[var(--radius-sm)] p-2 text-text-muted transition-colors hover:bg-glass-overlay hover:text-text-primary md:hidden"
             aria-label="Cerrar menú"
           >
             <X size={20} />
@@ -86,7 +89,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="hidden rounded-[var(--radius-sm)] p-2 text-text-muted transition-colors hover:bg-bg-surface-hover hover:text-text-primary md:inline-flex"
+            className="hidden rounded-[var(--radius-sm)] p-2 text-text-muted transition-colors hover:bg-glass-overlay hover:text-text-primary md:inline-flex"
             aria-label={isCollapsed ? 'Expandir barra lateral' : 'Contraer barra lateral'}
           >
             {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
@@ -97,15 +100,15 @@ export function Sidebar({
           {navItems.map((item) => (
             <NavLink
               key={item.path}
-              to={item.path}
+              to={isDemo ? `/demo${item.path}` : item.path}
               onClick={onCloseMobile}
               title={isCollapsed ? item.label : undefined}
               className={({ isActive }) => cn(
                 'group flex min-h-[2.75rem] items-center gap-3 rounded-[var(--radius-md)] px-3 text-sm font-medium transition-all duration-300',
                 isCollapsed && 'md:justify-center md:px-2',
                 isActive
-                  ? 'bg-brand-primary/10 border border-brand-primary/20 text-brand-primary shadow-sm hover:bg-brand-primary/15'
-                  : 'bg-transparent border border-transparent text-text-secondary hover:text-text-primary hover:bg-bg-surface-hover hover:border-border-light',
+                  ? 'bg-brand-primary/10 border border-brand-primary/20 text-brand-primary shadow-sm hover:bg-brand-primary/15 backdrop-blur-sm'
+                  : 'bg-transparent border border-transparent text-text-secondary hover:text-text-primary hover:bg-glass-overlay hover:border-border-light',
               )}
             >
               {({ isActive }) => (

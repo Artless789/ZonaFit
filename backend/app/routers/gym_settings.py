@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user, require_admin
 from app.database.database import get_db
+from app.exceptions.conflict_exception import ConflictException
 from app.exceptions.not_found_exception import NotFoundException
 from app.models.user import User
 from app.schemas.gym_settings import (
@@ -27,6 +28,11 @@ def get_gym_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if not current_user.gym_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with a gym",
+        )
     try:
         return GymSettingsService.get_by_gym_id(db, current_user)
     except NotFoundException as e:
@@ -48,7 +54,18 @@ def create_gym_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    return GymSettingsService.create(db, current_user, settings_data)
+    if not current_user.gym_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with a gym",
+        )
+    try:
+        return GymSettingsService.create(db, current_user, settings_data)
+    except ConflictException as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e.message),
+        )
 
 
 @router.put(
@@ -62,6 +79,11 @@ def update_gym_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
+    if not current_user.gym_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with a gym",
+        )
     try:
         settings = GymSettingsService.get_by_gym_id(db, current_user)
     except NotFoundException as e:
@@ -82,6 +104,11 @@ def complete_onboarding(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
+    if not current_user.gym_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with a gym",
+        )
     try:
         GymSettingsService.complete_onboarding(db, current_user)
         return {"success": True, "message": "Onboarding completed successfully"}

@@ -17,8 +17,15 @@ class Settings:
     SMTP_HOST: str = os.getenv("SMTP_HOST", "")
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
     SMTP_USER: str = os.getenv("SMTP_USER", "")
-    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
-    SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "noreply@zonafit.com")
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+
+    # ── Meta WhatsApp Cloud API / Embedded Signup ───────────────────────────────
+    META_APP_ID: str = os.getenv("META_APP_ID", os.getenv("WHATSAPP_APP_ID", ""))
+    META_APP_SECRET: str = os.getenv("META_APP_SECRET", os.getenv("WHATSAPP_APP_SECRET", ""))
+    META_CONFIG_ID: str = os.getenv("META_CONFIG_ID", "")
+    META_GRAPH_API_VERSION: str = os.getenv("META_GRAPH_API_VERSION", os.getenv("WHATSAPP_API_VERSION", "v22.0"))
+    META_WEBHOOK_VERIFY_TOKEN: str = os.getenv("META_WEBHOOK_VERIFY_TOKEN", os.getenv("WHATSAPP_WEBHOOK_VERIFY_TOKEN", "zonafit_webhook_verify_token"))
+    META_WEBHOOK_SECRET: str = os.getenv("META_WEBHOOK_SECRET", os.getenv("WHATSAPP_APP_SECRET", ""))
+    META_SYSTEM_USER_TOKEN: str = os.getenv("META_SYSTEM_USER_TOKEN", "")
 
 settings = Settings()

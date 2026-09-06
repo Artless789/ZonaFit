@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Modal } from '../../components/shared/Modal';
-import { Input } from '../../components/shared/Input';
-import { Select } from '../../components/shared/Select';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { useToast } from '../../components/shared/Toast';
+import { Modal } from '@shared/ui/Modal';
+import { NumericInput } from '@shared/ui/NumericInput';
+import { Select } from '@shared/ui/Select';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { DollarSign } from 'lucide-react';
+import { useToast } from '@shared/ui/Toast';
 import { useAccountsReceivables } from '../../hooks/useAccountsReceivables';
-import type { AccountsReceivable } from '../../types/accountsReceivable';
+import type { AccountsReceivable } from '@shared/types/accountsReceivable';
+import { formatCurrency } from '@shared/utils/formatters';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -26,9 +28,7 @@ export function PaymentModal({ isOpen, onClose, ar }: PaymentModalProps) {
   const [amountStr, setAmountStr] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(price);
-  };
+  const formatPrice = formatCurrency;
   
   if (!ar) return null;
 
@@ -87,11 +87,11 @@ export function PaymentModal({ isOpen, onClose, ar }: PaymentModalProps) {
         </div>
 
         <div className="space-y-4 pt-2">
-          <Input 
-            type="number"
+          <NumericInput 
             label="Monto del Abono"
             placeholder="0"
             value={amountStr}
+            leftIcon={<DollarSign size={16} />}
             onChange={(e) => setAmountStr(e.target.value)}
             disabled={isSaving}
             min="0"

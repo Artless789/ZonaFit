@@ -3,7 +3,7 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { SuperadminSidebar } from '../components/layout/SuperadminSidebar';
 import { Navbar } from '../components/layout/Navbar';
 import { useAuth } from '../context/AuthContext';
-import { Spinner } from '../components/shared/Spinner';
+import { Spinner } from '@shared/ui/Spinner';
 
 export function SuperadminLayout() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -24,7 +24,8 @@ export function SuperadminLayout() {
   }
 
   if (user?.role.toUpperCase() !== 'SUPERADMIN') {
-    return <Navigate to="/dashboard" replace />;
+    window.location.assign('/app/dashboard');
+    return null;
   }
 
   return (

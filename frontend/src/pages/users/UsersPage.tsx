@@ -1,19 +1,12 @@
-// @ts-nocheck
-import { Select, SelectItem } from '../../components/shared/Select';
-import React, { useState } from 'react';
+import { Select, SelectItem } from '@shared/ui/Select';
+import { useState } from 'react';
 import { useUsers } from '../../hooks/useUsers';
-import {
-  Title,
-  Text,
-  TextInput,
-  Flex
-} from '@tremor/react';
-import { MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { Search, Plus } from 'lucide-react';
 import { UserDrawer } from './UserDrawer';
-import type { User } from '../../types/user';
-import { GlassCard } from '../../components/shared/GlassCard';
-import { Button } from '../../components/shared/Button';
-import { Badge } from '../../components/shared/Badge';
+import type { User } from '@shared/types/user';
+import { Input } from '@shared/ui/Input';
+import { Button } from '@shared/ui/Button';
+import { Badge } from '@shared/ui/Badge';
 
 export const UsersPage = () => {
   const [search, setSearch] = useState('');
@@ -44,18 +37,18 @@ export const UsersPage = () => {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-center">
         <div>
-          <Title className="text-2xl font-bold text-text-primary">Usuarios y Personal</Title>
-          <Text className="text-text-secondary">Administra los accesos y roles del personal del gimnasio.</Text>
+          <h1 className="text-2xl font-bold text-text-primary">Usuarios y Personal</h1>
+          <p className="text-sm text-text-secondary">Administra los accesos y roles del personal del gimnasio.</p>
         </div>
-        <Button onClick={handleCreate}>
-          <PlusIcon className="w-4 h-4 mr-2 inline-block"/> Nuevo Usuario
+        <Button onClick={handleCreate} className="flex items-center gap-2">
+          <Plus size={16} /> Nuevo Usuario
         </Button>
       </div>
 
-      <GlassCard className="p-4 mb-6 flex flex-col sm:flex-row gap-4">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-4 mb-6 flex flex-col sm:flex-row gap-4">
         <div className="w-full sm:max-w-xs">
-          <TextInput
-            icon={MagnifyingGlassIcon}
+          <Input
+            leftIcon={<Search size={16} className="text-text-muted" />}
             placeholder="Buscar por nombre o correo..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -68,9 +61,9 @@ export const UsersPage = () => {
             <SelectItem value="inactive">Inactivos</SelectItem>
           </Select>
         </div>
-      </GlassCard>
+      </div>
 
-      <GlassCard className="p-0 overflow-hidden">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-0 overflow-hidden">
         <div className="overflow-x-auto rounded-xl border border-border-medium">
           <table className="w-full">
             <thead className="bg-bg-surface/80 border-b border-border-medium">
@@ -92,7 +85,7 @@ export const UsersPage = () => {
                   <td className="px-4 py-3 text-sm font-medium text-text-primary">{user.full_name}</td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{user.email}</td>
                   <td className="px-4 py-3 text-sm">
-                    <Badge variant={user.role === 'OWNER' ? 'purple' : user.role === 'ADMIN' ? 'info' : 'neutral'}>
+                    <Badge variant={user.role === 'OWNER' ? 'default' : user.role === 'ADMIN' ? 'info' : 'neutral'}>
                       {user.role}
                     </Badge>
                   </td>
@@ -116,7 +109,7 @@ export const UsersPage = () => {
             </tbody>
           </table>
         </div>
-      </GlassCard>
+      </div>
 
       <UserDrawer 
         isOpen={isDrawerOpen}

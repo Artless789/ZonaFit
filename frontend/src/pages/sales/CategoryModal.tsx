@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Modal } from '../../components/shared/Modal';
-import { Input } from '../../components/shared/Input';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { useToast } from '../../components/shared/Toast';
-import { Badge } from '../../components/shared/Badge';
-import { categorySchema, CategoryFormValues } from '../../schemas/categorySchema';
-import type { Category } from '../../types/category';
+import { Modal } from '@shared/ui/Modal';
+import { Input } from '@shared/ui/Input';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { useToast } from '@shared/ui/Toast';
+import { Badge } from '@shared/ui/Badge';
+import { categorySchema, CategoryFormValues } from '@shared/schemas/categorySchema';
+import type { Category } from '@shared/types/category';
 import { useCategories } from '../../hooks/useCategories';
 import { Edit2, Ban, Tag } from 'lucide-react';
-import { cn } from '../../utils/cn';
+import { cn } from '@shared/utils/cn';
 
 interface CategoryModalProps {
   isOpen: boolean;

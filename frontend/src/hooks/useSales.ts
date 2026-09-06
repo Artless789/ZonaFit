@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { saleService } from '../services/saleService';
-import { SaleCreate, SaleUpdate, Sale, SaleDetailCreate, SaleDetail } from '../types/sale';
+import { SaleCreate, SaleUpdate, Sale, SaleDetailCreate, SaleDetail } from '@shared/types/sale';
 import { Paginated } from '../services/membershipPlanService';
 
 export const useSales = () => {

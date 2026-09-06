@@ -1,19 +1,22 @@
 import { useState, useMemo } from 'react';
-import { ShoppingCart, Search, Plus, Minus, X, CreditCard, ShoppingBag, Banknote, CalendarClock, Download, CheckCircle2 } from 'lucide-react';
-import type { Product } from '../../types/product';
-import type { Category } from '../../types/category';
-import type { Client } from '../../types/client';
-import { GlassCard } from '../../components/shared/GlassCard';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { ClientSearchCombobox } from '../../components/shared/ClientSearchCombobox';
-import { Input } from '../../components/shared/Input';
-import { Select } from '../../components/shared/Select';
-import { useToast } from '../../components/shared/Toast';
+import { useQueryClient } from '@tanstack/react-query';
+import { ShoppingCart, Search, Plus, Minus, X, CreditCard, ShoppingBag, Banknote, CalendarClock, Download, CheckCircle2, DollarSign } from 'lucide-react';
+import type { Product } from '@shared/types/product';
+import type { Category } from '@shared/types/category';
+import type { Client } from '@shared/types/client';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { ClientSearchCombobox } from '@shared/ui/ClientSearchCombobox';
+import { Input } from '@shared/ui/Input';
+import { NumericInput } from '@shared/ui/NumericInput';
+import { Select } from '@shared/ui/Select';
+import { useToast } from '@shared/ui/Toast';
 import { useSales } from '../../hooks/useSales';
-import { Modal } from '../../components/shared/Modal';
-import { cn } from '../../utils/cn';
-import { generateReceiptPDF } from '../../utils/pdfGenerator';
-import type { Invoice } from '../../types/invoice';
+import { useGymSettings } from '../../hooks/useGymSettings';
+import { Modal } from '@shared/ui/Modal';
+import { cn } from '@shared/utils/cn';
+import { generateReceiptPDF } from '@shared/utils/pdfGenerator';
+import type { Invoice } from '@shared/types/invoice';
+import { formatCurrency } from '@shared/utils/formatters';
 
 interface POSViewProps {
   products: Product[];
@@ -33,8 +36,11 @@ const PAYMENT_METHODS = [
 ];
 
 export function POSView({ products, categories, clients }: POSViewProps) {
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const { createMutation, createDetailMutation } = useSales();
+  const { query: gymSettingsQuery } = useGymSettings();
+  const gymSettings = gymSettingsQuery.data;
 
   // State
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,7 +71,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
     });
   }, [activeProducts, searchTerm, selectedCategory]);
 
-  const cartTotal = cart.reduce((total, item) => total + (item.product.sale_price * item.quantity), 0);
+  const cartTotal = cart.reduce((total, item) => total + ((Number(item.product.sale_price) || 0) * item.quantity), 0);
   
   const initialPaymentNum = initialPaymentStr ? parseFloat(initialPaymentStr.replace(/[^0-9.-]+/g, '')) || 0 : 0;
   const balanceDue = Math.max(0, cartTotal - initialPaymentNum);
@@ -112,8 +118,8 @@ export function POSView({ products, categories, clients }: POSViewProps) {
     setCart(prev => prev.filter(item => item.product.id !== productId));
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(price);
+  const formatPrice = (price: number | string) => {
+    return formatCurrency(Number(price) || 0);
   };
 
   const handleCheckoutIntent = () => {
@@ -185,6 +191,15 @@ export function POSView({ products, categories, clients }: POSViewProps) {
         toast({ type: 'warning', title: 'Venta Procesada', message: 'La venta se registró, pero no se pudo generar el comprobante automático.' });
       }
 
+      // 5. Invalidate relevant queries so all views update reactively
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts_receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['cash_registers'] });
+      queryClient.invalidateQueries({ queryKey: ['cash_movements'] });
+
       if (createdInvoice) {
         setCompletedInvoice(createdInvoice);
       } else {
@@ -193,7 +208,8 @@ export function POSView({ products, categories, clients }: POSViewProps) {
       }
       
     } catch (error: any) {
-      toast({ type: 'error', title: 'Error en Checkout', message: error?.response?.data?.detail || 'No pudimos completar la venta. Inténtalo nuevamente.' });
+      const errorDetail = error?.response?.data?.detail || error?.response?.data?.error?.message || error?.message || 'No pudimos completar la venta. Inténtalo nuevamente.';
+      toast({ type: 'error', title: 'Error en Checkout', message: errorDetail });
     }
   };
 
@@ -221,6 +237,13 @@ export function POSView({ products, categories, clients }: POSViewProps) {
         details,
         clientName: client?.full_name,
         clientDocument: client?.document,
+        gymName: gymSettings?.trade_name || gymSettings?.legal_name || 'ZonaFit',
+        gymNit: gymSettings?.tax_id,
+        gymPhone: gymSettings?.official_phone,
+        gymAddress: gymSettings?.physical_address,
+        gymCity: gymSettings?.city,
+        paymentMethod: completedInvoice.payment_method,
+        receiptFooterNotes: gymSettings?.receipt_footer_notes,
       });
     } catch (err) {
       toast({ type: 'error', title: 'Error', message: 'No se pudo descargar el comprobante.' });
@@ -234,7 +257,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-200px)] min-h-[600px]">
         
         {/* LEFT COLUMN: Catalog */}
-        <GlassCard className="lg:col-span-7 xl:col-span-8 flex flex-col h-full overflow-hidden p-0">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 lg:col-span-7 xl:col-span-8 flex flex-col h-full overflow-hidden p-0">
           <div className="p-4 border-b border-border-light bg-bg-surface flex flex-col gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
@@ -320,10 +343,10 @@ export function POSView({ products, categories, clients }: POSViewProps) {
               </div>
             )}
           </div>
-        </GlassCard>
+        </div>
 
         {/* RIGHT COLUMN: Cart & Checkout */}
-        <GlassCard className="lg:col-span-5 xl:col-span-4 flex flex-col h-full overflow-hidden p-0 border-brand-primary/20 shadow-glass-large">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 lg:col-span-5 xl:col-span-4 flex flex-col h-full overflow-hidden p-0 border-brand-primary/20 shadow-glass-large">
           
           {/* Sale Type Selector */}
           <div className="p-3 border-b border-border-light bg-bg-surface">
@@ -445,15 +468,14 @@ export function POSView({ products, categories, clients }: POSViewProps) {
                   disabled={isCheckingOut}
                   className="w-full"
                 />
-                <Input 
-                  type="number"
+                <NumericInput 
                   label="Abono Inicial (Opcional)"
                   placeholder="0"
+                  leftIcon={<DollarSign size={16} />}
                   value={initialPaymentStr}
                   onChange={(e) => setInitialPaymentStr(e.target.value)}
                   disabled={isCheckingOut}
                   className="w-full"
-                  min="0"
                   max={cartTotal}
                 />
               </div>
@@ -516,7 +538,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
               {isCheckingOut ? 'Procesando...' : (saleType === 'CREDIT' ? 'Generar Crédito' : 'Procesar Venta')}
             </ActionGlowButton>
           </div>
-        </GlassCard>
+        </div>
 
       </div>
 

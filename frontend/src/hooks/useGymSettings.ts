@@ -1,17 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gymSettingsService } from '../services/gymSettingsService';
-import { GymSettingsCreate, GymSettingsUpdate, GymSettings } from '../types/gymSettings';
+import { GymSettingsCreate, GymSettingsUpdate, GymSettings } from '@shared/types/gymSettings';
 import { useAuth } from '../context/AuthContext';
 
 export const useGymSettings = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const queryKey = ['gymSettings'];
+  const queryKey = ['gymSettings', user?.gym_id];
 
   const query = useQuery<GymSettings, Error>({
     queryKey,
     queryFn: gymSettingsService.getSettings,
-    enabled: user?.role?.toUpperCase() !== 'SUPERADMIN',
+    enabled: !!user?.gym_id && user?.role?.toUpperCase() !== 'SUPERADMIN',
     retry: (failureCount, error: any) => {
       // Don't retry if it's a 404 (needs setup) or 401/403
       if (error.response?.status === 404 || error.response?.status === 401 || error.response?.status === 403) {
@@ -25,6 +25,7 @@ export const useGymSettings = () => {
     mutationFn: gymSettingsService.createSettings,
     onSuccess: (data) => {
       queryClient.setQueryData(queryKey, data);
+      queryClient.invalidateQueries({ queryKey: ['gymSettings'] });
     },
   });
 
@@ -32,6 +33,7 @@ export const useGymSettings = () => {
     mutationFn: gymSettingsService.updateSettings,
     onSuccess: (data) => {
       queryClient.setQueryData(queryKey, data);
+      queryClient.invalidateQueries({ queryKey: ['gymSettings'] });
     },
   });
 

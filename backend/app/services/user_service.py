@@ -26,8 +26,9 @@ class UserService:
         if current_user.role.upper() != "SUPERADMIN":
             query = query.filter(User.gym_id == current_user.gym_id)
         
-        if filters.search:
-            search_term = f"%{filters.search}%"
+        search_val = getattr(filters, "search", None)
+        if search_val:
+            search_term = f"%{search_val}%"
             query = query.filter(
                 or_(
                     User.full_name.ilike(search_term),
@@ -35,10 +36,14 @@ class UserService:
                 )
             )
 
-        if filters.status == "active":
-            query = query.filter(User.is_active == True)
-        elif filters.status == "inactive":
-            query = query.filter(User.is_active == False)
+        status_val = getattr(filters, "status", None)
+        if status_val:
+            status_clean = str(status_val).lower().strip()
+            if status_clean in ("active", "activo", "true", "1"):
+                query = query.filter(User.is_active == True)
+            elif status_clean in ("inactive", "inactivo", "false", "0"):
+                query = query.filter(User.is_active == False)
+            # If status is "all" or any other unhandled string, do not restrict by is_active
 
         allowed_sort_fields = {
             "id": User.id,
@@ -47,9 +52,14 @@ class UserService:
             "role": User.role,
         }
         
-        if sort.sort_by in allowed_sort_fields:
-            sort_column = allowed_sort_fields[sort.sort_by]
-            if sort.sort_desc:
+        sort_by = getattr(sort, "sort_by", None) or getattr(sort, "sort", None)
+        sort_desc = getattr(sort, "sort_desc", None)
+        if sort_desc is None:
+            sort_desc = (getattr(sort, "order", "asc") or "asc").lower() == "desc"
+
+        if sort_by and sort_by in allowed_sort_fields:
+            sort_column = allowed_sort_fields[sort_by]
+            if sort_desc:
                 query = query.order_by(sort_column.desc())
             else:
                 query = query.order_by(sort_column.asc())
@@ -82,14 +92,17 @@ class UserService:
         db.info['bypass_rls'] = True
         db.execute(text("SELECT set_config('app.bypass_rls', 'on', true)"))
 
-        existing_user = db.query(User).filter(User.email == user_data.email).first()
-        if existing_user:
-            raise ValueError("El correo electrónico ya está registrado.")
-            
-        # Restore RLS if it's not superadmin
-        if current_user.role.upper() != "SUPERADMIN":
-            db.info['tenant_id'] = current_user.gym_id
-            db.execute(text("SELECT set_config('app.current_gym_id', :gym_id, true)"), {"gym_id": str(current_user.gym_id)})
+        try:
+            existing_user = db.query(User).filter(User.email == user_data.email).first()
+            if existing_user:
+                raise ValueError("El correo electrónico ya está registrado.")
+        finally:
+            # ALWAYS restore RLS after global check — prevents bypass leaking via connection pool
+            if current_user.role.upper() != "SUPERADMIN":
+                db.info.pop('bypass_rls', None)
+                db.info['tenant_id'] = current_user.gym_id
+                db.execute(text("SELECT set_config('app.bypass_rls', 'off', true)"))
+                db.execute(text("SELECT set_config('app.current_gym_id', :gym_id, true)"), {"gym_id": str(current_user.gym_id)})
 
         new_user = User(
             full_name=user_data.full_name,
@@ -151,13 +164,18 @@ class UserService:
              from sqlalchemy import text
              db.info['bypass_rls'] = True
              db.execute(text("SELECT set_config('app.bypass_rls', 'on', true)"))
-             existing_user = db.query(User).filter(User.email == user_data.email).first()
-             if existing_user and existing_user.id != user.id:
-                 raise ValueError("El correo electrónico ya está registrado.")
-             if current_user.role.upper() != "SUPERADMIN":
-                 db.info['tenant_id'] = current_user.gym_id
-                 db.execute(text("SELECT set_config('app.current_gym_id', :gym_id, true)"), {"gym_id": str(current_user.gym_id)})
-                 
+             try:
+                 existing_user = db.query(User).filter(User.email == user_data.email).first()
+                 if existing_user and existing_user.id != user.id:
+                     raise ValueError("El correo electrónico ya está registrado.")
+             finally:
+                 # ALWAYS restore RLS after global check — prevents bypass leaking via connection pool
+                 if current_user.role.upper() != "SUPERADMIN":
+                     db.info.pop('bypass_rls', None)
+                     db.info['tenant_id'] = current_user.gym_id
+                     db.execute(text("SELECT set_config('app.bypass_rls', 'off', true)"))
+                     db.execute(text("SELECT set_config('app.current_gym_id', :gym_id, true)"), {"gym_id": str(current_user.gym_id)})
+
              user.email = user_data.email
 
         if user_data.full_name is not None:

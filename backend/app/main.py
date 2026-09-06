@@ -31,6 +31,8 @@ from app.routers import (
     accounts_receivables,
     cash_registers,
     users,
+    whatsapp,
+    whatsapp_webhook,
 )
 
 app = FastAPI(
@@ -132,6 +134,7 @@ app.include_router(auth.router)
 app.include_router(gym_settings.router)
 app.include_router(superadmin.router)
 app.include_router(subscriptions.router)
+app.include_router(whatsapp_webhook.router)
 
 # Protected by subscription
 active_sub_dep = [Depends(require_active_subscription)]
@@ -155,3 +158,4 @@ app.include_router(cash_registers.router, dependencies=active_sub_dep)
 app.include_router(users.router, dependencies=active_sub_dep)
 app.include_router(notifications.templates_router, dependencies=active_sub_dep)
 app.include_router(notifications.notifications_router, dependencies=active_sub_dep)
+app.include_router(whatsapp.router, dependencies=active_sub_dep)

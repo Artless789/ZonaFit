@@ -29,22 +29,25 @@ class SaleService:
         sale_data: SaleCreate,
     ):
 
-        client = (
-            db.query(Client)
-            .filter(
-                Client.id == sale_data.client_id,
-                Client.gym_id == current_user.gym_id,
-                Client.is_active == True,
+        client_id = None
+        if sale_data.client_id:
+            client = (
+                db.query(Client)
+                .filter(
+                    Client.id == sale_data.client_id,
+                    Client.gym_id == current_user.gym_id,
+                    Client.is_active == True,
+                )
+                .first()
             )
-            .first()
-        )
 
-        if not client:
-            raise NotFoundException("Client not found.")
+            if not client:
+                raise NotFoundException("Client not found.")
+            client_id = client.id
 
         sale = Sale(
             gym_id=current_user.gym_id,
-            client_id=client.id,
+            client_id=client_id,
             total=Decimal("0.00"),
             status=SaleStatus.OPEN,
             notes=sale_data.notes,

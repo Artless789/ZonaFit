@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { Building2, Users, AlertCircle, ShieldAlert, CreditCard, DollarSign, Activity } from 'lucide-react';
-import { GlassCard } from '../../components/shared/GlassCard';
-import { Skeleton } from '../../components/shared/Skeleton';
+import { Skeleton } from '@shared/ui/Skeleton';
 import { superadminService } from '../../services/superadminService';
-import { Badge } from '../../components/shared/Badge';
+import { Badge } from '@shared/ui/Badge';
+import { formatCurrency } from '@shared/utils/formatters';
 
 export function SuperadminDashboard() {
   const { data: metrics, isLoading, isError } = useQuery({
@@ -27,13 +27,13 @@ export function SuperadminDashboard() {
 
   if (isError) {
     return (
-      <GlassCard className="p-8 text-center max-w-lg mx-auto flex flex-col items-center gap-4 mt-8">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-8 text-center max-w-lg mx-auto flex flex-col items-center gap-4 mt-8">
         <ShieldAlert className="w-12 h-12 text-danger" />
         <h2 className="text-xl font-bold text-text-primary">Error de Conexión</h2>
         <p className="text-sm text-text-secondary">
           No se pudieron cargar las métricas globales.
         </p>
-      </GlassCard>
+      </div>
     );
   }
 
@@ -45,7 +45,7 @@ export function SuperadminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <GlassCard className="p-6 flex flex-col gap-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-brand-primary/10 rounded-lg">
               <Building2 className="w-6 h-6 text-brand-primary" />
@@ -53,9 +53,9 @@ export function SuperadminDashboard() {
             <h3 className="text-sm font-semibold text-text-secondary">Gimnasios Totales</h3>
           </div>
           <div className="text-3xl font-bold text-text-primary">{metrics?.total_gyms}</div>
-        </GlassCard>
+        </div>
 
-        <GlassCard className="p-6 flex flex-col gap-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-success/10 rounded-lg">
               <Building2 className="w-6 h-6 text-success" />
@@ -63,9 +63,9 @@ export function SuperadminDashboard() {
             <h3 className="text-sm font-semibold text-text-secondary">Gimnasios Activos</h3>
           </div>
           <div className="text-3xl font-bold text-text-primary">{metrics?.active_gyms}</div>
-        </GlassCard>
+        </div>
 
-        <GlassCard className="p-6 flex flex-col gap-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-warning/10 rounded-lg">
               <AlertCircle className="w-6 h-6 text-warning" />
@@ -73,9 +73,9 @@ export function SuperadminDashboard() {
             <h3 className="text-sm font-semibold text-text-secondary">Pendientes de Onboarding</h3>
           </div>
           <div className="text-3xl font-bold text-text-primary">{metrics?.pending_onboarding_gyms}</div>
-        </GlassCard>
+        </div>
 
-        <GlassCard className="p-6 flex flex-col gap-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-info/10 rounded-lg">
               <Users className="w-6 h-6 text-info" />
@@ -83,9 +83,9 @@ export function SuperadminDashboard() {
             <h3 className="text-sm font-semibold text-text-secondary">Usuarios Totales</h3>
           </div>
           <div className="text-3xl font-bold text-text-primary">{metrics?.total_users}</div>
-        </GlassCard>
+        </div>
         
-        <GlassCard className="p-6 flex flex-col gap-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-danger/10 rounded-lg">
               <Building2 className="w-6 h-6 text-danger" />
@@ -93,11 +93,11 @@ export function SuperadminDashboard() {
             <h3 className="text-sm font-semibold text-text-secondary">Gimnasios Inactivos</h3>
           </div>
           <div className="text-3xl font-bold text-text-primary">{metrics?.inactive_gyms}</div>
-        </GlassCard>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <GlassCard className="p-6 flex flex-col gap-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-success/10 rounded-lg">
               <CreditCard className="w-6 h-6 text-success" />
@@ -105,9 +105,9 @@ export function SuperadminDashboard() {
             <h3 className="text-sm font-semibold text-text-secondary">Suscripciones Activas</h3>
           </div>
           <div className="text-3xl font-bold text-text-primary">{metrics?.active_subscriptions}</div>
-        </GlassCard>
+        </div>
         
-        <GlassCard className="p-6 flex flex-col gap-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-brand-primary/10 rounded-lg">
               <Activity className="w-6 h-6 text-brand-primary" />
@@ -115,9 +115,9 @@ export function SuperadminDashboard() {
             <h3 className="text-sm font-semibold text-text-secondary">Suscripciones en Trial</h3>
           </div>
           <div className="text-3xl font-bold text-text-primary">{metrics?.trial_subscriptions}</div>
-        </GlassCard>
+        </div>
 
-        <GlassCard className="p-6 flex flex-col gap-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-warning/10 rounded-lg">
               <AlertCircle className="w-6 h-6 text-warning" />
@@ -125,9 +125,9 @@ export function SuperadminDashboard() {
             <h3 className="text-sm font-semibold text-text-secondary">Suscripciones Vencidas</h3>
           </div>
           <div className="text-3xl font-bold text-text-primary">{metrics?.expired_subscriptions}</div>
-        </GlassCard>
+        </div>
         
-        <GlassCard className="p-6 flex flex-col gap-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-success/10 rounded-lg">
               <DollarSign className="w-6 h-6 text-success" />
@@ -136,13 +136,13 @@ export function SuperadminDashboard() {
           </div>
           <div className="text-3xl font-bold text-text-primary">
             {metrics?.total_revenue != null 
-              ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(metrics.total_revenue)
+              ? formatCurrency(metrics.total_revenue)
               : '$0'}
           </div>
-        </GlassCard>
+        </div>
       </div>
 
-      <GlassCard className="p-6">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6">
         <h2 className="text-lg font-bold text-text-primary mb-4">Información del Sistema</h2>
         <div className="flex items-center justify-between py-2 border-b border-border-light">
           <span className="text-text-secondary text-sm">Superadministradores Registrados</span>
@@ -152,7 +152,7 @@ export function SuperadminDashboard() {
           <span className="text-text-secondary text-sm">Planes Comerciales Activos</span>
           <Badge variant="success">{metrics?.active_plans}</Badge>
         </div>
-      </GlassCard>
+      </div>
     </div>
   );
 }

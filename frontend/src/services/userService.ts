@@ -1,6 +1,6 @@
 import { api } from './api';
-import type { User, UserCreate, UserUpdate } from '../types/user';
-import type { PaginatedResponse } from '../types/pagination';
+import type { User, UserCreate, UserUpdate } from '@shared/types/user';
+import type { PaginatedResponse } from '@shared/types/pagination';
 
 export const userService = {
   getUsers: async (

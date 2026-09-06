@@ -10,12 +10,9 @@ db = SessionLocal()
 db.info['bypass_rls'] = True
 db.execute(text("SELECT set_config('app.bypass_rls', 'on', true)"))
 
-payments = db.query(SubscriptionPayment).all()
-print('PAYMENTS:')
-for p in payments:
-    print(f'ID: {p.id}, Gym: {p.gym_id}, Sub: {p.subscription_id}, Status: {p.status.value}, Wompi: {p.provider_transaction_id}')
+res = db.execute(text("SELECT payment_method, count(1) FROM payments GROUP BY payment_method")).fetchall()
+print('PAYMENTS BY METHOD:', res)
 
-subs = db.query(Subscription).all()
-print('\nSUBSCRIPTIONS:')
-for s in subs:
-    print(f'ID: {s.id}, Gym: {s.gym_id}, Status: {s.status}, Plan: {s.plan_id}, Ends: {s.ends_at}')
+
+
+

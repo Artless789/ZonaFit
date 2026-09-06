@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
 from app.database.database import get_db
+from app.exceptions.not_found_exception import NotFoundException
 from app.models.user import User
 from app.schemas.membership import (
     MembershipCreate,
@@ -32,6 +33,11 @@ def create_membership(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if not current_user.gym_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with a gym",
+        )
     try:
         return MembershipService.create(
             db,
@@ -39,9 +45,14 @@ def create_membership(
             membership,
             background_tasks,
         )
+    except NotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e.message),
+        )
     except ValueError as e:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
 
@@ -57,6 +68,11 @@ def get_memberships(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if not current_user.gym_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with a gym",
+        )
     return MembershipService.get_all(
         db,
         current_user,
@@ -75,6 +91,11 @@ def get_membership(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if not current_user.gym_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with a gym",
+        )
     membership = MembershipService.get_by_id(
         db,
         current_user,
@@ -83,7 +104,7 @@ def get_membership(
 
     if not membership:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Membership not found.",
         )
 
@@ -100,6 +121,11 @@ def update_membership(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if not current_user.gym_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with a gym",
+        )
     membership = MembershipService.get_by_id(
         db,
         current_user,
@@ -108,7 +134,7 @@ def update_membership(
 
     if not membership:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Membership not found.",
         )
 
@@ -128,6 +154,11 @@ def delete_membership(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if not current_user.gym_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with a gym",
+        )
     membership = MembershipService.get_by_id(
         db,
         current_user,
@@ -136,7 +167,7 @@ def delete_membership(
 
     if not membership:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Membership not found.",
         )
 

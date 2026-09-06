@@ -1,5 +1,5 @@
 import { ShieldCheck } from 'lucide-react';
-import { Button } from '../../components/shared/Button';
+import { Button } from '@shared/ui/Button';
 import { useNavigate } from 'react-router-dom';
 
 export function PrivacyPage() {

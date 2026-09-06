@@ -1,7 +1,5 @@
 class PaymentMethod:
     CASH = "CASH"
-    CARD = "CARD"
     TRANSFER = "TRANSFER"
-    NEQUI = "NEQUI"
-    DAVIPLATA = "DAVIPLATA"
-    EFECTIVO = "EFECTIVO"  
+    CARD = "CARD"
+    ALL = [CASH, TRANSFER, CARD]

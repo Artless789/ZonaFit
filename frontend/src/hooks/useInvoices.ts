@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invoiceService } from '../services/invoiceService';
-import { useToast } from '../components/shared/Toast';
+import { useToast } from '@shared/ui/Toast';
 
 export function useInvoices(params?: { page?: number; limit?: number; search?: string; status?: string }) {
   const queryClient = useQueryClient();

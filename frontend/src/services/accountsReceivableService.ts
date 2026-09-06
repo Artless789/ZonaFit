@@ -1,7 +1,7 @@
 import { api } from './api';
-import type { AccountsReceivable, PaymentRequest } from '../types/accountsReceivable';
-import type { Payment } from '../types/payment';
-import type { PaginationResponse } from '../types/pagination';
+import type { AccountsReceivable, PaymentRequest } from '@shared/types/accountsReceivable';
+import type { Payment } from '@shared/types/payment';
+import type { PaginationResponse } from '@shared/types/pagination';
 
 export const accountsReceivableService = {
   getAll: async (params?: { page?: number; limit?: number; status?: string }): Promise<PaginationResponse<AccountsReceivable>> => {

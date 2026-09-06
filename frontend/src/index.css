@@ -40,7 +40,10 @@
     inset -1px 0 0 0 rgba(0, 0, 0, 0.3),
     inset 0 -1px 0 0 rgba(0, 0, 0, 0.5),
     inset 0 10px 20px -10px rgba(255, 255, 255, 0.06);
-  --glass-blur: 16px;
+  --glass-blur-1: 4px;
+  --glass-blur-2: 12px;
+  --glass-blur-3: 24px;
+  --glass-blur: var(--glass-blur-2); /* Legacy support */
 
   /* 4. TEXT */
   --color-text-primary: #F2F3F5;
@@ -214,6 +217,9 @@
   --shadow-glass: var(--glass-shadow);
   --shadow-glass-large: var(--shadow-lg);
   --shadow-glass-up: var(--shadow-md);
+  --blur-glass-1: var(--glass-blur-1);
+  --blur-glass-2: var(--glass-blur-2);
+  --blur-glass-3: var(--glass-blur-3);
 }
 
 @layer base {
@@ -336,6 +342,54 @@
   box-shadow: var(--glass-shadow);
   backdrop-filter: blur(var(--glass-blur)) saturate(155%);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(155%);
+}
+
+/* --------------------------------------------------
+   MATERIAL SYSTEM CLASSES
+   -------------------------------------------------- */
+
+.material-background {
+  background-color: var(--color-bg-page);
+}
+
+.material-surface {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle, var(--color-border-light));
+}
+
+.material-elevated {
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-medium);
+  box-shadow: var(--shadow-sm);
+}
+
+.material-glass {
+  background: var(--glass-ambient-light), var(--glass-background);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur-2)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-2)) saturate(160%);
+}
+
+.material-glass-strong {
+  background: var(--glass-ambient-light), var(--glass-background);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur-3)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-3)) saturate(180%);
+}
+
+.material-glass-interactive {
+  background: linear-gradient(135deg, var(--color-glass-overlay), transparent 58%), var(--glass-background);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur-1)) saturate(155%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-1)) saturate(155%);
+  transition: all var(--transition-base);
+}
+.material-glass-interactive:hover {
+  background: linear-gradient(135deg, rgba(255,255,255,0.06), transparent 58%), var(--glass-background);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .zonafit-table-head {

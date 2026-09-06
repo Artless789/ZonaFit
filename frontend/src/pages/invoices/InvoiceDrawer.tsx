@@ -1,14 +1,15 @@
-import { Drawer } from '../../components/shared/Drawer';
-import { GlassCard } from '../../components/shared/GlassCard';
-import { Badge } from '../../components/shared/Badge';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { Skeleton } from '../../components/shared/Skeleton';
+import { Drawer } from '@shared/ui/Drawer';
+import { Badge } from '@shared/ui/Badge';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { Skeleton } from '@shared/ui/Skeleton';
 import { Download, AlertCircle, ShoppingBag } from 'lucide-react';
 import { useInvoiceDetails } from '../../hooks/useInvoices';
-import { generateReceiptPDF } from '../../utils/pdfGenerator';
-import type { Invoice } from '../../types/invoice';
+import { useGymSettings } from '../../hooks/useGymSettings';
+import { generateReceiptPDF } from '@shared/utils/pdfGenerator';
+import type { Invoice } from '@shared/types/invoice';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatCurrency } from '@shared/utils/formatters';
 
 interface InvoiceDrawerProps {
   isOpen: boolean;
@@ -20,10 +21,10 @@ interface InvoiceDrawerProps {
 
 export function InvoiceDrawer({ isOpen, onClose, invoice, clientName, clientDocument }: InvoiceDrawerProps) {
   const { data: details = [], isLoading, error } = useInvoiceDetails(invoice?.id || 0);
+  const { query: gymSettingsQuery } = useGymSettings();
+  const gymSettings = gymSettingsQuery.data;
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(price);
-  };
+  const formatPrice = formatCurrency;
   
   const formatDate = (dateString: string) => {
     try {
@@ -49,6 +50,13 @@ export function InvoiceDrawer({ isOpen, onClose, invoice, clientName, clientDocu
       details,
       clientName,
       clientDocument,
+      gymName: gymSettings?.trade_name || gymSettings?.legal_name || 'ZonaFit',
+      gymNit: gymSettings?.tax_id,
+      gymPhone: gymSettings?.official_phone,
+      gymAddress: gymSettings?.physical_address,
+      gymCity: gymSettings?.city,
+      paymentMethod: invoice.payment_method,
+      receiptFooterNotes: gymSettings?.receipt_footer_notes,
     });
   };
 
@@ -63,7 +71,7 @@ export function InvoiceDrawer({ isOpen, onClose, invoice, clientName, clientDocu
       <div className="space-y-6">
         
         {/* Main Info */}
-        <GlassCard className="space-y-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 space-y-4">
           <div className="flex justify-between items-start border-b border-border-light pb-4">
             <div>
               <h3 className="text-lg font-bold text-text-primary">{invoice.invoice_number}</h3>
@@ -85,6 +93,10 @@ export function InvoiceDrawer({ isOpen, onClose, invoice, clientName, clientDocu
               <span className="block text-text-muted mb-1">Venta Asociada</span>
               <span className="font-semibold text-text-primary">#{invoice.sale_id}</span>
             </div>
+            <div>
+              <span className="block text-text-muted mb-1">Método de Pago</span>
+              <span className="font-semibold text-text-primary">{invoice.payment_method || 'CASH'}</span>
+            </div>
           </div>
           
           <div className="pt-2">
@@ -97,7 +109,7 @@ export function InvoiceDrawer({ isOpen, onClose, invoice, clientName, clientDocu
               Descargar Comprobante PDF
             </ActionGlowButton>
           </div>
-        </GlassCard>
+        </div>
 
         {/* Invoice Details (Products) */}
         <div className="space-y-3">
@@ -112,22 +124,22 @@ export function InvoiceDrawer({ isOpen, onClose, invoice, clientName, clientDocu
               <Skeleton className="h-16 w-full rounded-lg" />
             </div>
           ) : error ? (
-            <GlassCard className="bg-danger/5 border-danger/20 flex flex-col items-center justify-center py-6 text-center">
+            <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 bg-danger/5 border-danger/20 flex flex-col items-center justify-center py-6 text-center">
                <AlertCircle className="text-danger opacity-80 mb-2" size={24} />
                <p className="text-danger text-sm">Error al cargar productos.</p>
-            </GlassCard>
+            </div>
           ) : details.length === 0 ? (
-            <GlassCard className="flex flex-col items-center justify-center py-8 text-center text-text-muted border-dashed">
+            <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 flex flex-col items-center justify-center py-8 text-center text-text-muted border-dashed">
               <ShoppingBag size={32} className="opacity-20 mb-2" />
               <p className="text-sm">No hay productos en este comprobante.</p>
-            </GlassCard>
+            </div>
           ) : (
             <div className="space-y-2">
               {details.map(item => (
-                <GlassCard key={item.id} className="p-3 flex justify-between items-center group hover:bg-bg-elevated transition-colors">
+                <div key={item.id} className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-3 flex justify-between items-center group hover:bg-bg-elevated transition-colors">
                   <div>
                     <div className="font-semibold text-text-primary text-sm">
-                      Producto #{item.product_id}
+                      {item.product_name || `Producto #${item.product_id}`}
                     </div>
                     <div className="text-xs text-text-muted flex gap-2">
                       <span>Cant: {item.quantity}</span>
@@ -138,14 +150,14 @@ export function InvoiceDrawer({ isOpen, onClose, invoice, clientName, clientDocu
                   <div className="font-bold text-text-primary">
                     {formatPrice(item.subtotal)}
                   </div>
-                </GlassCard>
+                </div>
               ))}
             </div>
           )}
         </div>
 
         {/* Totals */}
-        <GlassCard className="space-y-2 bg-bg-surface border border-border-medium">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 space-y-2 bg-bg-surface border border-border-medium">
           <div className="flex justify-between text-sm text-text-secondary">
             <span>Subtotal:</span>
             <span>{formatPrice(invoice.subtotal)}</span>
@@ -166,7 +178,7 @@ export function InvoiceDrawer({ isOpen, onClose, invoice, clientName, clientDocu
             <span>TOTAL:</span>
             <span>{formatPrice(invoice.total)}</span>
           </div>
-        </GlassCard>
+        </div>
       </div>
     </Drawer>
   );

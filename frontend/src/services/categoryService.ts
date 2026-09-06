@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Category, CategoryCreate, CategoryUpdate } from '../types/category';
+import type { Category, CategoryCreate, CategoryUpdate } from '@shared/types/category';
 import type { Paginated } from './membershipPlanService';
 
 export const categoryService = {

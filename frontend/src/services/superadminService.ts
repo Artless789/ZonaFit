@@ -1,6 +1,6 @@
 import { api } from './api';
-import { SuperadminDashboardMetrics, SuperadminGym, SuperadminUser, SuperadminAuditLog, SuperadminPlan, SuperadminSubscription } from '../types/superadmin';
-import { PaginationResponse } from '../types/pagination';
+import { SuperadminDashboardMetrics, SuperadminGym, SuperadminUser, SuperadminAuditLog, SuperadminPlan, SuperadminSubscription } from '@shared/types/superadmin';
+import { PaginationResponse } from '@shared/types/pagination';
 
 export const superadminService = {
   getDashboardMetrics: async (): Promise<SuperadminDashboardMetrics> => {

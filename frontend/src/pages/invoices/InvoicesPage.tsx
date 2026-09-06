@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { GlassCard } from '../../components/shared/GlassCard';
-import { Badge } from '../../components/shared/Badge';
-import { Spinner } from '../../components/shared/Spinner';
-import { Input } from '../../components/shared/Input';
-import { Select } from '../../components/shared/Select';
+import { Badge } from '@shared/ui/Badge';
+import { Spinner } from '@shared/ui/Spinner';
+import { Input } from '@shared/ui/Input';
+import { Select } from '@shared/ui/Select';
 import { useInvoices } from '../../hooks/useInvoices';
 import { useClients } from '../../hooks/useClients';
 import { InvoiceDrawer } from './InvoiceDrawer';
 import { Search, FileText, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
-import type { Invoice } from '../../types/invoice';
+import type { Invoice } from '@shared/types/invoice';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatCurrency } from '@shared/utils/formatters';
 
 export function InvoicesPage() {
   const [page, setPage] = useState(1);
@@ -41,9 +41,7 @@ export function InvoicesPage() {
     return client ? client.document : 'N/A';
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(price);
-  };
+  const formatPrice = formatCurrency;
   
   const formatDate = (dateString: string) => {
     try {
@@ -71,7 +69,7 @@ export function InvoicesPage() {
         <p className="text-text-secondary">Historial de comprobantes de venta emitidos.</p>
       </div>
 
-      <GlassCard className="p-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="flex-1 w-full max-w-md relative">
           <Input 
             placeholder="Buscar por número..." 
@@ -93,9 +91,9 @@ export function InvoicesPage() {
             ]}
           />
         </div>
-      </GlassCard>
+      </div>
 
-      <GlassCard className="overflow-hidden">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -189,7 +187,7 @@ export function InvoicesPage() {
             </div>
           </div>
         )}
-      </GlassCard>
+      </div>
 
       <InvoiceDrawer 
         isOpen={isDrawerOpen} 

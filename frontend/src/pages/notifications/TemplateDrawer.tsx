@@ -2,13 +2,13 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Drawer } from '../../components/shared/Drawer';
-import { Select } from '../../components/shared/Select';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { useToast } from '../../components/shared/Toast';
+import { Drawer } from '@shared/ui/Drawer';
+import { Select } from '@shared/ui/Select';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { useToast } from '@shared/ui/Toast';
 import { useNotifications } from '../../hooks/useNotifications';
 import { EVENT_TYPE_OPTIONS, CHANNEL_OPTIONS, TEMPLATE_VARIABLES } from '../../services/notificationService';
-import type { NotificationTemplate } from '../../types/notification';
+import type { NotificationTemplate } from '@shared/types/notification';
 import { Tag } from 'lucide-react';
 
 const templateSchema = z.object({

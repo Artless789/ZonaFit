@@ -6,6 +6,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Text,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -26,7 +27,7 @@ class MembershipPlan(Base):
 
     name = Column(String(100), nullable=False)
 
-    description = Column(String(255), nullable=True)
+    description = Column(Text, nullable=True)
 
     duration_days = Column(Integer, nullable=False)
 

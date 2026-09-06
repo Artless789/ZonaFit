@@ -1,4 +1,4 @@
-import { addDays, subDays } from 'date-fns';
+﻿import { addDays, subDays } from 'date-fns';
 
 const now = new Date();
 
@@ -43,10 +43,10 @@ export const MOCK_CATEGORIES = [
 ];
 
 export const MOCK_PRODUCTS = [
-  { id: 1, category_id: 1, name: 'Proteína Whey 2lb', barcode: '12345', price: 150000, stock: 12, minimum_stock: 5, is_active: true },
-  { id: 2, category_id: 2, name: 'Agua Mineral 500ml', barcode: '54321', price: 3000, stock: 50, minimum_stock: 20, is_active: true },
-  { id: 3, category_id: 2, name: 'Bebida Energizante', barcode: '11111', price: 6000, stock: 30, minimum_stock: 10, is_active: true },
-  { id: 4, category_id: 3, name: 'Guantes de Cuero', barcode: '22222', price: 45000, stock: 5, minimum_stock: 5, is_active: true },
+  { id: 1, gym_id: 99999, category_id: 1, name: 'Proteína Whey 2lb', sku: '12345', barcode: '12345', price: 150000, sale_price: 150000, purchase_price: 100000, stock: 12, minimum_stock: 5, is_active: true, created_at: now.toISOString(), updated_at: now.toISOString() },
+  { id: 2, gym_id: 99999, category_id: 2, name: 'Agua Mineral 500ml', sku: '54321', barcode: '54321', price: 3000, sale_price: 3000, purchase_price: 1500, stock: 50, minimum_stock: 20, is_active: true, created_at: now.toISOString(), updated_at: now.toISOString() },
+  { id: 3, gym_id: 99999, category_id: 2, name: 'Bebida Energizante', sku: '11111', barcode: '11111', price: 6000, sale_price: 6000, purchase_price: 3500, stock: 30, minimum_stock: 10, is_active: true, created_at: now.toISOString(), updated_at: now.toISOString() },
+  { id: 4, gym_id: 99999, category_id: 3, name: 'Guantes de Cuero', sku: '22222', barcode: '22222', price: 45000, sale_price: 45000, purchase_price: 25000, stock: 5, minimum_stock: 5, is_active: true, created_at: now.toISOString(), updated_at: now.toISOString() },
 ];
 
 export const MOCK_CLIENTS = [
@@ -58,10 +58,10 @@ export const MOCK_CLIENTS = [
 ];
 
 export const MOCK_MEMBERSHIPS = [
-  { id: 1, client_id: 1, membership_plan_id: 1, start_date: subDays(now, 20).toISOString(), end_date: addDays(now, 10).toISOString(), status: 'ACTIVE', trainer_name: 'David', is_active: true, created_at: subDays(now, 20).toISOString() },
-  { id: 2, client_id: 2, membership_plan_id: 2, start_date: subDays(now, 2).toISOString(), end_date: addDays(now, 88).toISOString(), status: 'ACTIVE', trainer_name: 'Ana', is_active: true, created_at: subDays(now, 2).toISOString() },
-  { id: 3, client_id: 3, membership_plan_id: 1, start_date: subDays(now, 35).toISOString(), end_date: subDays(now, 5).toISOString(), status: 'EXPIRED', trainer_name: 'David', is_active: true, created_at: subDays(now, 35).toISOString() },
-  { id: 4, client_id: 4, membership_plan_id: 1, start_date: subDays(now, 1).toISOString(), end_date: addDays(now, 29).toISOString(), status: 'ACTIVE', trainer_name: 'Ana', is_active: true, created_at: subDays(now, 1).toISOString() },
+  { id: 1, client_id: 1, membership_plan_id: 1, price: 80000, start_date: subDays(now, 20).toISOString(), end_date: addDays(now, 10).toISOString(), status: 'ACTIVE', trainer_name: 'David', is_active: true, total_paid: 80000, pending_balance: 0, payments: [{ id: 1, amount: 80000, payment_method: 'CASH', status: 'PAID', created_at: subDays(now, 20).toISOString() }], created_at: subDays(now, 20).toISOString() },
+  { id: 2, client_id: 2, membership_plan_id: 2, price: 200000, start_date: subDays(now, 2).toISOString(), end_date: addDays(now, 88).toISOString(), status: 'ACTIVE', trainer_name: 'Ana', is_active: true, total_paid: 200000, pending_balance: 0, payments: [{ id: 2, amount: 200000, payment_method: 'TRANSFER', status: 'PAID', created_at: subDays(now, 2).toISOString() }], created_at: subDays(now, 2).toISOString() },
+  { id: 3, client_id: 3, membership_plan_id: 1, price: 80000, start_date: subDays(now, 35).toISOString(), end_date: subDays(now, 5).toISOString(), status: 'EXPIRED', trainer_name: 'David', is_active: true, total_paid: 40000, pending_balance: 40000, payments: [{ id: 3, amount: 40000, payment_method: 'CASH', status: 'PAID', created_at: subDays(now, 35).toISOString() }], created_at: subDays(now, 35).toISOString() },
+  { id: 4, client_id: 4, membership_plan_id: 1, price: 80000, start_date: subDays(now, 1).toISOString(), end_date: addDays(now, 29).toISOString(), status: 'ACTIVE', trainer_name: 'Ana', is_active: true, total_paid: 80000, pending_balance: 0, payments: [{ id: 4, amount: 80000, payment_method: 'CARD', status: 'PAID', created_at: subDays(now, 1).toISOString() }], created_at: subDays(now, 1).toISOString() },
 ];
 
 export const MOCK_AR = [
@@ -77,27 +77,25 @@ export const MOCK_PAYMENTS = [
 ];
 
 export const MOCK_DASHBOARD = {
-  daily_sales_total: 80000, // Today's payment for María
-  daily_sales_count: 1,
-  monthly_revenue: 320000,
-  monthly_revenue_change_percentage: 15.5,
+  sales_today: 5,
+  sales_today_amount: 150000,
+  income_this_month: 320000,
   active_clients: 3,
-  active_clients_change_percentage: 5.2,
-  expiring_memberships_count: 1, // Carlos expires in 10 days
-  pending_accounts_total: 190000,
-  pending_accounts_count: 2,
+  expiring_memberships_count: 1,
+  total_receivables: 190000,
+  overdue_receivables: 40000,
   recent_activity: [
-    { type: 'membership_sale', description: 'María Torres adquirió Mensualidad Básica', time: subDays(now, 1).toISOString() },
-    { type: 'product_sale', description: 'Venta de Proteína Whey a Carlos Rodríguez (Crédito)', time: subDays(now, 5).toISOString() },
-    { type: 'membership_sale', description: 'Laura Martínez adquirió Trimestre Premium', time: subDays(now, 2).toISOString() },
-    { type: 'client_created', description: 'Nuevo cliente: Andrés Gómez', time: subDays(now, 3).toISOString() },
+    { id: "1", type: 'MEMBERSHIP', title: 'Nueva Membresía', subtitle: 'María Torres adquirió Mensualidad Básica', amount: 80000, created_at: subDays(now, 1).toISOString() },
+    { id: "2", type: 'SALE', title: 'Venta de Producto', subtitle: 'Venta de Proteína Whey a Carlos Rodríguez (Crédito)', amount: 150000, created_at: subDays(now, 5).toISOString() },
+    { id: "3", type: 'MEMBERSHIP', title: 'Nueva Membresía', subtitle: 'Laura Martínez adquirió Trimestre Premium', amount: 200000, created_at: subDays(now, 2).toISOString() },
+    { id: "4", type: 'CLIENT', title: 'Nuevo Cliente', subtitle: 'Nuevo cliente: Andrés Gómez', amount: null, created_at: subDays(now, 3).toISOString() },
   ],
   expiring_memberships: [
-    { id: 1, client_id: 1, client_name: 'Carlos Rodríguez', client_document: '1010101010', plan_name: 'Mensualidad Básica', end_date: addDays(now, 10).toISOString(), days_left: 10 }
+    { id: 1, client_name: 'Carlos Rodríguez', plan_name: 'Mensualidad Básica', end_date: addDays(now, 10).toISOString(), days_left: 10 }
   ],
-  pending_accounts: [
-    { id: 1, client_name: 'Andrés Gómez', balance_due: 40000, due_date: subDays(now, 2).toISOString() },
-    { id: 2, client_name: 'Carlos Rodríguez', balance_due: 150000, due_date: addDays(now, 15).toISOString() }
+  receivables: [
+    { id: 1, client_name: 'Andrés Gómez', balance_due: 40000, due_date: subDays(now, 2).toISOString(), days_overdue: 2 },
+    { id: 2, client_name: 'Carlos Rodríguez', balance_due: 150000, due_date: addDays(now, 15).toISOString(), days_overdue: 0 }
   ]
 };
 
@@ -125,4 +123,43 @@ export const MOCK_CASH_REGISTERS = [
 
 export const MOCK_CASH_MOVEMENTS = [
   { id: 1, cash_register_id: 1, type: 'IN', amount: 80000, description: 'Venta de membresía - María Torres', created_at: subDays(now, 1).toISOString() }
+];
+
+export const MOCK_SUBSCRIPTION = {
+  id: 1,
+  gym_id: 99999,
+  status: 'TRIAL',
+  starts_at: subDays(now, 5).toISOString(),
+  ends_at: addDays(now, 9).toISOString(),
+  is_lifetime: false,
+  cancellation_requested_at: null,
+  plan: {
+    id: 1,
+    name: 'Plan Pro',
+    price: 99000,
+    billing_interval: 'MONTHLY',
+  }
+};
+
+export const MOCK_SAAS_PLANS = [
+  {
+    id: 1,
+    name: 'Plan Mensual Pro',
+    description: 'Acceso total para gimnasios en crecimiento',
+    price: 99000,
+    billing_interval: 'MONTHLY',
+    duration_days: 30,
+    is_active: true,
+    features: ['Gestión de clientes ilimitada', 'Punto de Venta POS', 'Facturación electrónica', 'Control de caja']
+  },
+  {
+    id: 2,
+    name: 'Plan Anual VIP',
+    description: 'Ahorra 20% pagando el año completo',
+    price: 950000,
+    billing_interval: 'YEARLY',
+    duration_days: 365,
+    is_active: true,
+    features: ['Todo lo del plan Pro', 'Soporte prioritario 24/7', 'Módulo de WhatsApp ilimitado', 'Auditoría avanzada']
+  }
 ];

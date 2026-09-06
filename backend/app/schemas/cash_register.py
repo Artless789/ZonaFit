@@ -9,9 +9,33 @@ class CashRegisterBase(BaseModel):
 class CashRegisterCreate(CashRegisterBase):
     pass
 
+class PaymentMethodReconciliation(BaseModel):
+    method: str
+    registered_amount: Decimal = Field(default=Decimal("0.00"))
+    verified_amount: Decimal = Field(default=Decimal("0.00"))
+    difference: Decimal = Field(default=Decimal("0.00"))
+    status: Optional[str] = None  # "CUADRADO", "SOBRANTE", "FALTANTE"
+
+class PaymentMethodSummaryItem(BaseModel):
+    method: str
+    label: str
+    registered_amount: Decimal
+
+class CashRegisterSummaryResponse(BaseModel):
+    register_id: int
+    status: str
+    opened_at: datetime
+    opening_balance: Decimal
+    cash_incomes: Decimal
+    cash_outcomes: Decimal
+    expected_cash: Decimal
+    payment_methods: list[PaymentMethodSummaryItem]
+    total_registered_income: Decimal
+
 class CashRegisterClose(BaseModel):
     counted_balance: Decimal = Field(..., ge=0)
     closing_notes: Optional[str] = None
+    reconciliations: Optional[list[PaymentMethodReconciliation]] = None
 
 class CashRegisterResponse(CashRegisterBase):
     id: int
@@ -25,6 +49,7 @@ class CashRegisterResponse(CashRegisterBase):
     difference: Optional[Decimal] = None
     status: str
     closing_notes: Optional[str] = None
+    reconciliation_data: Optional[str] = None
 
     class Config:
         from_attributes = True

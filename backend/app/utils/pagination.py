@@ -13,20 +13,23 @@ def paginate(
 ) -> PaginationResponse:
 
     total = query.count()
+    limit = getattr(params, "effective_limit", params.page_size)
+    offset = getattr(params, "effective_offset", params.offset)
+    page = getattr(params, "effective_page", params.page)
 
     items = (
-        query.offset(params.offset)
-        .limit(params.page_size)
+        query.offset(offset)
+        .limit(limit)
         .all()
     )
 
     return PaginationResponse(
         items=items,
-        page=params.page,
-        page_size=params.page_size,
+        page=page,
+        page_size=limit,
         total=total,
         total_pages=calculate_total_pages(
             total,
-            params.page_size,
+            limit,
         ),
     )

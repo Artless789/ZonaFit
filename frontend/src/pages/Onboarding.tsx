@@ -1,22 +1,23 @@
-import { Select } from '../components/shared/Select';
+import { Select } from '@shared/ui/Select';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button } from '../components/shared/Button';
-import { GlassCard } from '../components/shared/GlassCard';
-import { ActionGlowButton } from '../components/shared/ActionGlowButton';
+import { Button } from '@shared/ui/Button';
+import { Card } from '@shared/ui/Card';
+
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../components/shared/Toast';
+import { useToast } from '@shared/ui/Toast';
 import { gymSettingsService } from '../services/gymSettingsService';
 import { subscriptionService } from '../services/subscriptionService';
-import { ErrorState } from '../components/shared/ErrorState';
+import { SUBSCRIPTION_QUERY_KEY } from '../shared/subscription/useLicenseStatus';
+import { ErrorState } from '@shared/ui/ErrorState';
 import { Building, Settings, ChevronRight, ChevronLeft, Globe, DollarSign, Zap, Clock } from 'lucide-react';
-import type { GymSettingsUpdate } from '../types/gymSettings';
+import { COUNTRIES, CURRENCIES, TIMEZONES } from '@shared/utils/constants';
+import type { GymSettingsUpdate } from '@shared/types/gymSettings';
 
 export function Onboarding() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -26,13 +27,18 @@ export function Onboarding() {
   // Redirigir si ya completó onboarding
   useEffect(() => {
     if (user?.onboarding_completed) {
-      navigate('/dashboard', { replace: true });
+      window.location.assign('/app/dashboard');
     }
-  }, [user, navigate]);
+  }, [user]);
 
-  const { data: settings, isLoading: isLoadingSettings, isError } = useQuery({
-    queryKey: ['gymSettings'],
+  const { data: settings, isLoading: isLoadingSettings, isError, error } = useQuery({
+    queryKey: ['gymSettings', user?.gym_id],
     queryFn: gymSettingsService.getSettings,
+    enabled: !!user?.gym_id,
+    retry: (failureCount, err: any) => {
+      if (err.response?.status === 404) return false;
+      return failureCount < 2;
+    }
   });
 
   useEffect(() => {
@@ -54,6 +60,13 @@ export function Onboarding() {
     }
   }, [settings]);
 
+  const createMutation = useMutation({
+    mutationFn: gymSettingsService.createSettings,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gymSettings'] });
+    },
+  });
+
   const updateMutation = useMutation({
     mutationFn: gymSettingsService.updateSettings,
     onSuccess: () => {
@@ -64,7 +77,7 @@ export function Onboarding() {
   const startSubMutation = useMutation({
     mutationFn: subscriptionService.startSubscription,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mySubscription'] });
+      queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_QUERY_KEY });
     }
   });
 
@@ -85,15 +98,29 @@ export function Onboarding() {
   };
 
   const handleNext = async () => {
+    const isNewRecord = error && (error as any).response?.status === 404;
+    
     if (currentStep === 1) {
       try {
-        await updateMutation.mutateAsync(formData);
+        if (isNewRecord) {
+          const payload = {
+            ...formData,
+            official_email: formData.official_email || user?.email || 'admin@zonafit.com',
+            country: formData.country || 'Colombia',
+            city: formData.city || 'Ciudad',
+            currency: formData.currency || 'COP',
+            timezone: formData.timezone || 'America/Bogota'
+          };
+          await createMutation.mutateAsync(payload as any);
+        } else {
+          await updateMutation.mutateAsync(formData);
+        }
         setCurrentStep(2);
       } catch (err: any) {
         toast({
           type: 'error',
           title: 'Error guardando datos',
-          message: err.response?.data?.detail || 'Verifica los campos obligatorios.'
+          message: err.response?.data?.detail || err.userMessage || 'Verifica los campos obligatorios.'
         });
       }
     } else if (currentStep === 2) {
@@ -104,7 +131,7 @@ export function Onboarding() {
         toast({
           type: 'error',
           title: 'Error guardando datos',
-          message: err.response?.data?.detail || 'Verifica los campos obligatorios.'
+          message: err.response?.data?.detail || err.userMessage || 'Verifica los campos obligatorios.'
         });
       }
     }
@@ -115,15 +142,15 @@ export function Onboarding() {
       await startSubMutation.mutateAsync({ intent });
       await completeMutation.mutateAsync();
       if (intent === 'PURCHASE') {
-        window.location.href = '/subscription/checkout';
+        window.location.assign('/subscription/checkout');
       } else {
-        window.location.href = '/dashboard';
+        window.location.assign('/app/dashboard');
       }
     } catch (err: any) {
       toast({
         type: 'error',
         title: 'Error',
-        message: err.response?.data?.detail || 'Ocurrió un error al iniciar tu suscripción.'
+        message: err.response?.data?.detail || err.userMessage || 'Ocurrió un error al iniciar tu suscripción.'
       });
     }
   };
@@ -139,7 +166,9 @@ export function Onboarding() {
     );
   }
 
-  if (isError) {
+  const isNotFoundError = error && (error as any).response?.status === 404;
+
+  if (isError && !isNotFoundError) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-transparent font-sans">
         <ErrorState 
@@ -170,7 +199,7 @@ export function Onboarding() {
           <p className="text-text-secondary mt-1 text-sm font-medium">Configuremos tu gimnasio para comenzar</p>
         </div>
 
-        <GlassCard className="overflow-hidden">
+        <Card variant="glass" padding="none" className="overflow-hidden">
           {/* Progress Indicator */}
           <div className="px-8 pt-8 pb-4 border-b border-border-light/30">
             <div className="flex items-center justify-between max-w-lg mx-auto relative">
@@ -314,14 +343,8 @@ export function Onboarding() {
                         name="country"
                         value={formData.country || ''}
                         onChange={handleChange}
-                        
-                      >
-                        <option value="Colombia">Colombia</option>
-                        <option value="México">México</option>
-                        <option value="Perú">Perú</option>
-                        <option value="Chile">Chile</option>
-                        <option value="Argentina">Argentina</option>
-                      </Select>
+                        options={COUNTRIES.map(country => ({ value: country, label: country }))}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-text-muted mb-1.5 uppercase">
@@ -331,14 +354,8 @@ export function Onboarding() {
                         name="currency"
                         value={formData.currency || ''}
                         onChange={handleChange}
-                        
-                      >
-                        <option value="COP">COP - Peso Colombiano</option>
-                        <option value="MXN">MXN - Peso Mexicano</option>
-                        <option value="PEN">PEN - Sol Peruano</option>
-                        <option value="CLP">CLP - Peso Chileno</option>
-                        <option value="USD">USD - Dólar Estadounidense</option>
-                      </Select>
+                        options={CURRENCIES}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-text-muted mb-1.5 uppercase">Zona Horaria</label>
@@ -346,14 +363,8 @@ export function Onboarding() {
                         name="timezone"
                         value={formData.timezone || ''}
                         onChange={handleChange}
-                        
-                      >
-                        <option value="America/Bogota">America/Bogota</option>
-                        <option value="America/Mexico_City">America/Mexico_City</option>
-                        <option value="America/Lima">America/Lima</option>
-                        <option value="America/Santiago">America/Santiago</option>
-                        <option value="America/Argentina/Buenos_Aires">America/Argentina/Buenos_Aires</option>
-                      </Select>
+                        options={TIMEZONES.map(tz => ({ value: tz, label: tz }))}
+                      />
                     </div>
                   </div>
                   
@@ -419,7 +430,7 @@ export function Onboarding() {
               )}
             </AnimatePresence>
           </div>
-        </GlassCard>
+        </Card>
       </div>
     </div>
   );

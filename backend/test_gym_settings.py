@@ -37,20 +37,39 @@ def log(label: str, passed: bool, detail: str = "") -> None:
         FAIL_COUNT += 1
 
 
-def get_admin_info() -> tuple[int, int]:
+def create_test_session(gym_id: int | None = None) -> SessionLocal:
     db = SessionLocal()
+    db.info['bypass_rls'] = True
+    if gym_id:
+        db.info['tenant_id'] = gym_id
+    return db
+
+
+def get_admin_info() -> tuple[int, int]:
+    db = create_test_session()
     try:
         user = db.query(User).filter(User.email == ADMIN_EMAIL).first()
         if not user:
-            print(f"\n[ERROR] No se encontro un usuario con email '{ADMIN_EMAIL}'.")
-            sys.exit(1)
+            user = db.query(User).filter(User.role.in_(["ADMIN", "OWNER"]), User.gym_id.isnot(None)).first()
+        if not user:
+            from app.models.gym import Gym
+            gym = db.query(Gym).first()
+            if not gym:
+                gym = Gym(name="Test Gym Settings", document_number="900000000", address="Calle 1", phone="123")
+                db.add(gym)
+                db.commit()
+                db.refresh(gym)
+            user = User(full_name="Test Admin", email="test_admin_settings@zonafit.co", password="xxx", role="ADMIN", gym_id=gym.id)
+            db.add(user)
+            db.commit()
+            db.refresh(user)
         return user.id, user.gym_id
     finally:
         db.close()
 
 
 def fetch_settings(gym_id: int):
-    db = SessionLocal()
+    db = create_test_session(gym_id)
     try:
         return db.query(GymSettings).filter(GymSettings.gym_id == gym_id).first()
     finally:
@@ -58,7 +77,7 @@ def fetch_settings(gym_id: int):
 
 
 def cleanup(gym_id: int) -> None:
-    db = SessionLocal()
+    db = create_test_session(gym_id)
     try:
         db.query(GymSettings).filter(GymSettings.gym_id == gym_id).delete()
         db.commit()
@@ -93,7 +112,7 @@ def run_tests() -> None:
 
     # TEST 1: get sin registro -> NotFoundException
     print("[TEST 1] get_by_gym_id sin configuracion existente")
-    db = SessionLocal()
+    db = create_test_session(gym_id)
     try:
         admin = db.query(User).filter(User.id == user_id).first()
         GymSettingsService.get_by_gym_id(db, admin)
@@ -107,7 +126,7 @@ def run_tests() -> None:
 
     # TEST 2: create con datos validos (verificamos con query separado)
     print("\n[TEST 2] create con datos validos")
-    db = SessionLocal()
+    db = create_test_session(gym_id)
     try:
         admin = db.query(User).filter(User.id == user_id).first()
         GymSettingsService.create(db, admin, GymSettingsCreate(**VALID_PAYLOAD))
@@ -128,7 +147,7 @@ def run_tests() -> None:
 
     # TEST 3: create duplicado -> ConflictException
     print("\n[TEST 3] create duplicado")
-    db = SessionLocal()
+    db = create_test_session(gym_id)
     try:
         admin = db.query(User).filter(User.id == user_id).first()
         GymSettingsService.create(db, admin, GymSettingsCreate(**VALID_PAYLOAD))
@@ -142,7 +161,7 @@ def run_tests() -> None:
 
     # TEST 4: get con registro existente
     print("\n[TEST 4] get_by_gym_id con configuracion existente")
-    db = SessionLocal()
+    db = create_test_session(gym_id)
     try:
         admin = db.query(User).filter(User.id == user_id).first()
         fetched = GymSettingsService.get_by_gym_id(db, admin)
@@ -155,7 +174,7 @@ def run_tests() -> None:
 
     # TEST 5: update parcial (verificamos con query separado)
     print("\n[TEST 5] update parcial (solo trade_name y city)")
-    db = SessionLocal()
+    db = create_test_session(gym_id)
     try:
         admin = db.query(User).filter(User.id == user_id).first()
         settings = GymSettingsService.get_by_gym_id(db, admin)

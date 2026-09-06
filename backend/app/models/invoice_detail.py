@@ -57,3 +57,7 @@ class InvoiceDetail(Base):
         "Product",
         back_populates="invoice_details",
     )
+
+    @property
+    def product_name(self):
+        return self.product.name if self.product else None

@@ -1,6 +1,6 @@
 import { api } from './api';
-import type { Invoice, InvoiceCreate, InvoiceDetail } from '../types/invoice';
-import type { PaginationResponse } from '../types/pagination';
+import type { Invoice, InvoiceCreate, InvoiceDetail } from '@shared/types/invoice';
+import type { PaginationResponse } from '@shared/types/pagination';
 
 export const invoiceService = {
   getAll: async (params?: { page?: number; limit?: number; search?: string; status?: string }): Promise<PaginationResponse<Invoice>> => {

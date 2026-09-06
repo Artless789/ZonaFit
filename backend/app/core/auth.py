@@ -54,21 +54,29 @@ def get_current_user(
     return user
 
 def require_superadmin(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     if current_user.role.upper() != "SUPERADMIN":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Requires platform admin privileges.")
     return current_user
 
 def require_owner(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     if current_user.role.upper() not in ["SUPERADMIN", "OWNER"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Requires gym owner privileges.")
     return current_user
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     if current_user.role.upper() not in ["SUPERADMIN", "OWNER", "ADMIN"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Requires admin privileges.")
     return current_user
 
 def require_staff(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     if current_user.role.upper() not in ["SUPERADMIN", "OWNER", "ADMIN", "STAFF"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Requires staff privileges.")
     return current_user
@@ -77,6 +85,9 @@ def require_active_subscription(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> User:
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
     if current_user.role.upper() == "SUPERADMIN":
         return current_user
         

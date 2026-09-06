@@ -2,8 +2,8 @@ import { LogOut, Menu, Sun, Moon } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { Avatar } from '../shared/Avatar';
-import { Button } from '../shared/Button';
+import { Avatar } from '@shared/ui/Avatar';
+import { Button } from '@shared/ui/Button';
 
 import { useGymSettings } from '../../hooks/useGymSettings';
 
@@ -44,7 +44,7 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
           <button
             type="button"
             onClick={onOpenMobileMenu}
-            className="rounded-[var(--radius-sm)] p-2 text-text-secondary transition-colors hover:bg-bg-surface-hover hover:text-text-primary md:hidden"
+            className="rounded-[var(--radius-sm)] p-2 text-text-secondary transition-colors hover:bg-glass-overlay hover:text-text-primary md:hidden"
             aria-label="Abrir menú de navegación"
           >
             <Menu size={20} />
@@ -59,7 +59,7 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4">
-          <div className="group flex items-center gap-3 rounded-full border border-border-light bg-bg-elevated/50 py-1.5 pl-4 pr-1.5 shadow-xs transition-all duration-300 hover:bg-bg-elevated/75 hover:border-border-medium cursor-pointer">
+          <div className="group flex items-center gap-3 rounded-full border border-border-light bg-bg-surface/60 backdrop-blur-md py-1.5 pl-4 pr-1.5 shadow-xs transition-all duration-300 hover:bg-glass-overlay hover:border-border-medium hover:shadow-glass cursor-pointer">
             <div className="hidden text-right sm:block">
               <p className="text-sm font-semibold leading-none text-text-primary mb-0.5 transition-colors">{user?.full_name || 'Administrador'}</p>
               <p className="text-xs text-text-muted leading-none">{user?.role || 'Admin'}</p>

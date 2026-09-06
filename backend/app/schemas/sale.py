@@ -1,5 +1,6 @@
 from decimal import Decimal
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -20,7 +21,7 @@ class SaleUpdate(BaseModel):
 
 class SaleCompleteRequest(BaseModel):
     sale_type: str  # "CASH" or "CREDIT"
-    payment_method: str | None = None  # e.g., "CASH", "CARD", "WOMPI"
+    payment_method: Literal["CASH", "CARD", "TRANSFER"] | None = None
     due_date: datetime | None = None
     initial_payment: Decimal = Decimal("0.00")
 

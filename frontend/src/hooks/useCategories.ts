@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { categoryService } from '../services/categoryService';
-import { CategoryCreate, CategoryUpdate, Category } from '../types/category';
+import { CategoryCreate, CategoryUpdate, Category } from '@shared/types/category';
 import { Paginated } from '../services/membershipPlanService';
 
 export const useCategories = () => {

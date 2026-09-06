@@ -1,20 +1,35 @@
-// @ts-nocheck
-import { Select, SelectItem } from '../../components/shared/Select';
-import { useState } from 'react';
+import { Select, SelectItem } from '@shared/ui/Select';
+import { Input } from '@shared/ui/Input';
+import { useState, useMemo } from 'react';
 import { ShieldCheck, Activity } from 'lucide-react';
 import { useAuditLogs } from '../../hooks/useAuditLogs';
 import { AuditTable } from './AuditTable';
-import { Skeleton } from '../../components/shared/Skeleton';
-import { GlassCard } from '../../components/shared/GlassCard';
-import { TextInput } from '@tremor/react';
+import { Skeleton } from '@shared/ui/Skeleton';
 
 export function AuditPage() {
   const [action, setAction] = useState<string>('ALL');
   const [entityType, setEntityType] = useState<string>('ALL');
   const [userId, setUserId] = useState<string>('');
+  const [page, setPage] = useState<number>(1);
+  const pageSize = 15;
+
+  const handleActionChange = (val: string) => {
+    setAction(val);
+    setPage(1);
+  };
+
+  const handleEntityTypeChange = (val: string) => {
+    setEntityType(val);
+    setPage(1);
+  };
+
+  const handleUserIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUserId(e.target.value);
+    setPage(1);
+  };
 
   const { query } = useAuditLogs(
-    100, 
+    150, 
     0, 
     action === 'ALL' ? undefined : action,
     entityType === 'ALL' ? undefined : entityType,
@@ -23,6 +38,14 @@ export function AuditPage() {
   
   const logs = query.data?.items || [];
   const isLoading = query.isLoading;
+
+  const totalPages = Math.max(1, Math.ceil(logs.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedLogs = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return logs.slice(start, start + pageSize);
+  }, [logs, currentPage, pageSize]);
 
   if (isLoading) {
     return (
@@ -52,7 +75,7 @@ export function AuditPage() {
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
         
         {/* Info Banner */}
-        <GlassCard className="mb-6 bg-brand-primary/5 border-brand-primary/20 flex items-start gap-4 p-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 mb-6 bg-brand-primary/5 border-brand-primary/20 flex items-start gap-4 p-4">
           <div className="bg-brand-primary/10 p-2 rounded-full mt-1">
             <Activity className="text-brand-primary" size={20} />
           </div>
@@ -63,13 +86,13 @@ export function AuditPage() {
               Solo usuarios con privilegios de Administrador o Auditor pueden visualizar este panel.
             </p>
           </div>
-        </GlassCard>
+        </div>
 
         {/* Filtros */}
-        <GlassCard className="mb-6 p-4 flex flex-col md:flex-row gap-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 mb-6 p-4 flex flex-col md:flex-row gap-4">
           <div className="w-full md:w-1/3">
             <label className="text-xs font-medium text-text-secondary mb-1 block">Acción</label>
-            <Select value={action} onValueChange={setAction}>
+            <Select value={action} onValueChange={handleActionChange}>
               <SelectItem value="ALL">Todas las acciones</SelectItem>
               <SelectItem value="USER_CREATED">Creación de Usuario</SelectItem>
               <SelectItem value="USER_UPDATED">Modificación de Usuario</SelectItem>
@@ -84,7 +107,7 @@ export function AuditPage() {
           </div>
           <div className="w-full md:w-1/3">
             <label className="text-xs font-medium text-text-secondary mb-1 block">Módulo / Entidad</label>
-            <Select value={entityType} onValueChange={setEntityType}>
+            <Select value={entityType} onValueChange={handleEntityTypeChange}>
               <SelectItem value="ALL">Todos los módulos</SelectItem>
               <SelectItem value="User">Usuarios y Personal</SelectItem>
               <SelectItem value="Client">Clientes</SelectItem>
@@ -98,15 +121,22 @@ export function AuditPage() {
           </div>
           <div className="w-full md:w-1/3">
             <label className="text-xs font-medium text-text-secondary mb-1 block">ID de Usuario</label>
-            <TextInput 
+            <Input 
               placeholder="Buscar por ID de usuario..." 
               value={userId}
-              onChange={(e) => setUserId(e.target.value)}
+              onChange={handleUserIdChange}
             />
           </div>
-        </GlassCard>
+        </div>
 
-        <AuditTable logs={logs} />
+        <AuditTable 
+          logs={paginatedLogs} 
+          totalLogs={logs.length}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );

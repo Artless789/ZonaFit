@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
 from app.database.database import get_db
+from app.exceptions.conflict_exception import ConflictException
+from app.exceptions.not_found_exception import NotFoundException
 from app.models.user import User
 from app.schemas.membership_plan import (
     MembershipPlanCreate,
@@ -32,15 +34,25 @@ def create_plan(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if not current_user.gym_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with a gym",
+        )
     try:
         return MembershipPlanService.create_plan(
             db,
             current_user,
             plan,
         )
+    except ConflictException as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e.message),
+        )
     except ValueError as e:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
 
@@ -56,6 +68,11 @@ def get_plans(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if not current_user.gym_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with a gym",
+        )
     return MembershipPlanService.get_all(
         db,
         current_user,
@@ -74,6 +91,11 @@ def get_plan(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if not current_user.gym_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with a gym",
+        )
     plan = MembershipPlanService.get_by_id(
         db,
         current_user,
@@ -82,7 +104,7 @@ def get_plan(
 
     if not plan:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Plan not found.",
         )
 
@@ -99,6 +121,11 @@ def update_plan(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if not current_user.gym_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with a gym",
+        )
     plan = MembershipPlanService.get_by_id(
         db,
         current_user,
@@ -107,15 +134,21 @@ def update_plan(
 
     if not plan:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Plan not found.",
         )
 
-    return MembershipPlanService.update(
-        db,
-        plan,
-        plan_data,
-    )
+    try:
+        return MembershipPlanService.update(
+            db,
+            plan,
+            plan_data,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 @router.delete(
@@ -127,6 +160,11 @@ def delete_plan(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if not current_user.gym_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with a gym",
+        )
     plan = MembershipPlanService.get_by_id(
         db,
         current_user,
@@ -135,7 +173,7 @@ def delete_plan(
 
     if not plan:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Plan not found.",
         )
 

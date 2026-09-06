@@ -27,3 +27,11 @@ pip-delete-this-directory.txt
 # OS
 .DS_Store
 Thumbs.db
+
+# Testing
+.pytest_cache/
+
+# Uploads
+uploads/
+backend/uploads/*
+!backend/uploads/.gitkeep

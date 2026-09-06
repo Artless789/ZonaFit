@@ -1,18 +1,18 @@
 import { useState, useMemo } from 'react';
 import { Search, Filter, WalletCards, Receipt, AlertTriangle } from 'lucide-react';
-import { GlassCard } from '../../components/shared/GlassCard';
-import { Badge } from '../../components/shared/Badge';
-import { Spinner } from '../../components/shared/Spinner';
-import { ErrorState } from '../../components/shared/ErrorState';
-import { Select } from '../../components/shared/Select';
-import { Pagination } from '../../components/shared/Pagination';
+import { Badge } from '@shared/ui/Badge';
+import { Spinner } from '@shared/ui/Spinner';
+import { ErrorState } from '@shared/ui/ErrorState';
+import { Select } from '@shared/ui/Select';
+import { Pagination } from '@shared/ui/Pagination';
 import { useAccountsReceivables } from '../../hooks/useAccountsReceivables';
 import { useClients } from '../../hooks/useClients';
 import { CreditsDrawer } from './CreditsDrawer';
 import { PaymentModal } from './PaymentModal';
-import type { AccountsReceivable } from '../../types/accountsReceivable';
+import type { AccountsReceivable } from '@shared/types/accountsReceivable';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatCurrency } from '@shared/utils/formatters';
 
 export function CreditsPage() {
   const [page, setPage] = useState(1);
@@ -44,9 +44,7 @@ export function CreditsPage() {
     // In our logic, PaymentModal is separated.
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(price);
-  };
+  const formatPrice = formatCurrency;
 
   const formatShortDate = (dateString: string) => {
     try {
@@ -116,7 +114,7 @@ export function CreditsPage() {
         <h1 className="text-2xl font-bold text-text-primary mb-6">Cuentas por Cobrar</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <GlassCard className="p-4 flex flex-col justify-center border-brand-primary/20 bg-brand-primary/5">
+          <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-4 flex flex-col justify-center border-brand-primary/20 bg-brand-primary/5">
             <div className="flex items-center gap-2 text-text-secondary mb-1">
               <WalletCards size={18} />
               <span className="text-sm font-medium">Total por Cobrar (Vista)</span>
@@ -124,36 +122,36 @@ export function CreditsPage() {
             <div className="text-2xl font-bold text-text-primary">
               {formatPrice(stats.totalDue)}
             </div>
-          </GlassCard>
+          </div>
           
-          <GlassCard className="p-4 flex flex-col justify-center">
+          <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-4 flex flex-col justify-center">
             <div className="flex items-center gap-2 text-warning mb-1">
               <Receipt size={18} />
               <span className="text-sm font-medium">Pendientes</span>
             </div>
             <div className="text-2xl font-bold text-text-primary">{stats.countPending}</div>
-          </GlassCard>
+          </div>
           
-          <GlassCard className="p-4 flex flex-col justify-center">
+          <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-4 flex flex-col justify-center">
             <div className="flex items-center gap-2 text-info mb-1">
               <Receipt size={18} />
               <span className="text-sm font-medium">Parciales</span>
             </div>
             <div className="text-2xl font-bold text-text-primary">{stats.countPartial}</div>
-          </GlassCard>
+          </div>
           
-          <GlassCard className="p-4 flex flex-col justify-center">
+          <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-4 flex flex-col justify-center">
             <div className="flex items-center gap-2 text-danger mb-1">
               <AlertTriangle size={18} />
               <span className="text-sm font-medium">Vencidas</span>
             </div>
             <div className="text-2xl font-bold text-text-primary">{stats.countOverdue}</div>
-          </GlassCard>
+          </div>
         </div>
       </div>
 
       {/* Filters */}
-      <GlassCard className="p-4 flex flex-col sm:flex-row gap-4 items-end">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-4 flex flex-col sm:flex-row gap-4 items-end">
         <div className="flex-1 w-full relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
           <input
@@ -178,10 +176,10 @@ export function CreditsPage() {
             ]}
           />
         </div>
-      </GlassCard>
+      </div>
 
       {/* Table */}
-      <GlassCard className="p-0 overflow-hidden">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-0 overflow-hidden">
         <div className="overflow-x-auto min-h-[300px]">
           {query.isLoading || clientsQuery.isLoading ? (
             <div className="flex items-center justify-center h-48">
@@ -253,7 +251,7 @@ export function CreditsPage() {
             />
           </div>
         )}
-      </GlassCard>
+      </div>
 
       {/* Drawer and Modal Components */}
       <CreditsDrawer

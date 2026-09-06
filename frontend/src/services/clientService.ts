@@ -1,6 +1,6 @@
 import { api } from './api';
-import type { Client, ClientCreate, ClientUpdate, Client360Response } from '../types/client';
-import type { PaginationResponse } from '../types/pagination';
+import type { Client, ClientCreate, ClientUpdate, Client360Response } from '@shared/types/client';
+import type { PaginationResponse } from '@shared/types/pagination';
 
 
 

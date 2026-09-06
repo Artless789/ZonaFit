@@ -6,8 +6,8 @@ import type {
   NotificationTemplate,
   NotificationTemplateCreate,
   NotificationTemplateUpdate,
-} from '../types/notification';
-import type { PaginatedResponse } from '../types/pagination';
+} from '@shared/types/notification';
+import type { PaginatedResponse } from '@shared/types/pagination';
 
 export const useNotifications = () => {
   const queryClient = useQueryClient();

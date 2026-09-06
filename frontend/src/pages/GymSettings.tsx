@@ -1,18 +1,19 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { GlassCard } from '../components/shared/GlassCard';
-import { Input } from '../components/shared/Input';
-import { Select } from '../components/shared/Select';
-import { ActionGlowButton } from '../components/shared/ActionGlowButton';
-import { Badge } from '../components/shared/Badge';
-import { useToast } from '../components/shared/Toast';
-import { Skeleton } from '../components/shared/Skeleton';
+
+import { Input } from '@shared/ui/Input';
+import { Select } from '@shared/ui/Select';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { Badge } from '@shared/ui/Badge';
+import { useToast } from '@shared/ui/Toast';
+import { Skeleton } from '@shared/ui/Skeleton';
 import { useGymSettings } from '../hooks/useGymSettings';
-import { gymSettingsSchema } from '../schemas/gymSettingsSchema';
+import { gymSettingsSchema } from '@shared/schemas/gymSettingsSchema';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { Building2, Receipt, ShieldAlert } from 'lucide-react';
+import { COUNTRIES, CURRENCIES, TIMEZONES } from '@shared/utils/constants';
 
 export function GymSettingsPage() {
   const { user } = useAuth();
@@ -45,6 +46,8 @@ export function GymSettingsPage() {
     if (query.data && !isNewRecord) {
       reset({
         ...query.data,
+        tax_regime: query.data.tax_regime ?? '',
+        receipt_footer_notes: query.data.receipt_footer_notes ?? '',
         default_tax_percentage: Number(query.data.default_tax_percentage),
       });
     }
@@ -60,16 +63,21 @@ export function GymSettingsPage() {
       return;
     }
 
+    const payload = {
+      ...data,
+      default_tax_percentage: Number(data.default_tax_percentage),
+    };
+
     try {
       if (isNewRecord) {
-        await createMutation.mutateAsync(data);
+        await createMutation.mutateAsync(payload);
         toast({
           type: 'success',
           title: 'Configuración Creada',
           message: 'Los datos institucionales han sido registrados con éxito.',
         });
       } else {
-        await updateMutation.mutateAsync(data);
+        await updateMutation.mutateAsync(payload);
         toast({
           type: 'success',
           title: 'Configuración Actualizada',
@@ -77,7 +85,7 @@ export function GymSettingsPage() {
         });
       }
       // Reset form with new data to clear isDirty state
-      reset(data);
+      reset(payload);
     } catch (err: any) {
       console.error(err);
       
@@ -109,6 +117,8 @@ export function GymSettingsPage() {
     if (query.data && !isNewRecord) {
       reset({
         ...query.data,
+        tax_regime: query.data.tax_regime ?? '',
+        receipt_footer_notes: query.data.receipt_footer_notes ?? '',
         default_tax_percentage: Number(query.data.default_tax_percentage),
       });
       toast({
@@ -128,7 +138,7 @@ export function GymSettingsPage() {
           <Skeleton className="h-10 w-64" />
           <Skeleton className="h-4 w-96" />
         </div>
-        <GlassCard className="flex flex-col gap-6 p-8">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 flex flex-col gap-6 p-8">
           <Skeleton className="h-6 w-48 mb-4" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Skeleton className="h-16 w-full" />
@@ -136,14 +146,14 @@ export function GymSettingsPage() {
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-16 w-full" />
           </div>
-        </GlassCard>
+        </div>
       </div>
     );
   }
 
   if (query.isError && !isNewRecord) {
     return (
-      <GlassCard className="p-8 text-center max-w-lg mx-auto flex flex-col items-center gap-4 mt-8">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-8 text-center max-w-lg mx-auto flex flex-col items-center gap-4 mt-8">
         <ShieldAlert className="w-12 h-12 text-danger" />
         <h2 className="text-xl font-bold text-text-primary">Error de Conexión</h2>
         <p className="text-sm text-text-secondary">
@@ -155,7 +165,7 @@ export function GymSettingsPage() {
         >
           Reintentar
         </button>
-      </GlassCard>
+      </div>
     );
   }
 
@@ -179,11 +189,21 @@ export function GymSettingsPage() {
 
         <div className="flex items-center gap-3">
           {isAdmin && (
-            <Link to="/settings/subscription">
-              <ActionGlowButton>
-                Gestionar Suscripción
-              </ActionGlowButton>
-            </Link>
+            <>
+              <Link to="/app/notifications">
+                <button
+                  type="button"
+                  className="px-3.5 py-2 text-sm font-medium border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-colors flex items-center gap-2"
+                >
+                  <span>WhatsApp Business</span>
+                </button>
+              </Link>
+              <Link to="/settings/subscription">
+                <ActionGlowButton>
+                  Gestionar Suscripción
+                </ActionGlowButton>
+              </Link>
+            </>
           )}
           {!isAdmin && (
             <div className="flex items-center gap-2 text-xs text-warning bg-warning/10 border border-warning/20 px-3 py-2 rounded-lg">
@@ -196,7 +216,7 @@ export function GymSettingsPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-8">
         {/* Block 1: Identificación Legal */}
-        <GlassCard className="flex flex-col gap-6">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 flex flex-col gap-6">
           <div className="flex items-center gap-2 border-b border-border-light pb-4">
             <Building2 className="text-brand-primary" size={22} />
             <h2 className="text-lg font-semibold text-text-primary">Datos Legales y Comerciales</h2>
@@ -236,10 +256,10 @@ export function GymSettingsPage() {
               {...register('tax_regime')}
             />
           </div>
-        </GlassCard>
+        </div>
 
         {/* Block 2: Contacto y Ubicación */}
-        <GlassCard className="flex flex-col gap-6">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 flex flex-col gap-6">
           <div className="flex items-center gap-2 border-b border-border-light pb-4">
             <Building2 className="text-brand-primary" size={22} />
             <h2 className="text-lg font-semibold text-text-primary">Ubicación y Contacto Oficial</h2>
@@ -280,20 +300,20 @@ export function GymSettingsPage() {
                 helperText={errors.city?.message as string}
                 {...register('city')}
               />
-              <Input
+              <Select
                 label="País"
-                placeholder="Colombia"
                 disabled={!isAdmin || isSaving}
                 error={!!errors.country}
                 helperText={errors.country?.message as string}
+                options={COUNTRIES.map(c => ({ value: c, label: c }))}
                 {...register('country')}
               />
             </div>
           </div>
-        </GlassCard>
+        </div>
 
         {/* Block 3: Facturación e Impuestos */}
-        <GlassCard className="flex flex-col gap-6">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 flex flex-col gap-6">
           <div className="flex items-center gap-2 border-b border-border-light pb-4">
             <Receipt className="text-brand-primary" size={22} />
             <h2 className="text-lg font-semibold text-text-primary">Moneda e Impuestos</h2>
@@ -302,11 +322,7 @@ export function GymSettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Select
               label="Moneda Principal"
-              options={[
-                { value: 'COP', label: 'COP - Peso Colombiano' },
-                { value: 'USD', label: 'USD - Dólar Estadounidense' },
-                { value: 'EUR', label: 'EUR - Euro' },
-              ]}
+              options={CURRENCIES}
               disabled={!isAdmin || isSaving}
               error={!!errors.currency}
               helperText={errors.currency?.message as string}
@@ -324,12 +340,12 @@ export function GymSettingsPage() {
               helperText={(errors.default_tax_percentage?.message as string) || 'Entre 0 y 100'}
               {...register('default_tax_percentage')}
             />
-            <Input
+            <Select
               label="Zona Horaria"
-              placeholder="America/Bogota"
               disabled={!isAdmin || isSaving}
               error={!!errors.timezone}
               helperText={errors.timezone?.message as string}
+              options={TIMEZONES.map(tz => ({ value: tz, label: tz }))}
               {...register('timezone')}
             />
           </div>
@@ -349,7 +365,7 @@ export function GymSettingsPage() {
               <span className="text-xs text-danger">{errors.receipt_footer_notes.message as string}</span>
             )}
           </div>
-        </GlassCard>
+        </div>
 
         {/* Sticky Action Bar */}
         {isAdmin && (

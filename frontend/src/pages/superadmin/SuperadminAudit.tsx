@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ShieldAlert, History } from 'lucide-react';
-import { GlassCard } from '../../components/shared/GlassCard';
-import { Skeleton } from '../../components/shared/Skeleton';
-import { Pagination } from '../../components/shared/Pagination';
+import { Skeleton } from '@shared/ui/Skeleton';
+import { Pagination } from '@shared/ui/Pagination';
 import { superadminService } from '../../services/superadminService';
+import { formatDate } from '@shared/utils/formatters';
 
 export function SuperadminAudit() {
   const [page, setPage] = useState(1);
@@ -19,20 +19,20 @@ export function SuperadminAudit() {
     return (
       <div className="flex flex-col gap-6">
         <Skeleton className="h-10 w-64" />
-        <GlassCard className="p-6">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6">
           <div className="flex flex-col gap-4">
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
           </div>
-        </GlassCard>
+        </div>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <GlassCard className="p-8 text-center max-w-lg mx-auto flex flex-col items-center gap-4 mt-8">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-8 text-center max-w-lg mx-auto flex flex-col items-center gap-4 mt-8">
         <ShieldAlert className="w-12 h-12 text-danger" />
         <h2 className="text-xl font-bold text-text-primary">Error de Conexión</h2>
         <p className="text-sm text-text-secondary">No se pudo cargar la auditoría.</p>
@@ -42,7 +42,7 @@ export function SuperadminAudit() {
         >
           Reintentar
         </button>
-      </GlassCard>
+      </div>
     );
   }
 
@@ -53,7 +53,7 @@ export function SuperadminAudit() {
         <p className="text-text-secondary text-sm mt-1">Registro de actividades de todos los tenants de la plataforma.</p>
       </div>
 
-      <GlassCard className="overflow-hidden">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 overflow-hidden">
         {data?.items.length === 0 ? (
           <div className="p-12 text-center flex flex-col items-center">
             <History className="w-12 h-12 text-text-muted mb-4" />
@@ -76,7 +76,7 @@ export function SuperadminAudit() {
                 {data?.items.map((log) => (
                   <tr key={log.id} className="hover:bg-white/[0.02] transition-colors">
                     <td className="px-6 py-4 text-sm text-text-secondary whitespace-nowrap">
-                      {new Date(log.created_at).toLocaleString()}
+                      {formatDate(log.created_at)}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-text-primary">
                       #{log.gym_id}
@@ -106,7 +106,7 @@ export function SuperadminAudit() {
             />
           </div>
         )}
-      </GlassCard>
+      </div>
     </div>
   );
 }

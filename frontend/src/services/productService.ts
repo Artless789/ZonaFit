@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Product, ProductCreate, ProductUpdate } from '../types/product';
+import type { Product, ProductCreate, ProductUpdate } from '@shared/types/product';
 import type { Paginated } from './membershipPlanService';
 
 export const productService = {

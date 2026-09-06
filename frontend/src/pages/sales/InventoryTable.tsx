@@ -1,8 +1,9 @@
 import { Edit2, Ban, PackageOpen } from 'lucide-react';
-import type { Product } from '../../types/product';
-import type { Category } from '../../types/category';
-import { Badge } from '../../components/shared/Badge';
-import { cn } from '../../utils/cn';
+import type { Product } from '@shared/types/product';
+import type { Category } from '@shared/types/category';
+import { Badge } from '@shared/ui/Badge';
+import { cn } from '@shared/utils/cn';
+import { formatCurrency } from '@shared/utils/formatters';
 
 interface InventoryTableProps {
   products: Product[];
@@ -26,13 +27,7 @@ export function InventoryTable({ products, categories, onEdit, onToggleStatus }:
     );
   }
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      maximumFractionDigits: 0
-    }).format(price);
-  };
+  const formatPrice = formatCurrency;
 
   const getCategoryName = (id: number) => {
     const cat = categories.find(c => c.id === id);

@@ -1,17 +1,19 @@
 import { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Drawer } from '../../components/shared/Drawer';
-import { Input } from '../../components/shared/Input';
-import { Select } from '../../components/shared/Select';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { useToast } from '../../components/shared/Toast';
-import { clientSchema, ClientFormValues } from '../../schemas/clientSchema';
-import type { Client } from '../../types/client';
+import { Drawer } from '@shared/ui/Drawer';
+import { Input } from '@shared/ui/Input';
+import { Select } from '@shared/ui/Select';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { useToast } from '@shared/ui/Toast';
+import { clientSchema, ClientFormValues } from '@shared/schemas/clientSchema';
+import type { Client } from '@shared/types/client';
 import { useClients } from '../../hooks/useClients';
 import { api } from '../../services/api';
 import { User as UserIcon, Upload, X } from 'lucide-react';
-import { AuthorizedImage } from '../../components/shared/AuthorizedImage';
+import { AuthorizedImage } from '@shared/ui/AuthorizedImage';
+
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ClientDrawerProps {
   isOpen: boolean;
@@ -20,6 +22,7 @@ interface ClientDrawerProps {
 }
 
 export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const { createMutation, updateMutation } = useClients();
   const isEditing = !!client;
@@ -79,6 +82,8 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
     await api.post(`/clients/${clientId}/photo`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
+    queryClient.invalidateQueries({ queryKey: ['clients'] });
+    queryClient.invalidateQueries({ queryKey: ['client360'] });
   };
 
   const onSubmit = async (data: ClientFormValues) => {
@@ -250,7 +255,7 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
           >
             Cancelar
           </button>
-          <ActionGlowButton type="submit" isLoading={isSaving} disabled={!isDirty && isEditing}>
+          <ActionGlowButton type="submit" isLoading={isSaving} disabled={!isDirty && !photoFile && isEditing}>
             {isEditing ? 'Guardar Cambios' : 'Registrar Cliente'}
           </ActionGlowButton>
         </div>

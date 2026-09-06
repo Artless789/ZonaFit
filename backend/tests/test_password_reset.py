@@ -16,6 +16,14 @@ from passlib.context import CryptContext
 # Test Database Setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_reset.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    if type(dbapi_connection).__name__ == 'Connection':
+        dbapi_connection.create_function("num_nonnulls", -1, lambda *args: sum(1 for a in args if a is not None))
+
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def override_get_db():
@@ -35,11 +43,9 @@ def override_get_db():
     finally:
         db.close()
 
-app.dependency_overrides[get_db] = override_get_db
-
 client = TestClient(app)
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="module", autouse=True)
 def setup_db():
     from app.database.base import Base
     Base.metadata.create_all(bind=engine)
@@ -66,10 +72,14 @@ def setup_db():
     db.add(user_b)
     db.commit()
     
+    app.dependency_overrides[get_db] = override_get_db
+
     yield
+
+    app.dependency_overrides.pop(get_db, None)
     Base.metadata.drop_all(bind=engine)
 
-def test_01_forgot_password_existing_email(setup_db):
+def test_01_forgot_password_existing_email():
     response = client.post("/auth/forgot-password", json={"email": "userA@test.com"})
     assert response.status_code == 200
     assert "instrucciones" in response.json()["message"]
@@ -94,7 +104,7 @@ def test_03_validate_valid_token():
     reset_token = PasswordResetToken(
         user_id=user.id,
         token_hash=token_hash,
-        expires_at=datetime.datetime.now(UTC) + datetime.timedelta(minutes=60)
+        expires_at=datetime.datetime.now(UTC).replace(tzinfo=None) + datetime.timedelta(minutes=60)
     )
     db.add(reset_token)
     db.commit()
@@ -116,7 +126,8 @@ def test_05_validate_expired_token():
     reset_token = PasswordResetToken(
         user_id=user.id,
         token_hash=token_hash,
-        expires_at=datetime.datetime.now(UTC) - datetime.timedelta(minutes=60)
+        expires_at=datetime.datetime.now(UTC) - datetime.timedelta(minutes=60),
+        created_at=datetime.datetime.now(UTC) - datetime.timedelta(minutes=120)
     )
     db.add(reset_token)
     db.commit()
@@ -135,7 +146,8 @@ def test_06_validate_used_token():
         user_id=user.id,
         token_hash=token_hash,
         expires_at=datetime.datetime.now(UTC) + datetime.timedelta(minutes=60),
-        used_at=datetime.datetime.now(UTC)
+        used_at=datetime.datetime.now(UTC),
+        created_at=datetime.datetime.now(UTC)
     )
     db.add(reset_token)
     db.commit()
@@ -154,7 +166,8 @@ def test_07_reset_password_success():
     reset_token = PasswordResetToken(
         user_id=user.id,
         token_hash=token_hash,
-        expires_at=datetime.datetime.now(UTC) + datetime.timedelta(minutes=60)
+        expires_at=datetime.datetime.now(UTC) + datetime.timedelta(minutes=60),
+        created_at=datetime.datetime.now(UTC)
     )
     db.add(reset_token)
     db.commit()
@@ -165,6 +178,28 @@ def test_07_reset_password_success():
     })
     
     assert response.status_code == 200
+
+def test_08_password_too_short():
+    db = TestingSessionLocal()
+    user = db.query(User).filter(User.email == "userB@test.com").first()
+    
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    
+    reset_token = PasswordResetToken(
+        user_id=user.id,
+        token_hash=token_hash,
+        expires_at=datetime.datetime.now(UTC) + datetime.timedelta(minutes=60),
+        created_at=datetime.datetime.now(UTC)
+    )
+    db.add(reset_token)
+    db.commit()
+
+    response = client.post("/auth/reset-password", json={
+        "token": raw_token,
+        "new_password": "short"
+    })
+    assert response.status_code == 422
 
 def test_09_verify_password_hash_changed():
     db = TestingSessionLocal()
@@ -183,9 +218,7 @@ def test_10_verify_token_used():
         assert token.used_at is not None
 
 def test_11_token_cant_be_used_for_another_user():
-    # If the payload doesn't even receive email, we can't try to change another user,
-    # The endpoint simply finds the token, gets the user_id associated with it, and changes that user's password.
-    # Therefore, A's token modifies A's password. It's impossible to use A's token to modify B's password.
+    # Token is tied to user_id in DB, cannot be forged for a different user
     pass
 
 def test_12_login_with_new_password():
@@ -193,8 +226,6 @@ def test_12_login_with_new_password():
         "username": "userA@test.com",
         "password": "NewPassword456"
     })
-    # Will fail locally if sqlite doesn't mock RLS appropriately for login but let's check
-    # actually sqlite doesn't have RLS so the bypass fails or ignores.
     assert response.status_code == 200
     assert "access_token" in response.json()
 
@@ -204,3 +235,43 @@ def test_13_login_with_old_password():
         "password": "OldPassword123"
     })
     assert response.status_code == 401
+
+def test_14_refresh_tokens_revoked_on_password_reset():
+    from app.models.refresh_token import RefreshToken
+    db = TestingSessionLocal()
+    user = db.query(User).filter(User.email == "userB@test.com").first()
+    
+    # Create an active refresh token
+    raw_rt = secrets.token_urlsafe(64)
+    rt_hash = hashlib.sha256(raw_rt.encode()).hexdigest()
+    rt = RefreshToken(
+        user_id=user.id,
+        token_hash=rt_hash,
+        expires_at=datetime.datetime.now(UTC).replace(tzinfo=None) + datetime.timedelta(days=7)
+    )
+    db.add(rt)
+    
+    # Create reset token
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    reset_token = PasswordResetToken(
+        user_id=user.id,
+        token_hash=token_hash,
+        expires_at=datetime.datetime.now(UTC) + datetime.timedelta(minutes=60),
+        created_at=datetime.datetime.now(UTC)
+    )
+    db.add(reset_token)
+    db.commit()
+
+    # Reset password
+    response = client.post("/auth/reset-password", json={
+        "token": raw_token,
+        "new_password": "NewPasswordB789"
+    })
+    assert response.status_code == 200
+
+    # Verify refresh token was revoked
+    db = TestingSessionLocal()
+    updated_rt = db.query(RefreshToken).filter(RefreshToken.token_hash == rt_hash).first()
+    assert updated_rt.revoked_at is not None
+

@@ -13,9 +13,12 @@ from app.schemas.sale_detail import (
 from app.services.sale_detail_service import SaleDetailService
 from app.schemas.pagination import PaginationParams, PaginationResponse
 
+from app.core.idempotency import IdempotentRoute
+
 router = APIRouter(
     prefix="/sale-details",
     tags=["Sale Details"],
+    route_class=IdempotentRoute
 )
 
 

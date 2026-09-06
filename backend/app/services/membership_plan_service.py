@@ -35,6 +35,12 @@ class MembershipPlanService:
         if existing_plan:
             raise ConflictException("A plan with this name already exists.")
 
+        if plan_data.duration_days <= 0:
+            raise ValueError("Plan duration must be greater than 0 days.")
+
+        if plan_data.price < 0:
+            raise ValueError("Plan price cannot be negative.")
+
         plan = MembershipPlan(
             gym_id=current_user.gym_id,
             name=plan_data.name,
@@ -63,9 +69,15 @@ class MembershipPlanService:
             db.query(MembershipPlan)
             .filter(
                 MembershipPlan.gym_id == current_user.gym_id,
-                MembershipPlan.is_active == True,
             )
         )
+
+        if filters.status:
+            status_lower = filters.status.lower()
+            if status_lower == "active":
+                query = query.filter(MembershipPlan.is_active == True)
+            elif status_lower == "inactive":
+                query = query.filter(MembershipPlan.is_active == False)
 
         query = apply_filters(
             query=query,
@@ -114,6 +126,12 @@ class MembershipPlanService:
         plan: MembershipPlan,
         plan_data: MembershipPlanUpdate,
     ):
+        if plan_data.duration_days is not None and plan_data.duration_days <= 0:
+            raise ValueError("Plan duration must be greater than 0 days.")
+
+        if plan_data.price is not None and plan_data.price < 0:
+            raise ValueError("Plan price cannot be negative.")
+
         update_data = plan_data.model_dump(exclude_unset=True)
 
         with DatabaseTransaction(db):

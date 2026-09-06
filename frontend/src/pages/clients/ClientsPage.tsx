@@ -4,27 +4,29 @@ import { useClients } from '../../hooks/useClients';
 import { ClientsTable } from './ClientsTable';
 import { ClientDrawer } from './ClientDrawer';
 import { ClientProfileDrawer } from './ClientProfileDrawer';
-import type { Client } from '../../types/client';
-import { GlassCard } from '../../components/shared/GlassCard';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { Skeleton } from '../../components/shared/Skeleton';
-import { ErrorState } from '../../components/shared/ErrorState';
-import { EmptyState } from '../../components/shared/EmptyState';
-import { Button } from '../../components/shared/Button';
-import { useToast } from '../../components/shared/Toast';
+import type { Client } from '@shared/types/client';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { Skeleton } from '@shared/ui/Skeleton';
+import { ErrorState } from '@shared/ui/ErrorState';
+import { EmptyState } from '@shared/ui/EmptyState';
+import { Button } from '@shared/ui/Button';
+import { useToast } from '@shared/ui/Toast';
 
-import { Pagination } from '../../components/shared/Pagination';
+import { Pagination } from '@shared/ui/Pagination';
 import { useDebounce } from '../../hooks/useDebounce';
+import { cn } from '@shared/utils/cn';
 
 export function ClientsPage() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const { toast } = useToast();
   
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const isActiveParam = statusFilter === 'all' ? undefined : statusFilter === 'active';
   
-  const { query, deleteMutation, updateMutation } = useClients(page, pageSize, debouncedSearchTerm);
+  const { query, deleteMutation, updateMutation } = useClients(page, pageSize, debouncedSearchTerm, isActiveParam);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false); // For Edit/Create
   const [isProfileOpen, setIsProfileOpen] = useState(false); // For 360 View
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -108,7 +110,7 @@ export function ClientsPage() {
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <GlassCard className="p-6 flex items-center gap-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
             <Users size={24} />
           </div>
@@ -116,9 +118,9 @@ export function ClientsPage() {
             <p className="text-text-muted text-sm font-medium">Total Clientes</p>
             <h3 className="text-2xl font-bold text-text-primary">{total}</h3>
           </div>
-        </GlassCard>
+        </div>
         
-        <GlassCard className="p-6 flex items-center gap-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center text-success">
             <Activity size={24} />
           </div>
@@ -126,9 +128,9 @@ export function ClientsPage() {
             <p className="text-text-muted text-sm font-medium">Activos</p>
             <h3 className="text-2xl font-bold text-text-primary">{activeCount}</h3>
           </div>
-        </GlassCard>
+        </div>
 
-        <GlassCard className="p-6 flex items-center gap-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-danger/10 flex items-center justify-center text-danger">
             <UserMinus size={24} />
           </div>
@@ -136,7 +138,7 @@ export function ClientsPage() {
             <p className="text-text-muted text-sm font-medium">Inactivos</p>
             <h3 className="text-2xl font-bold text-text-primary">{inactiveCount}</h3>
           </div>
-        </GlassCard>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -150,6 +152,44 @@ export function ClientsPage() {
             onChange={handleSearchChange}
             className="w-full h-10 pl-10 pr-4 rounded-md border border-border-medium bg-bg-page text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary transition-fast"
           />
+        </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="flex bg-bg-page p-1 rounded-lg border border-border-medium w-full md:w-auto justify-center">
+            <button
+              onClick={() => { setStatusFilter('all'); setPage(1); }}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                statusFilter === 'all' 
+                  ? "bg-bg-elevated text-text-primary shadow-sm" 
+                  : "text-text-muted hover:text-text-secondary"
+              )}
+            >
+              Todos
+            </button>
+            <button
+              onClick={() => { setStatusFilter('active'); setPage(1); }}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                statusFilter === 'active' 
+                  ? "bg-bg-elevated text-success shadow-sm" 
+                  : "text-text-muted hover:text-text-secondary"
+              )}
+            >
+              Activos
+            </button>
+            <button
+              onClick={() => { setStatusFilter('inactive'); setPage(1); }}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                statusFilter === 'inactive' 
+                  ? "bg-bg-elevated text-danger shadow-sm" 
+                  : "text-text-muted hover:text-text-secondary"
+              )}
+            >
+              Inactivos
+            </button>
+          </div>
         </div>
       </div>
 

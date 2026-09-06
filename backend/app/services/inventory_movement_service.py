@@ -32,6 +32,7 @@ class InventoryMovementService:
                 Product.gym_id == current_user.gym_id,
                 Product.is_active == True,
             )
+            .with_for_update()
             .first()
         )
 

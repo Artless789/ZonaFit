@@ -1,18 +1,17 @@
-// @ts-nocheck
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Drawer } from '../../components/shared/Drawer';
-import { Select } from '../../components/shared/Select';
-import { Input } from '../../components/shared/Input';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { useToast } from '../../components/shared/Toast';
-import { notificationSendSchema } from '../../schemas/notificationSchema';
-import type { Client } from '../../types/client';
+import { Drawer } from '@shared/ui/Drawer';
+import { Select } from '@shared/ui/Select';
+import { Input } from '@shared/ui/Input';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { useToast } from '@shared/ui/Toast';
+import { notificationSendSchema } from '@shared/schemas/notificationSchema';
+import type { Client } from '@shared/types/client';
 import { useNotifications } from '../../hooks/useNotifications';
 import { EVENT_TYPE_OPTIONS } from '../../services/notificationService';
 import { Send, Phone, AlertTriangle } from 'lucide-react';
-import type { NotificationSendFormValues } from '../../schemas/notificationSchema';
+import type { NotificationSendFormValues } from '@shared/schemas/notificationSchema';
 
 interface ManualDrawerProps {
   isOpen: boolean;
@@ -69,7 +68,7 @@ export function ManualDrawer({ isOpen, onClose, clients }: ManualDrawerProps) {
   const onSubmit = async (data: NotificationSendFormValues) => {
     try {
       await sendMutation.mutateAsync({
-        client_id: data.client_id || null,
+        client_id: data.client_id ? Number(data.client_id) : null,
         event_type: data.event_type,
         channel: data.channel,
         recipient: data.recipient,

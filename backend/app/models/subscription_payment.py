@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Enum, Numeric
 from sqlalchemy.orm import relationship
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
 from app.database.base import Base
 
 class TransactionStatus(str, enum.Enum):
@@ -24,8 +24,8 @@ class SubscriptionPayment(Base):
     currency = Column(String(3), nullable=False, default="COP")
     status = Column(Enum(TransactionStatus), index=True, nullable=False, default=TransactionStatus.PENDING)
     payment_method_type = Column(String(50), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     gym = relationship("Gym")
     subscription = relationship("Subscription")

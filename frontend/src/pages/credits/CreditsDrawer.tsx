@@ -1,13 +1,13 @@
-import { Drawer } from '../../components/shared/Drawer';
-import { GlassCard } from '../../components/shared/GlassCard';
-import { Badge } from '../../components/shared/Badge';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { Skeleton } from '../../components/shared/Skeleton';
+import { Drawer } from '@shared/ui/Drawer';
+import { Badge } from '@shared/ui/Badge';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { Skeleton } from '@shared/ui/Skeleton';
 import { CreditCard, History, AlertCircle } from 'lucide-react';
 import { useAccountsReceivablePayments } from '../../hooks/useAccountsReceivables';
-import type { AccountsReceivable } from '../../types/accountsReceivable';
+import type { AccountsReceivable } from '@shared/types/accountsReceivable';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatCurrency } from '@shared/utils/formatters';
 
 interface CreditsDrawerProps {
   isOpen: boolean;
@@ -22,9 +22,7 @@ export function CreditsDrawer({ isOpen, onClose, ar, onPay, clientName }: Credit
   const { data: payments = [], isLoading: isLoadingPayments, error } = 
     useAccountsReceivablePayments(ar?.id || 0);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(price);
-  };
+  const formatPrice = formatCurrency;
   
   const formatDate = (dateString: string) => {
     try {
@@ -64,7 +62,7 @@ export function CreditsDrawer({ isOpen, onClose, ar, onPay, clientName }: Credit
       <div className="space-y-6">
         
         {/* Main Details */}
-        <GlassCard className="space-y-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 space-y-4">
           <div className="flex justify-between items-start border-b border-border-light pb-4">
             <div>
               <h3 className="text-lg font-bold text-text-primary">{clientName}</h3>
@@ -100,7 +98,7 @@ export function CreditsDrawer({ isOpen, onClose, ar, onPay, clientName }: Credit
               </ActionGlowButton>
             </div>
           )}
-        </GlassCard>
+        </div>
 
         {/* Payment History */}
         <div className="space-y-3">
@@ -115,19 +113,19 @@ export function CreditsDrawer({ isOpen, onClose, ar, onPay, clientName }: Credit
               <Skeleton className="h-16 w-full rounded-lg" />
             </div>
           ) : error ? (
-            <GlassCard className="bg-danger/5 border-danger/20 flex flex-col items-center justify-center py-6 text-center">
+            <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 bg-danger/5 border-danger/20 flex flex-col items-center justify-center py-6 text-center">
                <AlertCircle className="text-danger opacity-80 mb-2" size={24} />
                <p className="text-danger text-sm">Error al cargar historial.</p>
-            </GlassCard>
+            </div>
           ) : payments.length === 0 ? (
-            <GlassCard className="flex flex-col items-center justify-center py-8 text-center text-text-muted border-dashed">
+            <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 flex flex-col items-center justify-center py-8 text-center text-text-muted border-dashed">
               <CreditCard size={32} className="opacity-20 mb-2" />
               <p className="text-sm">No hay pagos registrados aún.</p>
-            </GlassCard>
+            </div>
           ) : (
             <div className="space-y-2">
               {payments.map(payment => (
-                <GlassCard key={payment.id} className="p-3 flex justify-between items-center group hover:bg-bg-elevated transition-colors">
+                <div key={payment.id} className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-3 flex justify-between items-center group hover:bg-bg-elevated transition-colors">
                   <div>
                     <div className="font-semibold text-text-primary text-sm">
                       {formatPrice(payment.amount)}
@@ -141,7 +139,7 @@ export function CreditsDrawer({ isOpen, onClose, ar, onPay, clientName }: Credit
                   <Badge variant={payment.status === 'PAID' ? 'success' : 'neutral'} className="text-[10px]">
                     {payment.status}
                   </Badge>
-                </GlassCard>
+                </div>
               ))}
             </div>
           )}

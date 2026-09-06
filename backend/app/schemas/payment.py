@@ -1,5 +1,6 @@
 from decimal import Decimal
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -8,7 +9,8 @@ class PaymentBase(BaseModel):
     membership_id: int | None = None
     sale_id: int | None = None
     accounts_receivable_id: int | None = None
-    payment_method: str
+    amount: Decimal | None = None
+    payment_method: Literal["CASH", "CARD", "TRANSFER"]
     reference: str | None = None
 
 
@@ -17,7 +19,7 @@ class PaymentCreate(PaymentBase):
 
 
 class PaymentUpdate(BaseModel):
-    payment_method: str | None = None
+    payment_method: Literal["CASH", "CARD", "TRANSFER"] | None = None
     reference: str | None = None
     status: str | None = None
     is_active: bool | None = None

@@ -1,15 +1,22 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { GlassCard } from '../components/shared/GlassCard';
-import { ActionGlowButton } from '../components/shared/ActionGlowButton';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { Card } from '@shared/ui/Card';
 import { authService } from '../services/authService';
 import { User, Mail, Lock, Building, Phone, MapPin, Map, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { useToast } from '../components/shared/Toast';
+import { useToast } from '@shared/ui/Toast';
 
 function getRegistrationErrorMessage(error: unknown): string {
-  const detail = (error as { response?: { data?: { detail?: unknown } } })
-    .response?.data?.detail;
+  const responseData = (error as { response?: { data?: any } })?.response?.data;
+  
+  // Custom API wrapper format
+  if (responseData?.error?.message && typeof responseData.error.message === 'string') {
+    return responseData.error.message;
+  }
+
+  // Standard FastAPI format
+  const detail = responseData?.detail;
 
   if (typeof detail === 'string') return detail;
 
@@ -30,6 +37,8 @@ function getRegistrationErrorMessage(error: unknown): string {
 
 export function Register() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const planId = searchParams.get('planId');
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -85,7 +94,7 @@ export function Register() {
     try {
       await authService.register(formData);
       toast({ type: 'success', title: '¡Gimnasio Creado!', message: 'Serás redirigido al inicio de sesión.' });
-      navigate('/login');
+      navigate(planId ? `/login?planId=${planId}` : '/login');
     } catch (error: unknown) {
       toast({ 
         type: 'error', 
@@ -121,7 +130,7 @@ export function Register() {
           <p className="text-text-secondary mt-2 font-medium">Comienza a gestionar tu gimnasio con ZonaFit</p>
         </div>
 
-        <GlassCard className="p-1 md:p-8 overflow-hidden relative">
+        <Card variant="glass" padding="none" className="p-1 md:p-8 overflow-hidden relative">
           <form onSubmit={handleSubmit} className="p-6 md:p-0">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-10">
               
@@ -343,12 +352,12 @@ export function Register() {
               </ActionGlowButton>
             </div>
           </form>
-        </GlassCard>
+        </Card>
 
         <p className="text-center text-text-secondary mt-8 text-sm">
           ¿Ya tienes cuenta?{' '}
           <button 
-            onClick={() => navigate('/login')}
+            onClick={() => navigate(planId ? `/login?planId=${planId}` : '/login')}
             className="text-brand-primary hover:text-white font-medium transition-colors border-b border-transparent hover:border-brand-primary pb-0.5"
           >
             Inicia sesión aquí

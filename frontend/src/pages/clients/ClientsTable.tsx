@@ -1,8 +1,8 @@
 import { CheckCircle2, Ban, Eye } from 'lucide-react';
-import type { Client } from '../../types/client';
-import { Badge } from '../../components/shared/Badge';
-import { cn } from '../../utils/cn';
-import { AuthorizedImage } from '../../components/shared/AuthorizedImage';
+import type { Client } from '@shared/types/client';
+import { Badge } from '@shared/ui/Badge';
+import { cn } from '@shared/utils/cn';
+import { AuthorizedImage } from '@shared/ui/AuthorizedImage';
 
 interface ClientsTableProps {
   clients: Client[];

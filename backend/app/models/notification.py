@@ -46,6 +46,21 @@ class Notification(Base):
 
     sent_at = Column(DateTime(timezone=True), nullable=True)
 
+    integration_id = Column(
+        Integer,
+        ForeignKey("whatsapp_integrations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    provider_message_id = Column(String(100), nullable=True, index=True)
+
+    delivery_status = Column(String(50), nullable=True)
+
+    error_code = Column(String(50), nullable=True)
+
+    metadata_json = Column(Text, nullable=True)
+
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),

@@ -1,7 +1,8 @@
 import { Edit2, Tag, Ban } from 'lucide-react';
-import type { MembershipPlan } from '../../types/membershipPlan';
-import { Badge } from '../../components/shared/Badge';
-import { cn } from '../../utils/cn';
+import type { MembershipPlan } from '@shared/types/membershipPlan';
+import { Badge } from '@shared/ui/Badge';
+import { cn } from '@shared/utils/cn';
+import { formatCurrency } from '@shared/utils/formatters';
 
 interface MembershipPlansTableProps {
   plans: MembershipPlan[];
@@ -24,13 +25,7 @@ export function MembershipPlansTable({ plans, onEdit, onToggleStatus }: Membersh
     );
   }
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      maximumFractionDigits: 0
-    }).format(price);
-  };
+  const formatPrice = formatCurrency;
 
   return (
     <div className="w-full overflow-x-auto rounded-xl border border-border-light bg-bg-surface shadow-glass">

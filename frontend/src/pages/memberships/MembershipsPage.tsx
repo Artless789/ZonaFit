@@ -7,12 +7,13 @@ import { MembershipPlansTable } from './MembershipPlansTable';
 import { MembershipPlanDrawer } from './MembershipPlanDrawer';
 import { MembershipsTable, EnrichedMembership } from './MembershipsTable';
 import { MembershipDrawer } from './MembershipDrawer';
-import type { Membership } from '../../types/membership';
-import type { MembershipPlan } from '../../types/membershipPlan';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
-import { Skeleton } from '../../components/shared/Skeleton';
-import { useToast } from '../../components/shared/Toast';
-import { cn } from '../../utils/cn';
+import { MembershipDetailDrawer } from './MembershipDetailDrawer';
+import type { Membership } from '@shared/types/membership';
+import type { MembershipPlan } from '@shared/types/membershipPlan';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { Skeleton } from '@shared/ui/Skeleton';
+import { useToast } from '@shared/ui/Toast';
+import { cn } from '@shared/utils/cn';
 
 export function MembershipsPage() {
   const { toast } = useToast();
@@ -23,9 +24,9 @@ export function MembershipsPage() {
   const membershipsQuery = useMemberships();
   const clientsQuery = useClients();
 
-  const plans = plansQuery.query.data?.items || [];
-  const memberships = membershipsQuery.query.data?.items || [];
-  const clients = clientsQuery.query.data?.items || [];
+  const plans = (Array.isArray(plansQuery.query.data) ? plansQuery.query.data : plansQuery.query.data?.items) || [];
+  const memberships = (Array.isArray(membershipsQuery.query.data) ? membershipsQuery.query.data : membershipsQuery.query.data?.items) || [];
+  const clients = (Array.isArray(clientsQuery.query.data) ? clientsQuery.query.data : clientsQuery.query.data?.items) || [];
 
   // Enriched Memberships (Map IDs to Names)
   const enrichedMemberships: EnrichedMembership[] = useMemo(() => {
@@ -44,6 +45,14 @@ export function MembershipsPage() {
   const [isPlanDrawerOpen, setIsPlanDrawerOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<MembershipPlan | null>(null);
   const [isSubscriptionDrawerOpen, setIsSubscriptionDrawerOpen] = useState(false);
+  const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
+  const [selectedMembershipForDetail, setSelectedMembershipForDetail] = useState<Membership | null>(null);
+
+  // Handlers for Details
+  const handleViewDetails = (membership: Membership) => {
+    setSelectedMembershipForDetail(membership);
+    setIsDetailDrawerOpen(true);
+  };
 
   // Handlers for Plans
   const handleOpenCreatePlan = () => {
@@ -162,6 +171,7 @@ export function MembershipsPage() {
             <MembershipsTable 
               memberships={enrichedMemberships} 
               onToggleStatus={handleToggleSubscriptionStatus}
+              onViewDetails={handleViewDetails}
             />
           </div>
         ) : (
@@ -184,6 +194,13 @@ export function MembershipsPage() {
       <MembershipDrawer
         isOpen={isSubscriptionDrawerOpen}
         onClose={() => setIsSubscriptionDrawerOpen(false)}
+        clients={clients}
+        plans={plans}
+      />
+      <MembershipDetailDrawer
+        isOpen={isDetailDrawerOpen}
+        onClose={() => setIsDetailDrawerOpen(false)}
+        membership={selectedMembershipForDetail}
         clients={clients}
         plans={plans}
       />

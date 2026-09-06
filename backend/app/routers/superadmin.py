@@ -84,6 +84,10 @@ def get_gyms(
             if plan:
                 plan_name = plan.name
 
+        sub_status = None
+        if sub and sub.status is not None:
+            sub_status = sub.status.value if hasattr(sub.status, "value") else str(sub.status)
+
         results.append(SuperadminGymResponse(
             id=gym.id,
             name=gym.name,
@@ -95,7 +99,7 @@ def get_gyms(
             owner_name=owner.full_name if owner else None,
             owner_email=owner.email if owner else None,
             current_plan_name=plan_name,
-            subscription_status=sub.status.value if sub else None,
+            subscription_status=sub_status,
             subscription_starts_at=sub.starts_at if sub else None,
             subscription_ends_at=sub.ends_at if sub else None,
             created_at=gym.created_at

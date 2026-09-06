@@ -10,7 +10,7 @@ import {
   Receipt,
   X,
 } from 'lucide-react';
-import { cn } from '../../utils/cn';
+import { cn } from '@shared/utils/cn';
 
 const navItems = [
   { path: '/superadmin', label: 'Overview', icon: LayoutDashboard },

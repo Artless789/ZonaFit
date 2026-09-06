@@ -1,7 +1,7 @@
 import { MessageCircle, CheckCircle2, XCircle, Clock } from 'lucide-react';
-import type { Notification } from '../../types/notification';
-import type { Client } from '../../types/client';
-import { Badge } from '../../components/shared/Badge';
+import type { Notification } from '@shared/types/notification';
+import type { Client } from '@shared/types/client';
+import { Badge } from '@shared/ui/Badge';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 

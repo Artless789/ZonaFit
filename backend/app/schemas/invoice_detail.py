@@ -24,6 +24,7 @@ class InvoiceDetailResponse(BaseModel):
     invoice_id: int
 
     product_id: int
+    product_name: str | None = None
 
     quantity: int
 

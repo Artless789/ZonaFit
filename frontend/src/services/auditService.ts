@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { AuditLog } from '../types/audit';
+import type { AuditLog } from '@shared/types/audit';
 import type { Paginated } from './membershipPlanService';
 
 export const auditService = {

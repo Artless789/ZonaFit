@@ -6,6 +6,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -15,6 +16,10 @@ from app.database.base import Base
 
 class Product(Base):
     __tablename__ = "products"
+
+    __table_args__ = (
+        UniqueConstraint("gym_id", "sku", name="uq_gym_product_sku"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
 
@@ -43,7 +48,6 @@ class Product(Base):
     sku = Column(
         String(50),
         nullable=False,
-        unique=True,
     )
 
     purchase_price = Column(

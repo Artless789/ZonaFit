@@ -3,7 +3,7 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { Sidebar } from '../components/layout/Sidebar';
 import { Navbar } from '../components/layout/Navbar';
 import { useAuth } from '../context/AuthContext';
-import { Spinner } from '../components/shared/Spinner';
+import { Spinner } from '@shared/ui/Spinner';
 
 export function AppLayout() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -24,10 +24,15 @@ export function AppLayout() {
   }
 
   if (user?.role.toUpperCase() === 'SUPERADMIN') {
-    return <Navigate to="/superadmin" replace />;
+    window.location.assign('/superadmin');
+    return null;
   }
 
   if (user && !user.onboarding_completed) {
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/app')) {
+      window.location.assign('/onboarding');
+      return null;
+    }
     return <Navigate to="/onboarding" replace />;
   }
 

@@ -1,18 +1,20 @@
-import { Select } from '../../components/shared/Select';
+import { Select } from '@shared/ui/Select';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ShieldAlert, Package, Plus, Edit2, XCircle } from 'lucide-react';
+import { ShieldAlert, Package, Plus, Edit2, XCircle, DollarSign } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { GlassCard } from '../../components/shared/GlassCard';
-import { Skeleton } from '../../components/shared/Skeleton';
-import { Pagination } from '../../components/shared/Pagination';
+
+import { Skeleton } from '@shared/ui/Skeleton';
+import { Pagination } from '@shared/ui/Pagination';
 import { superadminService } from '../../services/superadminService';
-import { Badge } from '../../components/shared/Badge';
-import { Modal } from '../../components/shared/Modal';
-import { Input } from '../../components/shared/Input';
-import { Button } from '../../components/shared/Button';
-import { SuperadminPlan } from '../../types/superadmin';
-import { ActionGlowButton } from '../../components/shared/ActionGlowButton';
+import { Badge } from '@shared/ui/Badge';
+import { Modal } from '@shared/ui/Modal';
+import { Input } from '@shared/ui/Input';
+import { NumericInput } from '@shared/ui/NumericInput';
+import { Button } from '@shared/ui/Button';
+import { formatCurrency } from '@shared/utils/formatters';
+import { SuperadminPlan } from '@shared/types/superadmin';
+import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
 
 type PlanFormData = {
   name: string;
@@ -91,20 +93,20 @@ export function SuperadminPlans() {
     return (
       <div className="flex flex-col gap-6">
         <Skeleton className="h-10 w-64" />
-        <GlassCard className="p-6">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6">
           <div className="flex flex-col gap-4">
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
           </div>
-        </GlassCard>
+        </div>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <GlassCard className="p-8 text-center max-w-lg mx-auto flex flex-col items-center gap-4 mt-8">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-8 text-center max-w-lg mx-auto flex flex-col items-center gap-4 mt-8">
         <ShieldAlert className="w-12 h-12 text-danger" />
         <h2 className="text-xl font-bold text-text-primary">Error de Conexión</h2>
         <p className="text-sm text-text-secondary">No se pudieron cargar los planes.</p>
@@ -114,7 +116,7 @@ export function SuperadminPlans() {
         >
           Reintentar
         </button>
-      </GlassCard>
+      </div>
     );
   }
 
@@ -131,7 +133,7 @@ export function SuperadminPlans() {
         </ActionGlowButton>
       </div>
 
-      <GlassCard className="overflow-hidden">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 overflow-hidden">
         {data?.items.length === 0 ? (
           <div className="p-12 text-center flex flex-col items-center">
             <Package className="w-12 h-12 text-text-muted mb-4" />
@@ -160,7 +162,7 @@ export function SuperadminPlans() {
                     </td>
                     <td className="px-6 py-4 text-sm text-text-secondary">{plan.slug}</td>
                     <td className="px-6 py-4 text-sm font-medium text-text-primary">
-                      {plan.price > 0 ? `${plan.currency} $${plan.price}` : 'Por definir'}
+                      {plan.price > 0 ? `${plan.currency} ${formatCurrency(plan.price)}` : 'Por definir'}
                     </td>
                     <td className="px-6 py-4 text-sm text-text-secondary">
                       {plan.billing_interval}
@@ -197,7 +199,7 @@ export function SuperadminPlans() {
             />
           </div>
         )}
-      </GlassCard>
+      </div>
 
       {/* Modal Crear Plan */}
       <Modal
@@ -228,10 +230,10 @@ export function SuperadminPlans() {
             {...registerCreate('description')}
           />
           <div className="grid grid-cols-2 gap-4">
-            <Input
+            <NumericInput
               label="Precio"
-              type="number"
               placeholder="0.00"
+              leftIcon={<DollarSign size={16} />}
               {...registerCreate('price', { required: 'El precio es requerido', valueAsNumber: true })}
               error={createErrors.price?.message}
             />
@@ -288,9 +290,9 @@ export function SuperadminPlans() {
             {...registerEdit('description')}
           />
           <div className="grid grid-cols-2 gap-4">
-            <Input
+            <NumericInput
               label="Precio"
-              type="number"
+              leftIcon={<DollarSign size={16} />}
               {...registerEdit('price', { required: 'El precio es requerido', valueAsNumber: true })}
               error={editErrors.price?.message}
             />

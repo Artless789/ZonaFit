@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { clientService } from '../services/clientService';
-import { ClientCreate, ClientUpdate, Client, Client360Response } from '../types/client';
-import { PaginationResponse } from '../types/pagination';
+import { ClientCreate, ClientUpdate, Client, Client360Response } from '@shared/types/client';
+import { PaginationResponse } from '@shared/types/pagination';
 
 export const useClients = (page: number = 1, pageSize: number = 20, search: string = '', isActive?: boolean) => {
   const queryClient = useQueryClient();

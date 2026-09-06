@@ -15,9 +15,12 @@ from app.schemas.sort import SortParams
 from app.schemas.pagination import PaginationParams, PaginationResponse
 from app.services.category_service import CategoryService
 
+from app.core.idempotency import IdempotentRoute
+
 router = APIRouter(
     prefix="/categories",
     tags=["Categories"],
+    route_class=IdempotentRoute
 )
 
 

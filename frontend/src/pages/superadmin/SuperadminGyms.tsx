@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ShieldAlert, Building2, Gift } from 'lucide-react';
-import { GlassCard } from '../../components/shared/GlassCard';
-import { Skeleton } from '../../components/shared/Skeleton';
-import { Pagination } from '../../components/shared/Pagination';
+import { Skeleton } from '@shared/ui/Skeleton';
+import { Pagination } from '@shared/ui/Pagination';
 import { superadminService } from '../../services/superadminService';
-import { Badge } from '../../components/shared/Badge';
-import { Modal } from '../../components/shared/Modal';
-import { Button } from '../../components/shared/Button';
-import { SuperadminGym } from '../../types/superadmin';
+import { Badge } from '@shared/ui/Badge';
+import { Modal } from '@shared/ui/Modal';
+import { Button } from '@shared/ui/Button';
+import { SuperadminGym } from '@shared/types/superadmin';
 
 export function SuperadminGyms() {
   const queryClient = useQueryClient();
@@ -42,20 +41,20 @@ export function SuperadminGyms() {
     return (
       <div className="flex flex-col gap-6">
         <Skeleton className="h-10 w-64" />
-        <GlassCard className="p-6">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6">
           <div className="flex flex-col gap-4">
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
           </div>
-        </GlassCard>
+        </div>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <GlassCard className="p-8 text-center max-w-lg mx-auto flex flex-col items-center gap-4 mt-8">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-8 text-center max-w-lg mx-auto flex flex-col items-center gap-4 mt-8">
         <ShieldAlert className="w-12 h-12 text-danger" />
         <h2 className="text-xl font-bold text-text-primary">Error de Conexión</h2>
         <p className="text-sm text-text-secondary">No se pudieron cargar los gimnasios.</p>
@@ -65,7 +64,7 @@ export function SuperadminGyms() {
         >
           Reintentar
         </button>
-      </GlassCard>
+      </div>
     );
   }
 
@@ -76,7 +75,7 @@ export function SuperadminGyms() {
         <p className="text-text-secondary text-sm mt-1">Directorio global de tenants de la plataforma.</p>
       </div>
 
-      <GlassCard className="overflow-hidden">
+      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 overflow-hidden">
         {data?.items.length === 0 ? (
           <div className="p-12 text-center flex flex-col items-center">
             <Building2 className="w-12 h-12 text-text-muted mb-4" />
@@ -167,7 +166,7 @@ export function SuperadminGyms() {
             />
           </div>
         )}
-      </GlassCard>
+      </div>
 
       {/* Modal Otorgar Cortesía */}
       <Modal

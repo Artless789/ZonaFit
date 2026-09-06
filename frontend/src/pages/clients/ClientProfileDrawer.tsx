@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Drawer } from '../../components/shared/Drawer';
-import { Skeleton } from '../../components/shared/Skeleton';
-import { ErrorState } from '../../components/shared/ErrorState';
-import { Badge } from '../../components/shared/Badge';
-import { Button } from '../../components/shared/Button';
-import { AuthorizedImage } from '../../components/shared/AuthorizedImage';
+import { Drawer } from '@shared/ui/Drawer';
+import { Skeleton } from '@shared/ui/Skeleton';
+import { ErrorState } from '@shared/ui/ErrorState';
+import { Badge } from '@shared/ui/Badge';
+import { formatCurrency } from '@shared/utils/formatters';
+import { Button } from '@shared/ui/Button';
+import { AuthorizedImage } from '@shared/ui/AuthorizedImage';
 import { useClient360 } from '../../hooks/useClients';
-import type { Client } from '../../types/client';
+import type { Client } from '@shared/types/client';
 import { 
   User as UserIcon, 
   Phone, 
@@ -23,12 +24,6 @@ interface ClientProfileDrawerProps {
   clientId?: number;
   onEditClick: (client: Client) => void;
 }
-
-const formatCurrency = (value: number | string | null | undefined) => new Intl.NumberFormat('es-CO', {
-  style: 'currency',
-  currency: 'COP',
-  maximumFractionDigits: 0,
-}).format(Number(value) || 0);
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('es-CO', {

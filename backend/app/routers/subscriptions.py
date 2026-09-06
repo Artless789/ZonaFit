@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.auth import get_current_user, require_owner
 from app.database.database import get_db
 from app.models.user import User
-from app.models.subscription import Subscription
+from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.subscription_payment import SubscriptionPayment
 from app.models.plan import Plan
 from app.models.audit_log import AuditLog
@@ -13,6 +13,9 @@ from app.services.subscription_service import SubscriptionService
 from app.models.subscription_payment import TransactionStatus
 from app.core.config import settings
 from datetime import datetime, timedelta, timezone
+import logging
+
+logger = logging.getLogger(__name__)
 from fastapi import Request, BackgroundTasks
 import hashlib
 import uuid
@@ -41,7 +44,7 @@ def get_my_subscription(
         
     sub = SubscriptionService.get_current_subscription(db, current_user.gym_id)
     if not sub:
-        raise HTTPException(status_code=404, detail="No subscription found for your gym")
+        raise HTTPException(status_code=404, detail="No subscription found for this gym")
         
     return sub
 
@@ -56,12 +59,7 @@ def start_subscription(
     if not current_user.gym_id:
         raise HTTPException(status_code=400, detail="User is not associated with a gym")
 
-    # Check if a subscription already exists
-    existing = SubscriptionService.get_current_subscription(db, current_user.gym_id)
-    if existing:
-        return existing
-
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     
     if payload.intent == 'TRIAL':
         ends_at = now + timedelta(days=14)
@@ -72,17 +70,33 @@ def start_subscription(
     else:
         raise HTTPException(status_code=400, detail="Invalid intent")
 
-    new_sub = Subscription(
-        gym_id=current_user.gym_id,
-        plan_id=None,
-        status="TRIAL",
-        starts_at=now,
-        ends_at=ends_at,
-        is_lifetime=False
-    )
-    db.add(new_sub)
-    db.commit()
-    db.refresh(new_sub)
+    existing = SubscriptionService.get_current_subscription(db, current_user.gym_id)
+    if existing:
+        # If existing is already active or lifetime, return it
+        if SubscriptionService.is_active(existing):
+            return existing
+        # If it was an inactive, expired, or dummy subscription, activate the requested intent
+        existing.status = SubscriptionStatus.TRIAL
+        existing.starts_at = now
+        existing.ends_at = ends_at
+        existing.is_lifetime = False
+        existing.updated_at = now
+        db.commit()
+        db.refresh(existing)
+        sub_to_return = existing
+    else:
+        new_sub = Subscription(
+            gym_id=current_user.gym_id,
+            plan_id=None,
+            status=SubscriptionStatus.TRIAL,
+            starts_at=now,
+            ends_at=ends_at,
+            is_lifetime=False
+        )
+        db.add(new_sub)
+        db.commit()
+        db.refresh(new_sub)
+        sub_to_return = new_sub
 
     audit = AuditLog(
         gym_id=current_user.gym_id,
@@ -94,7 +108,7 @@ def start_subscription(
     db.add(audit)
     db.commit()
 
-    return new_sub
+    return sub_to_return
 
 @router.post("/{sub_id}/payment", response_model=SubscriptionPaymentInitResponse)
 def init_payment(
@@ -243,30 +257,26 @@ async def wompi_webhook(request: Request, db: Session = Depends(get_db)):
             db.commit()
             return {"status": "error", "reason": "Data mismatch"}
             
-        with open("webhook_debug.txt", "a") as f:
-            f.write(f"WEBHOOK DEBUG: payment read after lock. ID={payment.id}, STATUS={payment.status.value}, PROVIDER_ID={payment.provider_transaction_id}\n")
+        logger.debug(f"WEBHOOK DEBUG: payment read after lock. ID={payment.id}, STATUS={payment.status.value}, PROVIDER_ID={payment.provider_transaction_id}")
         # Idempotency check 1: Duplicate webhook (Already processed with same provider ID and status)
         if payment.provider_transaction_id == provider_id and payment.status.value == wompi_status:
-            with open("webhook_debug.txt", "a") as f:
-                f.write("WEBHOOK DEBUG: Caught duplicate webhook!\n")
+            logger.debug("WEBHOOK DEBUG: Caught duplicate webhook!")
             db.rollback()
             return {"status": "ok", "reason": "Already processed"}
             
         # Idempotency check 2: Prevent state regression
         if payment.status.value in ("APPROVED", "DECLINED", "ERROR", "VOIDED"):
             # If the payment reached a final state but the webhook is trying to change it
-            with open("webhook_debug.txt", "a") as f:
-                f.write(f"WEBHOOK DEBUG: Caught state regression. Current: {payment.status.value}, Trying: {wompi_status}\n")
+            logger.debug(f"WEBHOOK DEBUG: Caught state regression. Current: {payment.status.value}, Trying: {wompi_status}")
             db.rollback()
             return {"status": "ignored", "reason": f"Payment already in final state: {payment.status.value}"}
             
-        with open("webhook_debug.txt", "a") as f:
-            f.write("WEBHOOK DEBUG: Proceeding to process and commit.\n")
+        logger.debug("WEBHOOK DEBUG: Proceeding to process and commit.")
             
         # Update payment
         payment.provider_transaction_id = provider_id
         payment.status = wompi_status
-        payment.updated_at = datetime.utcnow()
+        payment.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         
         # Audit log the transition
         audit = AuditLog(
@@ -366,7 +376,7 @@ def verify_payment(
         
     payment.provider_transaction_id = provider_id
     payment.status = wompi_status
-    payment.updated_at = datetime.utcnow()
+    payment.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     
     audit = AuditLog(
         gym_id=payment.gym_id,
@@ -448,7 +458,7 @@ def cancel_subscription(
         raise HTTPException(status_code=404, detail="No active subscription found")
         
     # Mark cancellation request
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     sub.cancellation_requested_at = now
     
     # Record audit
