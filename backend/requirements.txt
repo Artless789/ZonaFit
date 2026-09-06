@@ -1,4 +1,4 @@
-﻿alembic==1.18.5
+alembic==1.18.5
 annotated-doc==0.0.4
 annotated-types==0.8.0
 anyio==4.14.2
@@ -40,3 +40,4 @@ typing-inspection==0.4.2
 typing_extensions==4.16.0
 uvicorn==0.51.0
 wrapt==2.3.0
+tzdata>=2024.1

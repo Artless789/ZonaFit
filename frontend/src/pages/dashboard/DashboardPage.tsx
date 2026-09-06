@@ -28,7 +28,24 @@ import { IncomeDetailsDrawer } from './IncomeDetailsDrawer';
 
 const formatTime = (dateString: string) => {
   const date = new Date(dateString);
-  return date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  const now = new Date();
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  const timeStr = date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  if (isToday) return timeStr;
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
+  if (isYesterday) return `Ayer, ${timeStr}`;
+  return `${date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}, ${timeStr}`;
 };
 
 export function DashboardPage() {
@@ -150,7 +167,7 @@ export function DashboardPage() {
               <div
                 key={label}
                 onClick={onClick}
-                className={`rounded-[var(--radius-xl)] bg-bg-surface/40 border border-border-light p-5 flex flex-col justify-between hover:border-border-medium hover:bg-bg-surface transition-all shadow-sm ${
+                className={`rounded-xl bg-bg-surface/40 border border-border-light p-5 flex flex-col justify-between hover:border-border-medium hover:bg-bg-surface transition-all shadow-sm ${
                   onClick ? 'cursor-pointer group hover:border-success/40' : ''
                 }`}
               >
@@ -187,7 +204,7 @@ export function DashboardPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
             
             {/* Actividad de Hoy */}
-            <div className="rounded-[var(--radius-xl)] bg-bg-surface/40 border border-border-light p-6 xl:col-span-1 flex flex-col">
+            <div className="rounded-xl bg-bg-surface/40 border border-border-light p-6 xl:col-span-1 flex flex-col">
               <div className="flex items-center gap-3 mb-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-bg-surface border border-border-light text-brand-primary">
                   <Clock size={20} />
@@ -209,9 +226,9 @@ export function DashboardPage() {
                     {data.recent_activity.map((activity, idx) => (
                       <div key={activity.id} className="relative pl-6 pb-4">
                         {idx !== data.recent_activity.length - 1 && (
-                          <div className="absolute left-2.5 top-5 bottom-[-16px] w-[2px] bg-border-light"></div>
+                          <div className="absolute left-2.5 top-5 -bottom-4 w-0.5 bg-border-light"></div>
                         )}
-                        <div className="absolute left-[3px] top-1.5 w-4 h-4 rounded-full bg-surface-dark border border-border-light flex items-center justify-center z-10">
+                        <div className="absolute left-0.75 top-1.5 w-4 h-4 rounded-full bg-surface-dark border border-border-light flex items-center justify-center z-10">
                           <div className="w-1.5 h-1.5 rounded-full bg-brand-primary/50"></div>
                         </div>
                         <div className="flex justify-between items-start">
@@ -239,7 +256,7 @@ export function DashboardPage() {
             <div className="xl:col-span-2 flex flex-col gap-6">
               
               {/* Membresías por Vencer */}
-              <div className="rounded-[var(--radius-xl)] bg-bg-surface/40 border border-border-light p-6">
+              <div className="rounded-xl bg-bg-surface/40 border border-border-light p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/10 text-warning">
@@ -272,7 +289,7 @@ export function DashboardPage() {
                       </thead>
                       <tbody className="divide-y divide-white/5">
                         {data.expiring_memberships.map((mem) => (
-                          <tr key={mem.id} className="hover:bg-white/[0.02] transition-colors group">
+                          <tr key={mem.id} className="hover:bg-white/2 transition-colors group">
                             <td className="py-3 text-sm font-medium text-text-primary">{mem.client_name}</td>
                             <td className="py-3 text-sm text-text-secondary">{mem.plan_name}</td>
                             <td className="py-3 text-sm">
@@ -296,7 +313,7 @@ export function DashboardPage() {
               </div>
 
               {/* Cartera Pendiente */}
-              <div className="rounded-[var(--radius-xl)] bg-bg-surface/40 border border-border-light p-6">
+              <div className="rounded-xl bg-bg-surface/40 border border-border-light p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-danger/10 text-danger">
@@ -329,7 +346,7 @@ export function DashboardPage() {
                       </thead>
                       <tbody className="divide-y divide-white/5">
                         {data.receivables.map((rec) => (
-                          <tr key={rec.id} className="hover:bg-white/[0.02] transition-colors group">
+                          <tr key={rec.id} className="hover:bg-white/2 transition-colors group">
                             <td className="py-3 text-sm font-medium text-text-primary flex items-center gap-2">
                               <UserCheck size={14} className="text-text-muted" /> {rec.client_name}
                             </td>

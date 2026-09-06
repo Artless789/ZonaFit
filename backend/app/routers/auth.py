@@ -171,8 +171,6 @@ def login(
         db.add(rt)
         db.commit()
 
-        print(f"[AUTH-TRACE][LOGIN] User: {user.id} ({user.email}) | Emitted HashPrefix: {token_hash[:10]} | Expires: {expires_at}")
-
         _set_refresh_cookie(response, raw_refresh, secure_policy, samesite_policy)
 
         return {

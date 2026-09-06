@@ -12,6 +12,7 @@ export interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   className?: string;
+  containerClassName?: string;
   hideCloseButton?: boolean;
 }
 
@@ -23,6 +24,7 @@ export function Modal({
   children, 
   footer,
   className,
+  containerClassName,
   hideCloseButton = false
 }: ModalProps) {
   // Prevent body scroll when modal is open
@@ -49,7 +51,7 @@ export function Modal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 sm:p-6">
+        <div className="fixed inset-0 z-(--z-modal) flex items-center justify-center p-4 sm:p-6">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -65,16 +67,16 @@ export function Modal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-lg z-[calc(var(--z-modal)+1)] flex flex-col"
+            className={cn("relative w-full max-w-lg z-[calc(var(--z-modal)+1)] flex flex-col", containerClassName)}
             role="dialog"
             aria-modal="true"
             aria-labelledby={title ? "modal-title" : undefined}
             aria-describedby={description ? "modal-description" : undefined}
           >
-            <div className={cn("w-full flex flex-col max-h-[90vh] shadow-xl overflow-hidden material-glass-strong rounded-[var(--radius-xl)]", className)}>
+            <div className={cn("w-full flex flex-col max-h-[90vh] shadow-xl overflow-hidden material-glass-strong rounded-xl", className)}>
               {/* Header */}
               {(title || !hideCloseButton) && (
-                <div className="flex-shrink-0 flex items-start justify-between px-6 py-5 border-b border-border-medium/40">
+                <div className="shrink-0 flex items-start justify-between px-6 py-5 border-b border-border-medium/40">
                   <div className="flex flex-col gap-1 pr-4">
                     {title && (
                       <h2 id="modal-title" className="text-lg font-semibold text-text-primary">
@@ -90,7 +92,7 @@ export function Modal({
                   {!hideCloseButton && (
                     <button
                       onClick={onClose}
-                      className="flex-shrink-0 rounded-full p-1.5 text-text-muted hover:bg-border-light hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-1 focus:ring-offset-bg-surface"
+                      className="shrink-0 rounded-full p-1.5 text-text-muted hover:bg-border-light hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-1 focus:ring-offset-bg-surface"
                       aria-label="Cerrar modal"
                     >
                       <X size={20} />
@@ -106,7 +108,7 @@ export function Modal({
 
               {/* Footer */}
               {footer && (
-                <div className="flex-shrink-0 px-6 py-4 border-t border-border-medium/40 bg-border-light/20 flex items-center justify-end gap-3">
+                <div className="shrink-0 px-6 py-4 border-t border-border-medium/40 bg-border-light/20 flex items-center justify-end gap-3">
                   {footer}
                 </div>
               )}

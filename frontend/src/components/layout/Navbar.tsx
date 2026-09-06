@@ -34,7 +34,7 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
   const { query } = useGymSettings();
   const title = pageTitles[location.pathname] ?? 'Centro de operaciones';
   const isSuperadmin = user?.role?.toUpperCase() === 'SUPERADMIN';
-  const gymName = isSuperadmin ? 'PLATAFORMA' : (query.data?.trade_name || 'ZONAFIT');
+  const gymName = isSuperadmin ? 'PLATAFORMA' : (query.data?.trade_name || 'MERWIL ZONAFIT');
 
   return (
     <div className="sticky top-0 z-[var(--z-navbar)] w-full px-4 pt-4 sm:px-6 pointer-events-none">

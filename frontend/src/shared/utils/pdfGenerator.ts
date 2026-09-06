@@ -1,8 +1,16 @@
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type { UserOptions } from 'jspdf-autotable';
 import type { Invoice, InvoiceDetail } from '@shared/types/invoice';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+
+const loadPdfModules = async () => {
+  const [{ jsPDF }, autoTableModule] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
+  const autoTable = (autoTableModule.default || (autoTableModule as any).autoTable || autoTableModule) as (doc: any, options: UserOptions) => void;
+  return { jsPDF, autoTable };
+};
 
 interface GenerateReceiptProps {
   invoice: Invoice;
@@ -18,12 +26,12 @@ interface GenerateReceiptProps {
   receiptFooterNotes?: string | null;
 }
 
-export const generateReceiptPDF = ({
+export const generateReceiptPDF = async ({
   invoice,
   details,
   clientName = 'Consumidor Final',
   clientDocument = 'N/A',
-  gymName = 'ZONAFIT',
+  gymName = 'MERWIL ZONAFIT',
   gymNit,
   gymPhone,
   gymAddress,
@@ -31,6 +39,7 @@ export const generateReceiptPDF = ({
   paymentMethod,
   receiptFooterNotes,
 }: GenerateReceiptProps) => {
+  const { jsPDF, autoTable } = await loadPdfModules();
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -201,10 +210,10 @@ export interface GenerateMembershipReceiptProps {
   receiptFooterNotes?: string | null;
 }
 
-export const generateMembershipPaymentReceiptPDF = ({
+export const generateMembershipPaymentReceiptPDF = async ({
   receiptNumber,
   paymentDate,
-  clientName = 'Cliente ZonaFit',
+  clientName = 'Cliente Merwil ZonaFit',
   clientDocument = 'N/A',
   clientPhone,
   planName,
@@ -215,7 +224,7 @@ export const generateMembershipPaymentReceiptPDF = ({
   paidAmount,
   pendingBalance,
   paymentMethod,
-  gymName = 'ZONAFIT',
+  gymName = 'MERWIL ZONAFIT',
   gymNit,
   gymPhone,
   gymAddress,
@@ -226,6 +235,7 @@ export const generateMembershipPaymentReceiptPDF = ({
     return;
   }
 
+  const { jsPDF, autoTable } = await loadPdfModules();
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',

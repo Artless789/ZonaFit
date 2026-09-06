@@ -1,16 +1,30 @@
-import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Outlet } from 'react-router-dom';
 import { Card } from '@shared/ui/Card';
 import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
-import { ShieldAlert, Receipt } from 'lucide-react';
+import { Button } from '@shared/ui/Button';
+import { ShieldAlert, Receipt, Zap, AlertCircle } from 'lucide-react';
 import { Spinner } from '@shared/ui/Spinner';
 import { Badge } from '@shared/ui/Badge';
 import { useLicenseStatus, isSubscriptionActive, SUBSCRIPTION_QUERY_KEY } from '../shared/subscription/useLicenseStatus';
+import { subscriptionService } from '../services/subscriptionService';
 
 export function SubscriptionGuard() {
   const queryClient = useQueryClient();
   const { data: subscription, isLoading, isError, refetch } = useLicenseStatus();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const emergencyMutation = useMutation({
+    mutationFn: subscriptionService.requestEmergencyExtension,
+    onSuccess: () => {
+      setErrorMessage(null);
+      queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_QUERY_KEY });
+    },
+    onError: (err: any) => {
+      setErrorMessage(err.response?.data?.detail || 'No se pudo activar la prórroga de emergencia.');
+    }
+  });
 
   useEffect(() => {
     const handleSubscriptionRestricted = () => {
@@ -71,7 +85,7 @@ export function SubscriptionGuard() {
 
   if (!isSubscriptionActive(subscription)) {
     let reason = "Tu suscripción no es válida actualmente.";
-    if (subscription.status === 'EXPIRED') reason = "Tu suscripción ha expirado.";
+    if (subscription.status === 'EXPIRED') reason = "Tu suscripción ha expirado y ha finalizado el periodo de gracia.";
     if (subscription.status === 'CANCELLED') reason = "Tu suscripción fue cancelada.";
     if (subscription.status === 'PAST_DUE') reason = "Tu suscripción presenta pagos atrasados.";
     if (subscription.status === 'TRIAL') reason = "Tu periodo de prueba ha expirado o requiere activación.";
@@ -99,17 +113,37 @@ export function SubscriptionGuard() {
           )}
         </div>
 
-        <div className="mt-4">
+        {errorMessage && (
+          <div className="w-full p-3 rounded-lg bg-danger/10 border border-danger/20 text-danger text-xs flex items-center gap-2">
+            <AlertCircle size={15} />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        <div className="mt-2 flex flex-col sm:flex-row items-center gap-3 w-full justify-center">
           <ActionGlowButton 
-            className="px-8 py-3"
+            className="px-8 py-3 w-full sm:w-auto"
             onClick={() => window.location.assign('/subscription/checkout')}
           >
             Actualizar plan
           </ActionGlowButton>
+
+          {subscription.can_request_emergency_extension && (
+            <Button
+              variant="outline"
+              onClick={() => emergencyMutation.mutate()}
+              disabled={emergencyMutation.isPending}
+              className="w-full sm:w-auto border-amber-500/40 text-amber-300 hover:bg-amber-500/10 flex items-center gap-2"
+              title="Otorga 24 horas de acceso provisional para que puedas operar de inmediato"
+            >
+              <Zap size={16} className="text-amber-400" />
+              {emergencyMutation.isPending ? 'Activando...' : 'Prórroga de Emergencia (24h)'}
+            </Button>
+          )}
         </div>
 
         <p className="text-xs text-text-muted text-center mt-2">
-          Contacta con el soporte si crees que esto es un error.
+          La prórroga de 24 horas te permite operar de emergencia mientras regularizas tu pago bancario.
         </p>
       </Card>
     );

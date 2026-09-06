@@ -893,7 +893,7 @@ export function IncomeDetailsDrawer({ isOpen, onClose }: IncomeDetailsDrawerProp
             {/* Acciones Finales */}
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border-light">
               <p className="text-[11px] text-text-muted">
-                ZonaFit Financial Analytics • Datos actualizados automáticamente
+                Merwil ZonaFit Financial Analytics • Datos actualizados automáticamente
               </p>
               <Button onClick={onClose} variant="primary" className="w-full sm:w-auto px-6">
                 Entendido, volver al Dashboard

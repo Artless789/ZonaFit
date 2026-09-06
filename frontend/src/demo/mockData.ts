@@ -1,4 +1,4 @@
-﻿import { addDays, subDays } from 'date-fns';
+import { addDays, subDays } from 'date-fns';
 
 const now = new Date();
 
@@ -14,7 +14,7 @@ export const MOCK_USER = {
 
 export const MOCK_GYM = {
   id: 99999,
-  name: 'ZonaFit Demo Gym',
+  name: 'Merwil ZonaFit Demo Gym',
   document_type: 'NIT',
   document: '900000000-1',
   phone: '3000000000',

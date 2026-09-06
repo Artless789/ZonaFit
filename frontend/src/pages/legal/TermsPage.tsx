@@ -19,12 +19,12 @@ export function TermsPage() {
 
           <div className="prose prose-invert prose-brand max-w-none text-text-secondary space-y-6">
             <p>
-              Bienvenido a <strong>ZonaFit</strong>. Los siguientes Términos y Condiciones regulan el uso de nuestra plataforma y los servicios de software administrativo (SaaS) proporcionados a gimnasios y centros deportivos.
+              Bienvenido a <strong>Merwil ZonaFit</strong>. Los siguientes Términos y Condiciones regulan el uso de nuestra plataforma y los servicios de software administrativo (SaaS) proporcionados a gimnasios y centros deportivos.
             </p>
 
             <h3 className="text-xl font-semibold text-text-primary mt-8 mb-4">1. Uso del Servicio</h3>
             <p>
-              ZonaFit otorga una licencia limitada, no exclusiva y revocable para utilizar el software con el fin de administrar su gimnasio. El usuario (Gimnasio) se compromete a no utilizar el sistema para fines ilícitos, fraudulentos o que violen derechos de terceros.
+              Merwil ZonaFit otorga una licencia limitada, no exclusiva y revocable para utilizar el software con el fin de administrar su gimnasio. El usuario (Gimnasio) se compromete a no utilizar el sistema para fines ilícitos, fraudulentos o que violen derechos de terceros.
             </p>
 
             <h3 className="text-xl font-semibold text-text-primary mt-8 mb-4">2. Responsabilidades de la Cuenta</h3>
@@ -36,13 +36,13 @@ export function TermsPage() {
             <ul className="list-disc pl-5 space-y-2">
               <li>Ofrecemos un período de prueba gratuito aplicable a los nuevos registros.</li>
               <li>Finalizado este período, el servicio requerirá una suscripción activa y pagada a través de los canales autorizados.</li>
-              <li>ZonaFit se reserva el derecho de suspender el acceso si se detectan cobros fallidos o incumplimientos de pago.</li>
+              <li>Merwil ZonaFit se reserva el derecho de suspender el acceso si se detectan cobros fallidos o incumplimientos de pago.</li>
               <li>Puede cancelar su suscripción en cualquier momento, pero no se realizarán reembolsos por períodos ya facturados o parcialmente utilizados.</li>
             </ul>
 
             <h3 className="text-xl font-semibold text-text-primary mt-8 mb-4">4. Disponibilidad del Servicio</h3>
             <p>
-              Haremos todos los esfuerzos comercialmente razonables para mantener el software operativo el 99.9% del tiempo. Sin embargo, ZonaFit no asume responsabilidad por interrupciones temporales causadas por mantenimiento, fallos de proveedores de internet u otros eventos de fuerza mayor.
+              Haremos todos los esfuerzos comercialmente razonables para mantener el software operativo el 99.9% del tiempo. Sin embargo, Merwil ZonaFit no asume responsabilidad por interrupciones temporales causadas por mantenimiento, fallos de proveedores de internet u otros eventos de fuerza mayor.
             </p>
 
             <div className="bg-brand-primary/10 border border-brand-primary/20 rounded-xl p-6 mt-8">

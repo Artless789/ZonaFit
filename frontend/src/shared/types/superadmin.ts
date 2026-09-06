@@ -15,6 +15,61 @@ export interface SuperadminGym {
   created_at: string | null;
 }
 
+export interface GymDetailUser {
+  id: number;
+  full_name: string;
+  email: string;
+  role: string;
+  is_active: boolean;
+}
+
+export interface SuperadminPaymentItem {
+  id: number;
+  reference: string;
+  amount_in_cents: number;
+  currency: string;
+  status: string;
+  provider_transaction_id: string | null;
+  refund_reason: string | null;
+  refunded_at: string | null;
+  created_at: string;
+}
+
+export interface SuperadminRefundRequest {
+  reason: string;
+  revoke_access_immediately?: boolean;
+}
+
+export interface SuperadminRefundResponse {
+  success: boolean;
+  message: string;
+  status: string;
+}
+
+export interface SuperadminGymDetail {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  address: string | null;
+  is_active: boolean;
+  onboarding_completed: boolean;
+  owner_id: number | null;
+  owner_name: string | null;
+  owner_email: string | null;
+  subscription_id: number | null;
+  current_plan_id: number | null;
+  current_plan_name: string | null;
+  subscription_status: string | null;
+  subscription_starts_at: string | null;
+  subscription_ends_at: string | null;
+  is_lifetime: boolean;
+  total_users: number;
+  total_clients: number;
+  users: GymDetailUser[];
+  payments?: SuperadminPaymentItem[];
+}
+
 export interface SuperadminUser {
   id: number;
   gym_id: number | null;
@@ -49,6 +104,8 @@ export interface SuperadminDashboardMetrics {
   total_revenue: number;
 }
 
+export type BillingIntervalType = 'MONTHLY' | 'BIMONTHLY' | 'QUARTERLY' | 'SEMIANNUAL' | 'YEARLY';
+
 export interface SuperadminPlan {
   id: number;
   name: string;
@@ -56,8 +113,10 @@ export interface SuperadminPlan {
   description: string | null;
   price: number;
   currency: string;
-  billing_interval: 'MONTHLY' | 'YEARLY';
+  billing_interval: BillingIntervalType;
   is_active: boolean;
+  is_popular?: boolean;
+  features?: string[];
   created_at: string;
 }
 

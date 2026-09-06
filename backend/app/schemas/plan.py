@@ -11,6 +11,8 @@ class PlanBase(BaseModel):
     currency: str = "COP"
     billing_interval: BillingInterval = BillingInterval.MONTHLY
     is_active: bool = True
+    is_popular: bool = False
+    features: Optional[list[str]] = []
 
 class PlanCreate(PlanBase):
     pass
@@ -23,6 +25,8 @@ class PlanUpdate(BaseModel):
     currency: Optional[str] = None
     billing_interval: Optional[BillingInterval] = None
     is_active: Optional[bool] = None
+    is_popular: Optional[bool] = None
+    features: Optional[list[str]] = None
 
 class PlanResponse(PlanBase):
     model_config = ConfigDict(from_attributes=True)

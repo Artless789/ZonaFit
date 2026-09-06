@@ -1,8 +1,8 @@
 import calendar
 from decimal import Decimal
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, time
 from typing import Optional
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.constants.membership_status import MembershipStatus
@@ -29,14 +29,28 @@ from app.schemas.dashboard import (
 class DashboardService:
 
     @staticmethod
+    def _get_gym_timezone(db: Session, gym_id: Optional[int]) -> timezone:
+        if not gym_id:
+            return timezone(timedelta(hours=-5))
+        try:
+            from app.models.gym_settings import GymSettings
+            settings = db.query(GymSettings).filter(GymSettings.gym_id == gym_id).first()
+            tz_str = settings.timezone if settings and settings.timezone else "America/Bogota"
+            from zoneinfo import ZoneInfo
+            return ZoneInfo(tz_str)
+        except Exception:
+            return timezone(timedelta(hours=-5))
+
+    @staticmethod
     def get_dashboard(
         db: Session,
         current_user: User,
     ) -> DashboardResponse:
         
-        now = datetime.now(timezone.utc)
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        month_start = today_start.replace(day=1)
+        gym_tz = DashboardService._get_gym_timezone(db, current_user.gym_id)
+        now_local = datetime.now(gym_tz)
+        today_start = datetime.combine(now_local.date(), time.min, tzinfo=gym_tz)
+        month_start = datetime.combine(now_local.date().replace(day=1), time.min, tzinfo=gym_tz)
         next_week = today_start + timedelta(days=7)
 
         # 1. Ventas del día (Ventas POS + Membresías nuevas/renovadas creadas hoy)
@@ -45,7 +59,7 @@ class DashboardService:
             Sale.status == SaleStatus.COMPLETED,
             Sale.is_active == True,
             Sale.created_at >= today_start,
-            ~Sale.notes.like("Membresía #%")  # Excluir ventas shadow internas de membresías
+            or_(Sale.notes.is_(None), ~Sale.notes.like("Membresía #%"))  # Excluir ventas shadow internas de membresías
         )
         pos_sales_count = pos_sales_query.count()
         pos_sales_amount = db.query(func.sum(Sale.total)).filter(
@@ -53,7 +67,7 @@ class DashboardService:
             Sale.status == SaleStatus.COMPLETED,
             Sale.is_active == True,
             Sale.created_at >= today_start,
-            ~Sale.notes.like("Membresía #%")
+            or_(Sale.notes.is_(None), ~Sale.notes.like("Membresía #%"))
         ).scalar() or Decimal("0.00")
 
         memberships_today_query = db.query(Membership).filter(
@@ -117,7 +131,13 @@ class DashboardService:
         expiring_memberships_db = expiring_memberships_query.limit(10).all()
         expiring_memberships = []
         for m in expiring_memberships_db:
-            days_left = (m.end_date.replace(tzinfo=timezone.utc) - now).days
+            days_left = 0
+            if m.end_date:
+                if isinstance(m.end_date, datetime):
+                    end_local = m.end_date.astimezone(gym_tz) if m.end_date.tzinfo else m.end_date.replace(tzinfo=timezone.utc).astimezone(gym_tz)
+                    days_left = (end_local.date() - now_local.date()).days
+                else:
+                    days_left = (m.end_date - now_local.date()).days
             if days_left < 0: days_left = 0
             expiring_memberships.append(DashboardExpiringMembership(
                 id=m.id,
@@ -137,8 +157,14 @@ class DashboardService:
         receivables = []
         for r in receivables_db:
             days_overdue = 0
-            if r.due_date and r.due_date.replace(tzinfo=timezone.utc) < today_start:
-                days_overdue = (now - r.due_date.replace(tzinfo=timezone.utc)).days
+            if r.due_date:
+                if isinstance(r.due_date, datetime):
+                    due_local = r.due_date.astimezone(gym_tz) if r.due_date.tzinfo else r.due_date.replace(tzinfo=timezone.utc).astimezone(gym_tz)
+                    if due_local.date() < now_local.date():
+                        days_overdue = (now_local.date() - due_local.date()).days
+                else:
+                    if r.due_date < now_local.date():
+                        days_overdue = (now_local.date() - r.due_date).days
                 
             receivables.append(DashboardReceivable(
                 id=r.id,
@@ -242,13 +268,14 @@ class DashboardService:
         month: Optional[int] = None,
         year: Optional[int] = None,
     ) -> IncomeDetailsResponse:
-        now = datetime.now(timezone.utc)
-        target_year = year if (year is not None and 2000 <= year <= 2100) else now.year
-        target_month = month if (month is not None and 1 <= month <= 12) else now.month
+        gym_tz = DashboardService._get_gym_timezone(db, current_user.gym_id)
+        now_local = datetime.now(gym_tz)
+        target_year = year if (year is not None and 2000 <= year <= 2100) else now_local.year
+        target_month = month if (month is not None and 1 <= month <= 12) else now_local.month
 
         num_days = calendar.monthrange(target_year, target_month)[1]
-        month_start = datetime(target_year, target_month, 1, 0, 0, 0, tzinfo=timezone.utc)
-        month_end = datetime(target_year, target_month, num_days, 23, 59, 59, 999999, tzinfo=timezone.utc)
+        month_start = datetime(target_year, target_month, 1, 0, 0, 0, tzinfo=gym_tz)
+        month_end = datetime(target_year, target_month, num_days, 23, 59, 59, 999999, tzinfo=gym_tz)
         
         # Query all active PAID payments for this gym in this month
         payments = (
@@ -316,12 +343,15 @@ class DashboardService:
             method_map[m_code]["amount"] += amt
             method_map[m_code]["count"] += 1
 
-            p_day = p.created_at.day if p.created_at else 1
+            created_at_local = p.created_at.astimezone(gym_tz) if (p.created_at and p.created_at.tzinfo) else (
+                p.created_at.replace(tzinfo=timezone.utc).astimezone(gym_tz) if p.created_at else now_local
+            )
+            p_day = created_at_local.day
             if p_day in daily_map:
                 daily_map[p_day]["amount"] += amt
                 daily_map[p_day]["count"] += 1
             else:
-                date_str = p.created_at.strftime("%Y-%m-%d") if p.created_at else f"{target_year}-{target_month:02d}-{p_day:02d}"
+                date_str = created_at_local.strftime("%Y-%m-%d")
                 daily_map[p_day] = {"date": date_str, "day": p_day, "amount": amt, "count": 1}
 
             client_name = None
@@ -344,7 +374,7 @@ class DashboardService:
                 concept=c_key,
                 concept_description=concept_desc,
                 client_name=client_name,
-                created_at=p.created_at or now,
+                created_at=p.created_at or now_local,
                 day=p_day,
             ))
 

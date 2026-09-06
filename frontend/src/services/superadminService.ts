@@ -1,5 +1,15 @@
 import { api } from './api';
-import { SuperadminDashboardMetrics, SuperadminGym, SuperadminUser, SuperadminAuditLog, SuperadminPlan, SuperadminSubscription } from '@shared/types/superadmin';
+import { 
+  SuperadminDashboardMetrics, 
+  SuperadminGym, 
+  SuperadminGymDetail, 
+  SuperadminUser, 
+  SuperadminAuditLog, 
+  SuperadminPlan, 
+  SuperadminSubscription,
+  SuperadminRefundRequest,
+  SuperadminRefundResponse
+} from '@shared/types/superadmin';
 import { PaginationResponse } from '@shared/types/pagination';
 
 export const superadminService = {
@@ -8,10 +18,19 @@ export const superadminService = {
     return data;
   },
 
-  getGyms: async (page = 1, pageSize = 20): Promise<PaginationResponse<SuperadminGym>> => {
+  getGyms: async (page = 1, pageSize = 20, search?: string): Promise<PaginationResponse<SuperadminGym>> => {
     const { data } = await api.get<PaginationResponse<SuperadminGym>>('/superadmin/gyms', {
-      params: { page, page_size: pageSize },
+      params: { 
+        page, 
+        page_size: pageSize,
+        ...(search && search.trim() ? { search: search.trim() } : {})
+      },
     });
+    return data;
+  },
+
+  getGymDetail: async (gymId: number): Promise<SuperadminGymDetail> => {
+    const { data } = await api.get<SuperadminGymDetail>(`/superadmin/gyms/${gymId}`);
     return data;
   },
 
@@ -55,6 +74,18 @@ export const superadminService = {
 
   assignSubscription: async (gymId: number, subscriptionData: Partial<SuperadminSubscription>): Promise<SuperadminSubscription> => {
     const { data } = await api.post<SuperadminSubscription>(`/superadmin/gyms/${gymId}/subscription`, subscriptionData);
+    return data;
+  },
+
+  refundPayment: async (
+    gymId: number, 
+    paymentId: number, 
+    payload: SuperadminRefundRequest
+  ): Promise<SuperadminRefundResponse> => {
+    const { data } = await api.post<SuperadminRefundResponse>(
+      `/superadmin/gyms/${gymId}/subscription/payments/${paymentId}/refund`,
+      payload
+    );
     return data;
   }
 };

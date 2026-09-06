@@ -19,20 +19,20 @@ export function PrivacyPage() {
 
           <div className="prose prose-invert prose-brand max-w-none text-text-secondary space-y-6">
             <p>
-              En <strong>ZonaFit</strong>, nos tomamos muy en serio la privacidad y seguridad de los datos. Esta política explica de forma clara cómo manejamos la información en nuestra plataforma SaaS, respetando la separación de responsabilidades entre nosotros como proveedores tecnológicos y los gimnasios como administradores de datos.
+              En <strong>Merwil ZonaFit</strong>, nos tomamos muy en serio la privacidad y seguridad de los datos. Esta política explica de forma clara cómo manejamos la información en nuestra plataforma SaaS, respetando la separación de responsabilidades entre nosotros como proveedores tecnológicos y los gimnasios como administradores de datos.
             </p>
 
             <div className="bg-bg-elevated border border-border-medium rounded-xl p-6">
               <h3 className="text-xl font-semibold text-text-primary mb-4">1. Roles sobre los Datos</h3>
               <ul className="space-y-3 list-disc pl-5">
-                <li><strong className="text-text-primary">ZonaFit (Proveedor):</strong> Actuamos como plataforma tecnológica. Aseguramos la infraestructura, pero no tomamos decisiones comerciales sobre los datos de los clientes finales.</li>
+                <li><strong className="text-text-primary">Merwil ZonaFit (Proveedor):</strong> Actuamos como plataforma tecnológica. Aseguramos la infraestructura, pero no tomamos decisiones comerciales sobre los datos de los clientes finales.</li>
                 <li><strong className="text-text-primary">El Gimnasio (Administrador):</strong> Es el dueño y responsable legal de los datos operativos de sus clientes, membresías y ventas registradas en la plataforma.</li>
                 <li><strong className="text-text-primary">Cliente Final:</strong> Persona natural cuyos datos son gestionados directamente por el Gimnasio al que asiste.</li>
               </ul>
             </div>
 
             <h3 className="text-xl font-semibold text-text-primary mt-8 mb-4">2. Qué información procesamos</h3>
-            <p>La información almacenada en ZonaFit se divide en:</p>
+            <p>La información almacenada en Merwil ZonaFit se divide en:</p>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Datos de la Cuenta (Gimnasios):</strong> Nombre, correo, teléfono, identificaciones tributarias y credenciales cifradas (hash).</li>
               <li><strong>Datos de Clientes del Gimnasio:</strong> Nombre, documento, teléfono, fotografía (opcional), historial de pagos y compras. Toda esta información pertenece exclusivamente al gimnasio que la registra y está protegida por aislamiento de inquilinos (Multi-Tenant).</li>

@@ -25,6 +25,8 @@ from app.models.cash_movement import CashMovement
 from app.models.notification import Notification
 from app.models.notification_template import NotificationTemplate
 from app.models.subscription import Subscription, SubscriptionStatus
+from app.models.whatsapp_integration import WhatsAppIntegration
+from app.core.encryption import encrypt_token
 from app.services.whatsapp_sender import WhatsAppSender
 from app.services.notification_service import NotificationService, normalize_phone_co, is_valid_phone
 from app.constants.notification_statuses import NotificationStatus
@@ -125,6 +127,20 @@ def setup_whatsapp_db():
     db.add_all([template1, template2])
     db.commit()
 
+    # Gym 1 WhatsApp Integration (Gym 2 remains unconfigured)
+    integ1 = WhatsAppIntegration(
+        id=1,
+        gym_id=1,
+        phone_number_id="100200300",
+        access_token_encrypted=encrypt_token("valid_token"),
+        waba_id="waba_alpha_1",
+        display_phone_number="+573001234567",
+        status="CONNECTED",
+        is_active=True,
+    )
+    db.add(integ1)
+    db.commit()
+
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = override_get_current_user
 
@@ -156,17 +172,17 @@ def test_02_whatsapp_sender_configured_check():
 def test_03_whatsapp_status_endpoint():
     global current_test_user
     db = TestingSessionLocal()
+    # Gym 1 has active integration -> configured is True
     current_test_user = db.query(User).filter(User.id == 1).first()
+    resp = client.get("/notifications/whatsapp-status")
+    assert resp.status_code == 200
+    assert resp.json()["configured"] is True
 
-    with patch.dict(os.environ, {"WHATSAPP_PHONE_NUMBER_ID": "12345", "WHATSAPP_ACCESS_TOKEN": "secret_tok"}):
-        resp = client.get("/notifications/whatsapp-status")
-        assert resp.status_code == 200
-        assert resp.json()["configured"] is True
-
-    with patch.dict(os.environ, {"WHATSAPP_PHONE_NUMBER_ID": "", "WHATSAPP_ACCESS_TOKEN": ""}):
-        resp = client.get("/notifications/whatsapp-status")
-        assert resp.status_code == 200
-        assert resp.json()["configured"] is False
+    # Gym 2 has no integration -> configured is False
+    current_test_user = db.query(User).filter(User.id == 2).first()
+    resp = client.get("/notifications/whatsapp-status")
+    assert resp.status_code == 200
+    assert resp.json()["configured"] is False
 
 
 def test_04_send_notification_to_valid_client_with_mocked_meta_api():
@@ -180,34 +196,33 @@ def test_04_send_notification_to_valid_client_with_mocked_meta_api():
         "messages": [{"id": "wamid.HBgM..."}]
     }
 
-    with patch.dict(os.environ, {"WHATSAPP_PHONE_NUMBER_ID": "100200300", "WHATSAPP_ACCESS_TOKEN": "valid_token"}):
-        with patch("urllib.request.urlopen") as mock_urlopen:
-            mock_cm = MagicMock()
-            mock_cm.read.return_value = json.dumps(mock_response).encode("utf-8")
-            mock_urlopen.return_value.__enter__.return_value = mock_cm
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_cm = MagicMock()
+        mock_cm.read.return_value = json.dumps(mock_response).encode("utf-8")
+        mock_urlopen.return_value.__enter__.return_value = mock_cm
 
-            payload = {
-                "client_id": 1,
-                "event_type": "GENERAL",
-                "channel": "WHATSAPP",
-                "recipient": "3001234567",
-                "message_body": "Hola Carlos, bienvenido a ZonaFit."
-            }
+        payload = {
+            "client_id": 1,
+            "event_type": "GENERAL",
+            "channel": "WHATSAPP",
+            "recipient": "3001234567",
+            "message_body": "Hola Carlos, bienvenido a ZonaFit."
+        }
 
-            resp = client.post("/notifications/send", json=payload)
-            assert resp.status_code == 202
-            data = resp.json()
-            assert data["status"] == "PENDING"
-            assert data["recipient"] == "573001234567"
-            assert data["client_id"] == 1
+        resp = client.post("/notifications/send", json=payload)
+        assert resp.status_code == 202
+        data = resp.json()
+        assert data["status"] == "PENDING"
+        assert data["recipient"] == "573001234567"
+        assert data["client_id"] == 1
 
-            # Execute background task synchronously with test db
-            NotificationService.send_and_update(data["id"], db=db)
+        # Execute background task synchronously with test db
+        NotificationService.send_and_update(data["id"], db=db)
 
-            db.expire_all()
-            notif = db.query(Notification).filter(Notification.id == data["id"]).first()
-            assert notif.status == NotificationStatus.SENT
-            assert notif.sent_at is not None
+        db.expire_all()
+        notif = db.query(Notification).filter(Notification.id == data["id"]).first()
+        assert notif.status == NotificationStatus.SENT
+        assert notif.sent_at is not None
 
 
 def test_05_meta_api_payload_structure_verified():
@@ -280,44 +295,50 @@ def test_08_meta_api_error_updates_notification_status_to_failed():
         message_body="Mensaje que fallara"
     )
 
-    with patch.dict(os.environ, {"WHATSAPP_PHONE_NUMBER_ID": "12345", "WHATSAPP_ACCESS_TOKEN": "token"}):
-        with patch("urllib.request.urlopen") as mock_urlopen:
-            mock_error = urllib.error.HTTPError(
-                url="https://graph.facebook.com/v22.0/12345/messages",
-                code=400,
-                msg="Bad Request",
-                hdrs={},
-                fp=MagicMock(read=lambda *a, **k: b'{"error": {"message": "(#131030) Recipient phone number not in allowed list"}}')
-            )
-            mock_urlopen.side_effect = mock_error
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_error = urllib.error.HTTPError(
+            url="https://graph.facebook.com/v22.0/100200300/messages",
+            code=400,
+            msg="Bad Request",
+            hdrs={},
+            fp=MagicMock(read=lambda *a, **k: b'{"error": {"message": "(#131030) Recipient phone number not in allowed list"}}')
+        )
+        mock_urlopen.side_effect = mock_error
 
-            NotificationService.send_and_update(notif.id, db=db)
-
-            db.expire_all()
-            failed_notif = db.query(Notification).filter(Notification.id == notif.id).first()
-            assert failed_notif.status == NotificationStatus.FAILED
-            assert "131030" in failed_notif.error_detail
-
-
-def test_09_unconfigured_credentials_marks_notification_failed():
-    db = TestingSessionLocal()
-    notif = NotificationService.dispatch(
-        db=db,
-        gym_id=1,
-        client_id=1,
-        event_type="GENERAL",
-        channel="WHATSAPP",
-        recipient="573001234567",
-        message_body="Mensaje sin credenciales"
-    )
-
-    with patch.dict(os.environ, {"WHATSAPP_PHONE_NUMBER_ID": "", "WHATSAPP_ACCESS_TOKEN": ""}):
         NotificationService.send_and_update(notif.id, db=db)
 
         db.expire_all()
         failed_notif = db.query(Notification).filter(Notification.id == notif.id).first()
         assert failed_notif.status == NotificationStatus.FAILED
-        assert "not configured" in failed_notif.error_detail
+        assert "131030" in failed_notif.error_detail
+
+
+def test_09_unconfigured_credentials_marks_notification_failed():
+    db = TestingSessionLocal()
+    integ = db.query(WhatsAppIntegration).filter(WhatsAppIntegration.gym_id == 1).first()
+    integ.is_active = False
+    db.commit()
+
+    try:
+        notif = NotificationService.dispatch(
+            db=db,
+            gym_id=1,
+            client_id=1,
+            event_type="GENERAL",
+            channel="WHATSAPP",
+            recipient="573001234567",
+            message_body="Mensaje sin credenciales"
+        )
+
+        NotificationService.send_and_update(notif.id, db=db)
+
+        db.expire_all()
+        failed_notif = db.query(Notification).filter(Notification.id == notif.id).first()
+        assert failed_notif.status == NotificationStatus.FAILED
+        assert "not configured for gym 1" in failed_notif.error_detail
+    finally:
+        integ.is_active = True
+        db.commit()
 
 
 def test_10_multi_tenant_isolation_cannot_send_to_foreign_client_or_view_foreign_notifications():

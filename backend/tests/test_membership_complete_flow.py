@@ -366,6 +366,21 @@ def test_08_whatsapp_notification_dispatch_mocked():
     db = TestingSessionLocal()
     current_test_user = db.query(User).filter(User.id == 1).first()
 
+    from app.models.whatsapp_integration import WhatsAppIntegration
+    from app.core.encryption import encrypt_token
+
+    existing_wi = db.query(WhatsAppIntegration).filter(WhatsAppIntegration.gym_id == 1).first()
+    if not existing_wi:
+        wi = WhatsAppIntegration(
+            gym_id=1,
+            phone_number_id="100200300",
+            waba_id="waba_test_123",
+            access_token_encrypted=encrypt_token("valid_token"),
+            is_active=True
+        )
+        db.add(wi)
+        db.commit()
+
     mock_response = {
         "messaging_product": "whatsapp",
         "contacts": [{"input": "573001234567", "wa_id": "573001234567"}],
@@ -405,6 +420,9 @@ def test_08_whatsapp_notification_dispatch_mocked():
             db.expire_all()
             updated_notif = db.query(Notification).filter(Notification.id == notif.id).first()
             assert updated_notif.status == NotificationStatus.SENT
+
+            db.delete(wi)
+            db.commit()
 
 
 def test_09_whatsapp_unconfigured_does_not_break_financial_flow():

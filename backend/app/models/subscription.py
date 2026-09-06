@@ -25,6 +25,7 @@ class Subscription(Base):
     payment_method_type = Column(String(50), nullable=True)
     payment_method_last4 = Column(String(4), nullable=True)
     cancellation_requested_at = Column(DateTime, nullable=True)
+    last_emergency_extension_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 

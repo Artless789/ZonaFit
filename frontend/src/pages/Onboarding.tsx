@@ -188,7 +188,7 @@ export function Onboarding() {
             <div className="absolute inset-0 bg-white/10 blur-[60px] rounded-full scale-150 -z-10 opacity-30 pointer-events-none"></div>
             <img 
               src="/logo.png" 
-              alt="ZonaFit Logo Oficial" 
+              alt="Merwil ZonaFit Logo Oficial" 
               className="w-16 object-contain drop-shadow-lg relative z-10"
               style={{ aspectRatio: '1664/1776' }}
             />
@@ -393,7 +393,7 @@ export function Onboarding() {
                       <Zap size={32} className="text-brand-primary" />
                     </div>
                     <h3 className="text-2xl font-bold text-white mb-2">¿Cómo quieres comenzar?</h3>
-                    <p className="text-text-muted text-base max-w-md mx-auto">Selecciona tu intención para empezar a disfrutar de ZonaFit en tu gimnasio.</p>
+                    <p className="text-text-muted text-base max-w-md mx-auto">Selecciona tu intención para empezar a disfrutar de Merwil ZonaFit en tu gimnasio.</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">

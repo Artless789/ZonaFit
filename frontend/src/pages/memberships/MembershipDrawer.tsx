@@ -135,10 +135,10 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
     label: `${p.name} - ${formatCurrency(p.price)} (${p.duration_days} días)`,
   }));
 
-  const handleDownloadReceipt = () => {
+  const handleDownloadReceipt = async () => {
     if (!completedReceipt) return;
     try {
-      generateMembershipPaymentReceiptPDF(completedReceipt);
+      await generateMembershipPaymentReceiptPDF(completedReceipt);
     } catch (err) {
       toast({ type: 'error', title: 'Error', message: 'No se pudo descargar el comprobante.' });
     }
@@ -202,7 +202,7 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
       const receiptData: GenerateMembershipReceiptProps = {
         receiptNumber: `REC-MEM-${created?.id || 'NUEVO'}`,
         paymentDate: new Date(),
-        clientName: selectedClient?.full_name || 'Cliente ZonaFit',
+        clientName: selectedClient?.full_name || 'Cliente Merwil ZonaFit',
         clientDocument: selectedClient?.document || 'N/A',
         clientPhone: selectedClient?.phone,
         planName: selectedPlan?.name || 'Membresía',
@@ -213,7 +213,7 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
         paidAmount: paidAmount,
         pendingBalance: pendingBalance,
         paymentMethod: data.payment_method || 'CASH',
-        gymName: gymSettings?.trade_name || gymSettings?.legal_name || 'ZonaFit',
+        gymName: gymSettings?.trade_name || gymSettings?.legal_name || 'Merwil ZonaFit',
         gymNit: gymSettings?.tax_id,
         gymPhone: gymSettings?.official_phone,
         gymAddress: gymSettings?.physical_address,

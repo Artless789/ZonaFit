@@ -197,8 +197,8 @@ class WhatsAppService:
         except Exception as exc:
             logger.warning(f'[WhatsApp Embedded Signup] Long-lived token exchange notice: {exc}')
 
-        # If the platform has a permanent System User Token configured, use it for persistent automation
-        final_token = settings.META_SYSTEM_USER_TOKEN.strip() if settings.META_SYSTEM_USER_TOKEN else access_token
+        # Gym's individual access token (strictly scoped to this gym's authorization)
+        gym_token = access_token
 
         phone_number_id = payload.phone_number_id
         waba_id = payload.waba_id
@@ -212,7 +212,7 @@ class WhatsAppService:
                 waba_url = f'https://graph.facebook.com/{api_version}/{waba_id}/phone_numbers'
                 waba_req = urllib.request.Request(
                     waba_url,
-                    headers={'Authorization': f'Bearer {final_token}'},
+                    headers={'Authorization': f'Bearer {gym_token}'},
                     method='GET',
                 )
                 with urllib.request.urlopen(waba_req, timeout=15) as resp:
@@ -231,7 +231,7 @@ class WhatsAppService:
                 phone_url = f'https://graph.facebook.com/{api_version}/{phone_number_id}?fields=display_phone_number,verified_name,quality_rating'
                 phone_req = urllib.request.Request(
                     phone_url,
-                    headers={'Authorization': f'Bearer {final_token}'},
+                    headers={'Authorization': f'Bearer {gym_token}'},
                     method='GET',
                 )
                 with urllib.request.urlopen(phone_req, timeout=15) as resp:
@@ -248,13 +248,16 @@ class WhatsAppService:
                 detail='No se pudo identificar el phone_number_id de WhatsApp de la cuenta de Meta',
             )
 
-        # Auto-subscribe app to WABA webhooks
+        # Auto-subscribe app to WABA webhooks (administrative onboarding call).
+        # Uses platform administrative token if configured; otherwise the gym's authorized token.
+        # This platform token is NEVER stored in the gym's integration record.
         if waba_id:
+            admin_token = settings.META_SYSTEM_USER_TOKEN.strip() if settings.META_SYSTEM_USER_TOKEN else gym_token
             try:
                 sub_url = f'https://graph.facebook.com/{api_version}/{waba_id}/subscribed_apps'
                 sub_req = urllib.request.Request(
                     sub_url,
-                    headers={'Authorization': f'Bearer {final_token}'},
+                    headers={'Authorization': f'Bearer {admin_token}'},
                     method='POST',
                 )
                 with urllib.request.urlopen(sub_req, timeout=10) as _:
@@ -262,9 +265,12 @@ class WhatsAppService:
             except Exception as e:
                 logger.warning(f'[WhatsApp Embedded Signup] Could not auto-subscribe WABA to webhooks: {e}')
 
+        # Multi-tenant credential storage:
+        # Strictly store the gym's individual token (encrypted with Fernet).
+        # Platform administrative tokens are NEVER saved into the gym's database record.
         connect_payload = WhatsAppIntegrationConnect(
             phone_number_id=phone_number_id,
-            access_token=final_token,
+            access_token=gym_token,
             waba_id=waba_id,
             business_id=business_id,
             display_phone_number=display_phone_number,
@@ -309,7 +315,7 @@ class WhatsAppService:
     ) -> dict:
         return WhatsAppSender.send_text(
             to_phone=to_phone,
-            body=message or 'Mensaje de prueba desde ZonaFit',
+            body=message or 'Mensaje de prueba desde Merwil ZonaFit',
             db=db,
             gym_id=gym_id,
         )

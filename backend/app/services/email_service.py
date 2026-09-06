@@ -17,7 +17,7 @@ class EmailService:
         <html>
           <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
             <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #2196F3;">ZONA<span style="color: #0d47a1;">FIT</span></h1>
+              <h1 style="color: #2196F3;">MERWIL <span style="color: #0d47a1;">ZONAFIT</span></h1>
             </div>
             <h2 style="color: #333;">Recuperación de contraseña</h2>
             <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta.</p>
@@ -64,7 +64,7 @@ class EmailService:
 
         try:
             msg = MIMEMultipart("alternative")
-            msg["Subject"] = "Recuperación de contraseña - ZonaFit"
+            msg["Subject"] = "Recuperación de contraseña - Merwil ZonaFit"
             msg["From"] = settings.SMTP_FROM_EMAIL
             msg["To"] = to_email
 

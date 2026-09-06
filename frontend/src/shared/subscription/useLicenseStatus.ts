@@ -16,6 +16,7 @@ function parseSubscriptionDate(value: string): Date {
 export function isSubscriptionActive(subscription: SubscriptionInfo | null | undefined): boolean {
   if (!subscription) return false;
   if (subscription.is_lifetime) return true;
+  if (subscription.is_in_grace_period) return true; // Grace period preserves active operational access
 
   const now = new Date();
   if (subscription.status !== 'ACTIVE' && subscription.status !== 'TRIAL') return false;

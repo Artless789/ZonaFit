@@ -260,28 +260,32 @@ export function MembershipDetailDrawer({
                     </Badge>
                     <button
                       type="button"
-                      onClick={() => {
-                        generateMembershipPaymentReceiptPDF({
-                          receiptNumber: `REC-MEM-${membership.id}-P${pmt.id}`,
-                          paymentDate: pmt.created_at,
-                          clientName: client?.full_name || `Cliente #${membership.client_id}`,
-                          clientDocument: client?.document || 'N/A',
-                          clientPhone: client?.phone,
-                          planName: plan?.name || 'Membresía',
-                          durationDays: plan?.duration_days,
-                          startDate: membership.start_date,
-                          endDate: membership.end_date,
-                          totalPrice: Number(membership.price),
-                          paidAmount: Number(pmt.amount),
-                          pendingBalance: pendingBalance,
-                          paymentMethod: pmt.payment_method,
-                          gymName: gymSettings?.trade_name || gymSettings?.legal_name || 'ZonaFit',
-                          gymNit: gymSettings?.tax_id,
-                          gymPhone: gymSettings?.official_phone,
-                          gymAddress: gymSettings?.physical_address,
-                          gymCity: gymSettings?.city,
-                          receiptFooterNotes: gymSettings?.receipt_footer_notes,
-                        });
+                      onClick={async () => {
+                        try {
+                          await generateMembershipPaymentReceiptPDF({
+                            receiptNumber: `REC-MEM-${membership.id}-P${pmt.id}`,
+                            paymentDate: pmt.created_at,
+                            clientName: client?.full_name || `Cliente #${membership.client_id}`,
+                            clientDocument: client?.document || 'N/A',
+                            clientPhone: client?.phone,
+                            planName: plan?.name || 'Membresía',
+                            durationDays: plan?.duration_days,
+                            startDate: membership.start_date,
+                            endDate: membership.end_date,
+                            totalPrice: Number(membership.price),
+                            paidAmount: Number(pmt.amount),
+                            pendingBalance: pendingBalance,
+                            paymentMethod: pmt.payment_method,
+                            gymName: gymSettings?.trade_name || gymSettings?.legal_name || 'Merwil ZonaFit',
+                            gymNit: gymSettings?.tax_id,
+                            gymPhone: gymSettings?.official_phone,
+                            gymAddress: gymSettings?.physical_address,
+                            gymCity: gymSettings?.city,
+                            receiptFooterNotes: gymSettings?.receipt_footer_notes,
+                          });
+                        } catch (err) {
+                          console.error('Error downloading payment receipt:', err);
+                        }
                       }}
                       title="Descargar Comprobante PDF"
                       className="p-1.5 rounded-lg border border-border-medium bg-bg-surface hover:bg-bg-elevated text-text-secondary hover:text-brand-primary transition-colors"

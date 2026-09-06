@@ -107,12 +107,44 @@ export function SubscriptionStatusBanner() {
     );
   }
 
+  // Periodo de Gracia (Grace Period)
+  if (subscription.is_in_grace_period) {
+    const daysGrace = subscription.days_left_in_grace ?? 0;
+    return (
+      <div className="rounded-xl p-4 mb-8 border border-amber-500/40 bg-amber-500/10 shadow-lg shadow-amber-950/20">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-2.5 bg-amber-500/20 rounded-lg text-amber-400 shrink-0">
+              <ShieldAlert size={26} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-bold text-amber-300 text-base">Periodo de Gracia Activo</h3>
+                <Badge variant="warning">GRACE PERIOD</Badge>
+              </div>
+              <p className="text-sm text-text-secondary leading-relaxed">
+                Tu plan venció el <strong className="text-text-primary">{formatDate(subscription.ends_at)}</strong>. 
+                Tienes <strong className="text-amber-300">{daysGrace > 0 ? `${daysGrace} día(s)` : 'últimas horas'}</strong> de gracia antes de la suspensión del torniquete y sistema.
+              </p>
+            </div>
+          </div>
+          <ActionGlowButton 
+            onClick={handleNavigateToSubscription}
+            className="whitespace-nowrap px-6 py-2.5 shrink-0"
+          >
+            Pagar y Regularizar
+          </ActionGlowButton>
+        </div>
+      </div>
+    );
+  }
+
   if (subscription.status === 'ACTIVE') {
     // Si tiene más de 7 días, mostramos un banner sutil
     const isExpiringSoon = daysRemaining !== null && daysRemaining <= 7;
     
     return (
-      <div className={`rounded-[var(--radius-xl)] p-4 mb-8 border ${isExpiringSoon ? 'border-warning/30 bg-warning/5' : 'border-success/20 bg-success/5'}`}>
+      <div className={`rounded-xl p-4 mb-8 border ${isExpiringSoon ? 'border-warning/30 bg-warning/5' : 'border-success/20 bg-success/5'}`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className={`p-2 rounded-lg ${isExpiringSoon ? 'bg-warning/20 text-warning' : 'bg-success/20 text-success'}`}>

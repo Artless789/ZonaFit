@@ -7,7 +7,15 @@ from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.subscription_payment import SubscriptionPayment
 from app.models.plan import Plan
 from app.models.audit_log import AuditLog
-from app.schemas.subscription import SubscriptionResponse, SubscriptionPaymentInitResponse, SubscriptionPaymentInitRequest, SubscriptionVerifyRequest, SubscriptionStartRequest
+from app.schemas.subscription import (
+    SubscriptionResponse, 
+    SubscriptionPaymentInitResponse, 
+    SubscriptionPaymentInitRequest, 
+    SubscriptionVerifyRequest, 
+    SubscriptionStartRequest,
+    SubscriptionCancelRequest,
+    SubscriptionEmergencyResponse
+)
 from app.schemas.plan import PlanResponse
 from app.services.subscription_service import SubscriptionService
 from app.models.subscription_payment import TransactionStatus
@@ -46,7 +54,12 @@ def get_my_subscription(
     if not sub:
         raise HTTPException(status_code=404, detail="No subscription found for this gym")
         
-    return sub
+    resp = SubscriptionResponse.model_validate(sub)
+    resp.is_in_grace_period = SubscriptionService.is_in_grace_period(sub)
+    resp.grace_period_ends_at = SubscriptionService.get_grace_period_ends_at(sub)
+    resp.days_left_in_grace = SubscriptionService.get_days_left_in_grace(sub)
+    resp.can_request_emergency_extension = SubscriptionService.can_request_emergency_extension(sub)
+    return resp
 
 
 @router.post("/start", response_model=SubscriptionResponse)
@@ -296,19 +309,14 @@ async def wompi_webhook(request: Request, db: Session = Depends(get_db)):
                 sub.status = "ACTIVE"
                 # Update ends_at based on plan billing_interval
                 now = datetime.now(timezone.utc).replace(tzinfo=None)
+                interval_str = getattr(plan.billing_interval, "value", str(plan.billing_interval))
+                interval_days = {"MONTHLY": 30, "BIMONTHLY": 60, "QUARTERLY": 90, "SEMIANNUAL": 180, "YEARLY": 365}.get(interval_str, 30)
+                
                 if not sub.starts_at or not sub.ends_at or sub.ends_at < now:
                     sub.starts_at = now
-                    # Add from now
-                    if plan.billing_interval == "MONTHLY":
-                        sub.ends_at = now + timedelta(days=30)
-                    elif plan.billing_interval == "YEARLY":
-                        sub.ends_at = now + timedelta(days=365)
+                    sub.ends_at = now + timedelta(days=interval_days)
                 else:
-                    # Extend from current ends_at
-                    if plan.billing_interval == "MONTHLY":
-                        sub.ends_at = sub.ends_at + timedelta(days=30)
-                    elif plan.billing_interval == "YEARLY":
-                        sub.ends_at = sub.ends_at + timedelta(days=365)
+                    sub.ends_at = sub.ends_at + timedelta(days=interval_days)
                     
                 audit_sub = AuditLog(
                     gym_id=payment.gym_id,
@@ -393,17 +401,14 @@ def verify_payment(
         if sub and plan:
             sub.status = "ACTIVE"
             now = datetime.now(timezone.utc).replace(tzinfo=None)
+            interval_str = getattr(plan.billing_interval, "value", str(plan.billing_interval))
+            interval_days = {"MONTHLY": 30, "BIMONTHLY": 60, "QUARTERLY": 90, "SEMIANNUAL": 180, "YEARLY": 365}.get(interval_str, 30)
+            
             if not sub.starts_at or not sub.ends_at or sub.ends_at < now:
                 sub.starts_at = now
-                if plan.billing_interval == "MONTHLY":
-                    sub.ends_at = now + timedelta(days=30)
-                elif plan.billing_interval == "YEARLY":
-                    sub.ends_at = now + timedelta(days=365)
+                sub.ends_at = now + timedelta(days=interval_days)
             else:
-                if plan.billing_interval == "MONTHLY":
-                    sub.ends_at = sub.ends_at + timedelta(days=30)
-                elif plan.billing_interval == "YEARLY":
-                    sub.ends_at = sub.ends_at + timedelta(days=365)
+                sub.ends_at = sub.ends_at + timedelta(days=interval_days)
                 
             audit_sub = AuditLog(
                 gym_id=payment.gym_id,
@@ -439,13 +444,16 @@ def get_payment_history(
             "currency": p.currency,
             "status": p.status.value,
             "created_at": p.created_at,
-            "provider_transaction_id": p.provider_transaction_id
+            "provider_transaction_id": p.provider_transaction_id,
+            "refund_reason": p.refund_reason,
+            "refunded_at": p.refunded_at
         }
         for p in payments
     ]
 
 @router.post("/cancel")
 def cancel_subscription(
+    payload: Optional[SubscriptionCancelRequest] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -461,18 +469,52 @@ def cancel_subscription(
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     sub.cancellation_requested_at = now
     
+    details_str = "User requested cancellation"
+    if payload:
+        if payload.reason:
+            details_str += f" | Motivo: {payload.reason}"
+        if payload.feedback:
+            details_str += f" | Feedback: {payload.feedback}"
+            
     # Record audit
     audit = AuditLog(
         gym_id=current_user.gym_id,
         user_id=current_user.id,
         action="SUBSCRIPTION_CANCELLED",
         entity_type="SUBSCRIPTION",
-        new_values={"details": "User requested cancellation"}
+        entity_id=sub.id,
+        new_values={"details": details_str}
     )
     db.add(audit)
     db.commit()
     
     return {"message": "Subscription cancellation requested successfully."}
+
+@router.post("/emergency-extension", response_model=SubscriptionEmergencyResponse)
+def request_emergency_extension(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    require_owner(current_user)
+    if not current_user.gym_id:
+        raise HTTPException(status_code=400, detail="User is not associated with a gym")
+        
+    sub = SubscriptionService.get_current_subscription(db, current_user.gym_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="No subscription found for this gym")
+        
+    if not SubscriptionService.can_request_emergency_extension(sub):
+        raise HTTPException(
+            status_code=400, 
+            detail="Tu gimnasio no es elegible para una prórroga de emergencia en este momento o ya fue utilizada en los últimos 180 días."
+        )
+        
+    new_ends_at = SubscriptionService.apply_emergency_extension(sub, db, current_user.id)
+    return SubscriptionEmergencyResponse(
+        success=True,
+        message="Prórroga de emergencia de 24 horas activada exitosamente.",
+        new_ends_at=new_ends_at
+    )
 
 @router.post("/reactivate")
 def reactivate_subscription(
@@ -496,6 +538,7 @@ def reactivate_subscription(
         user_id=current_user.id,
         action="SUBSCRIPTION_REACTIVATED",
         entity_type="SUBSCRIPTION",
+        entity_id=sub.id,
         new_values={"details": "User revoked cancellation request"}
     )
     db.add(audit)

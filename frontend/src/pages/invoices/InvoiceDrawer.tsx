@@ -43,21 +43,25 @@ export function InvoiceDrawer({ isOpen, onClose, invoice, clientName, clientDocu
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!invoice || !details.length) return;
-    generateReceiptPDF({
-      invoice,
-      details,
-      clientName,
-      clientDocument,
-      gymName: gymSettings?.trade_name || gymSettings?.legal_name || 'ZonaFit',
-      gymNit: gymSettings?.tax_id,
-      gymPhone: gymSettings?.official_phone,
-      gymAddress: gymSettings?.physical_address,
-      gymCity: gymSettings?.city,
-      paymentMethod: invoice.payment_method,
-      receiptFooterNotes: gymSettings?.receipt_footer_notes,
-    });
+    try {
+      await generateReceiptPDF({
+        invoice,
+        details,
+        clientName,
+        clientDocument,
+        gymName: gymSettings?.trade_name || gymSettings?.legal_name || 'Merwil ZonaFit',
+        gymNit: gymSettings?.tax_id,
+        gymPhone: gymSettings?.official_phone,
+        gymAddress: gymSettings?.physical_address,
+        gymCity: gymSettings?.city,
+        paymentMethod: invoice.payment_method,
+        receiptFooterNotes: gymSettings?.receipt_footer_notes,
+      });
+    } catch (err) {
+      console.error('Error generating PDF receipt:', err);
+    }
   };
 
   if (!invoice) return null;

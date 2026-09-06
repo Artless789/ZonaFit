@@ -188,11 +188,11 @@ export function SubscriptionCheckoutPage() {
   if (subscription?.is_lifetime) {
     return (
       <div className="min-h-screen p-8 max-w-4xl mx-auto flex flex-col justify-center">
-        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-8 text-center border-success/30 bg-success/10 flex flex-col items-center">
+        <div className="rounded-xl border border-success/30 bg-success/10 p-8 text-center flex flex-col items-center">
           <CheckCircle2 className="w-16 h-16 text-success mb-4" />
           <h2 className="text-2xl font-bold text-text-primary mb-2">Suscripción Sin Vencimiento</h2>
           <p className="text-success mb-6">
-            Tu cuenta tiene acceso vitalicio a ZonaFit. No necesitas realizar pagos.
+            Tu cuenta tiene acceso vitalicio a Merwil ZonaFit. No necesitas realizar pagos.
           </p>
           <Button onClick={() => window.location.assign('/app/dashboard')} variant="outline">
             Ir al Dashboard
@@ -217,11 +217,11 @@ export function SubscriptionCheckoutPage() {
   if (paymentStatus === 'APPROVED') {
     return (
       <div className="min-h-screen p-8 max-w-4xl mx-auto flex flex-col justify-center">
-        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-8 text-center flex flex-col items-center border-success/30 bg-success/5 shadow-glass-large">
+        <div className="rounded-xl border border-success/30 bg-success/5 p-8 text-center flex flex-col items-center shadow-glass-large">
           <CheckCircle2 className="w-16 h-16 text-success mb-4" />
           <h2 className="text-3xl font-bold text-text-primary mb-2">¡Pago Aprobado con Éxito!</h2>
           <p className="text-text-secondary mb-8 max-w-md">
-            Tu suscripción se ha activado correctamente para tu gimnasio. Ya tienes acceso completo a todas las funciones de ZonaFit.
+            Tu suscripción se ha activado correctamente para tu gimnasio. Ya tienes acceso completo a todas las funciones de Merwil ZonaFit.
           </p>
           <ActionGlowButton onClick={() => window.location.assign('/app/dashboard')} className="px-8 py-3 font-semibold">
             Ingresar a la Plataforma
@@ -234,7 +234,7 @@ export function SubscriptionCheckoutPage() {
   if (paymentStatus === 'DECLINED' || paymentStatus === 'ERROR' || paymentStatus === 'VOIDED') {
     return (
       <div className="min-h-screen p-8 max-w-4xl mx-auto flex flex-col justify-center">
-        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-8 text-center flex flex-col items-center border-danger/30 bg-danger/5 shadow-glass-large">
+        <div className="rounded-xl border border-danger/30 bg-danger/5 p-8 text-center flex flex-col items-center shadow-glass-large">
           {paymentStatus === 'DECLINED' ? (
             <XCircle className="w-16 h-16 text-danger mb-4" />
           ) : (
@@ -261,8 +261,8 @@ export function SubscriptionCheckoutPage() {
       {/* Top Header */}
       <header className="flex justify-between items-center py-4 mb-6 border-b border-border-light/20">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="ZonaFit Logo" className="w-8 object-contain" />
-          <span className="text-lg font-bold text-white tracking-tight">ZONAFIT</span>
+          <img src="/logo.png" alt="Merwil ZonaFit Logo" className="w-8 object-contain" />
+          <span className="text-lg font-bold text-white tracking-tight">MERWIL ZONAFIT</span>
           <span className="text-xs px-2 py-0.5 rounded-full bg-brand-primary/15 text-brand-primary border border-brand-primary/30 flex items-center gap-1 font-medium">
             <ShieldCheck size={12} /> Checkout Seguro
           </span>
@@ -296,10 +296,10 @@ export function SubscriptionCheckoutPage() {
                   : 'hover:ring-1 hover:ring-border-strong'
               }`}
             >
-              <div className={`rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 h-full p-6 flex flex-col ${isSelected ? 'bg-brand-primary/10 border-brand-primary/30' : ''}`}>
+              <div className={`rounded-xl border border-border-light bg-bg-surface/40 h-full p-6 flex flex-col ${isSelected ? 'bg-brand-primary/10 border-brand-primary/30' : ''}`}>
                 <div className="mb-4">
-                  <Badge variant={plan.billing_interval === 'YEARLY' ? 'success' : 'default'} className="mb-3">
-                    {plan.billing_interval === 'YEARLY' ? 'Anual' : 'Mensual'}
+                  <Badge variant={plan.billing_interval === 'YEARLY' ? 'success' : plan.billing_interval === 'SEMIANNUAL' || plan.billing_interval === 'QUARTERLY' ? 'info' : 'default'} className="mb-3">
+                    {plan.billing_interval === 'YEARLY' ? 'Anual' : plan.billing_interval === 'SEMIANNUAL' ? 'Semestral' : plan.billing_interval === 'QUARTERLY' ? 'Trimestral' : plan.billing_interval === 'BIMONTHLY' ? 'Bimestral' : 'Mensual'}
                   </Badge>
                   <h3 className="text-xl font-bold text-text-primary">{plan.name}</h3>
                 </div>
@@ -312,9 +312,20 @@ export function SubscriptionCheckoutPage() {
                 </div>
 
                 {plan.description && (
-                  <p className="text-text-secondary mb-6 flex-grow text-sm">
+                  <p className="text-text-secondary mb-4 text-sm">
                     {plan.description}
                   </p>
+                )}
+
+                {plan.features && plan.features.length > 0 && (
+                  <div className="space-y-1.5 mb-6 border-t border-white/5 pt-3">
+                    {plan.features.slice(0, 4).map((feat, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-xs text-text-secondary">
+                        <CheckCircle2 size={13} className="text-success shrink-0" />
+                        <span className="truncate">{feat}</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
 
                 <div className="mt-auto">

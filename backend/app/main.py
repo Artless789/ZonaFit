@@ -36,7 +36,7 @@ from app.routers import (
 )
 
 app = FastAPI(
-    title="ZonaFit API",
+    title="Merwil ZonaFit API",
     version="1.0.0",
 )
 
@@ -101,7 +101,7 @@ register_exception_handlers(app)
 @app.get("/")
 def root():
     return {
-        "message": "Bienvenido a ZonaFit API"
+        "message": "Bienvenido a Merwil ZonaFit API"
     }
 
 @app.get("/health")

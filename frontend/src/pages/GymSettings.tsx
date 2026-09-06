@@ -37,7 +37,7 @@ export function GymSettingsPage() {
       currency: 'COP',
       timezone: 'America/Bogota',
       default_tax_percentage: 19.00,
-      receipt_footer_notes: '¡Gracias por entrenar con nosotros en ZonaFit!',
+      receipt_footer_notes: '¡Gracias por entrenar con nosotros en Merwil ZonaFit!',
     },
   });
 
@@ -225,7 +225,7 @@ export function GymSettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Input
               label="Razón Social (Legal Name)"
-              placeholder="Ej. ZonaFit S.A.S."
+              placeholder="Ej. Merwil ZonaFit S.A.S."
               disabled={!isAdmin || isSaving}
               error={!!errors.legal_name}
               helperText={errors.legal_name?.message as string}
@@ -233,7 +233,7 @@ export function GymSettingsPage() {
             />
             <Input
               label="Nombre Comercial (Trade Name)"
-              placeholder="Ej. ZonaFit Sede Poblado"
+              placeholder="Ej. Merwil ZonaFit Sede Poblado"
               disabled={!isAdmin || isSaving}
               error={!!errors.trade_name}
               helperText={errors.trade_name?.message as string}

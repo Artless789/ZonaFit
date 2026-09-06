@@ -1,3 +1,4 @@
+import os
 import json
 import hmac
 import hashlib
@@ -190,6 +191,79 @@ def test_04_send_notification_routes_to_gym_credentials():
     assert notif.status == NStatus.SENT
     assert notif.provider_message_id == "wamid.HBgLMTEx"
     assert notif.delivery_status == "SENT"
+    db.close()
+
+def test_04_b_send_notification_routes_to_gym_b_credentials():
+    db = TestingSessionLocal()
+    notif = NotificationService.dispatch(
+        db=db,
+        gym_id=2,
+        client_id=2,
+        event_type="PAYMENT_RECEIVED",
+        channel="WHATSAPP",
+        recipient="573004445566",
+        message_body="Recibo de pago Beta"
+    )
+
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = b'{"messaging_product": "whatsapp", "messages": [{"id": "wamid.HBgLMjIy"}]}'
+        mock_resp.__enter__.return_value = mock_resp
+        mock_urlopen.return_value = mock_resp
+
+        NotificationService.send_and_update(notification_id=notif.id, db=db)
+
+        # Verify urllib request strictly used Gym 2's token and phone_number_id (never Gym 1's or global)
+        called_req = mock_urlopen.call_args[0][0]
+        assert "200998877665544" in called_req.full_url
+        assert called_req.headers["Authorization"] == "Bearer SUPER_SECRET_TOKEN_BETA"
+
+    db.refresh(notif)
+    assert notif.status == NStatus.SENT
+    assert notif.provider_message_id == "wamid.HBgLMjIy"
+    assert notif.delivery_status == "SENT"
+    db.close()
+
+def test_04_c_platform_system_user_token_does_not_substitute_unconfigured_gym():
+    db = TestingSessionLocal()
+
+    # Gym 3 exists but has NO WhatsAppIntegration
+    gym3 = db.query(Gym).filter(Gym.id == 3).first()
+    if not gym3:
+        gym3 = Gym(id=3, name="Gamma Gym Unconfigured", email="gamma@fit.com", owner_id=1)
+        db.add(gym3)
+        db.commit()
+
+    # Even when META_SYSTEM_USER_TOKEN and global env credentials exist on the platform:
+    with patch.object(settings, "META_SYSTEM_USER_TOKEN", "PLATFORM_GLOBAL_SYSTEM_USER_TOKEN"):
+        with patch.dict(os.environ, {"WHATSAPP_PHONE_NUMBER_ID": "GLOBAL_PHONE", "WHATSAPP_ACCESS_TOKEN": "GLOBAL_TOKEN"}):
+            # 1. is_configured MUST return False for gym 3
+            assert WhatsAppSender.is_configured(db=db, gym_id=3) is False
+
+            # 2. get_credentials MUST raise ValueError and not substitute platform or env credentials
+            with pytest.raises(ValueError) as exc_info:
+                WhatsAppSender.get_credentials(db=db, gym_id=3)
+            assert "WhatsApp credentials are not configured for gym 3" in str(exc_info.value)
+
+            # 3. NotificationService.send_and_update MUST fail without calling urllib
+            notif = NotificationService.dispatch(
+                db=db,
+                gym_id=3,
+                client_id=None,
+                event_type="GENERAL",
+                channel="WHATSAPP",
+                recipient="573007778899",
+                message_body="Intento de envio sin integracion"
+            )
+
+            with patch("urllib.request.urlopen") as mock_urlopen:
+                NotificationService.send_and_update(notification_id=notif.id, db=db)
+                mock_urlopen.assert_not_called()
+
+            db.refresh(notif)
+            assert notif.status == NStatus.FAILED
+            assert "not configured for gym 3" in notif.error_detail
+
     db.close()
 
 def test_05_whatsapp_webhook_verification():

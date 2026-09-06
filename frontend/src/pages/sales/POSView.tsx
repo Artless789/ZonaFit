@@ -232,12 +232,12 @@ export function POSView({ products, categories, clients }: POSViewProps) {
       
       const client = clients.find(c => c.id === completedInvoice.client_id);
       
-      generateReceiptPDF({
+      await generateReceiptPDF({
         invoice: completedInvoice,
         details,
         clientName: client?.full_name,
         clientDocument: client?.document,
-        gymName: gymSettings?.trade_name || gymSettings?.legal_name || 'ZonaFit',
+        gymName: gymSettings?.trade_name || gymSettings?.legal_name || 'Merwil ZonaFit',
         gymNit: gymSettings?.tax_id,
         gymPhone: gymSettings?.official_phone,
         gymAddress: gymSettings?.physical_address,

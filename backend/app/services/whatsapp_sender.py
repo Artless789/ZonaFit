@@ -55,6 +55,7 @@ class WhatsAppSender:
             )
             if integration and integration.phone_number_id and integration.access_token_encrypted:
                 return True
+            return False
         return bool(cls.get_phone_number_id() and cls.get_access_token())
 
     @classmethod
@@ -69,7 +70,7 @@ class WhatsAppSender:
         Resolves (phone_number_id, access_token, integration_id) prioritizing:
         1. Explicitly passed credentials.
         2. Database WhatsAppIntegration for gym_id.
-        3. Environment variables.
+        3. Environment variables (ONLY when gym_id is None).
         """
         if phone_number_id and access_token:
             return phone_number_id, access_token, None
@@ -93,14 +94,23 @@ class WhatsAppSender:
             except Exception as e:
                 logger.warning(f"Error fetching WhatsApp integration for gym {gym_id}: {e}")
 
-        # Fallback to env
+            # STRICT MULTI-TENANT ISOLATION:
+            # If gym_id is specified, operations MUST use that gym's individual integration.
+            # Platform tokens (e.g. META_SYSTEM_USER_TOKEN) or global environment credentials
+            # MUST NEVER substitute a missing or inactive gym integration.
+            raise ValueError(
+                f"WhatsApp credentials are not configured for gym {gym_id}. "
+                "The gym must connect its own WhatsApp integration in settings."
+            )
+
+        # Fallback to env ONLY when gym_id is None (e.g. standalone scripts or CLI without tenant context)
         env_phone_id = cls.get_phone_number_id()
         env_token = cls.get_access_token()
         if env_phone_id and env_token:
             return env_phone_id, env_token, None
 
         raise ValueError(
-            "WhatsApp credentials are not configured for this gym. "
+            "WhatsApp credentials are not configured. "
             "Connect WhatsApp in gym settings or configure WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN."
         )
 

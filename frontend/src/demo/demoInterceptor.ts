@@ -39,7 +39,6 @@ export function setupDemoInterceptor() {
 
     // Intercept and return mock data directly using config.adapter
     config.adapter = async (config) => {
-      console.log('Intercepting request:', config.url);
       try {
         await delay();
 
@@ -172,7 +171,6 @@ export function setupDemoInterceptor() {
             reqUrl.includes('/products') ||
             reqUrl.includes('/categories')
           ) {
-            console.log('Mocking successful mutation:', reqUrl);
             const mockInvoice = {
               id: mockData.MOCK_INVOICES.length + 1,
               code: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -197,7 +195,6 @@ export function setupDemoInterceptor() {
             };
           }
 
-          console.log('Mocking failed mutation:', reqUrl);
           return Promise.reject({
             response: {
               status: 403,
@@ -348,7 +345,6 @@ export function setupDemoInterceptor() {
           data = {};
         }
 
-        console.log('Returning data for:', reqUrl, data);
         return {
           data,
           status: 200,

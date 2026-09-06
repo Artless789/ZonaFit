@@ -30,6 +30,7 @@ Thumbs.db
 
 # Testing
 .pytest_cache/
+.playwright-mcp/
 
 # Uploads
 uploads/

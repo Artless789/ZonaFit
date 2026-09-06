@@ -24,6 +24,8 @@ class SubscriptionPayment(Base):
     currency = Column(String(3), nullable=False, default="COP")
     status = Column(Enum(TransactionStatus), index=True, nullable=False, default=TransactionStatus.PENDING)
     payment_method_type = Column(String(50), nullable=True)
+    refund_reason = Column(String(255), nullable=True)
+    refunded_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 

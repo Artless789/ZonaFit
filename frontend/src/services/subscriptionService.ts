@@ -15,11 +15,17 @@ export interface SubscriptionInfo {
     slug: string;
     price: number;
     currency: string;
-    billing_interval: 'MONTHLY' | 'YEARLY';
+    billing_interval: 'MONTHLY' | 'BIMONTHLY' | 'QUARTERLY' | 'SEMIANNUAL' | 'YEARLY';
+    features?: string[];
+    is_popular?: boolean;
   };
   cancellation_requested_at?: string | null;
   payment_source_id?: string | null;
   payment_method_last4?: string | null;
+  is_in_grace_period?: boolean;
+  grace_period_ends_at?: string | null;
+  days_left_in_grace?: number | null;
+  can_request_emergency_extension?: boolean;
 }
 
 export interface PaymentHistory {
@@ -30,6 +36,8 @@ export interface PaymentHistory {
   status: string;
   created_at: string;
   provider_transaction_id: string | null;
+  refund_reason?: string | null;
+  refunded_at?: string | null;
 }
 
 export interface PlanInfo {
@@ -39,8 +47,10 @@ export interface PlanInfo {
   description: string | null;
   price: number;
   currency: string;
-  billing_interval: 'MONTHLY' | 'YEARLY';
+  billing_interval: 'MONTHLY' | 'BIMONTHLY' | 'QUARTERLY' | 'SEMIANNUAL' | 'YEARLY';
   is_active: boolean;
+  is_popular?: boolean;
+  features?: string[];
 }
 
 export interface PaymentInitResponse {
@@ -89,13 +99,18 @@ export const subscriptionService = {
     return data;
   },
 
-  cancelSubscription: async (): Promise<{ message: string }> => {
-    const { data } = await api.post<{ message: string }>('/subscription/cancel');
+  cancelSubscription: async (payload?: { reason?: string; feedback?: string }): Promise<{ message: string }> => {
+    const { data } = await api.post<{ message: string }>('/subscription/cancel', payload || {});
     return data;
   },
 
   reactivateSubscription: async (): Promise<{ message: string }> => {
     const { data } = await api.post<{ message: string }>('/subscription/reactivate');
+    return data;
+  },
+
+  requestEmergencyExtension: async (): Promise<{ success: boolean; message: string; new_ends_at: string }> => {
+    const { data } = await api.post<{ success: boolean; message: string; new_ends_at: string }>('/subscription/emergency-extension');
     return data;
   }
 };

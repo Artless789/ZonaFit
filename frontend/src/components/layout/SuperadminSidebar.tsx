@@ -56,11 +56,11 @@ export function SuperadminSidebar({
           <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
             <img
               src="/logo.png"
-              alt="ZonaFit"
+              alt="Merwil ZonaFit"
               className="h-8 w-8 shrink-0 object-contain drop-shadow-sm"
             />
             <div className={cn('min-w-0 whitespace-nowrap', isCollapsed && 'md:hidden')}>
-              <p className="text-sm font-bold tracking-tight text-text-primary leading-tight">ZONAFIT</p>
+              <p className="text-sm font-bold tracking-tight text-text-primary leading-tight">MERWIL ZONAFIT</p>
               <p className="text-[0.65rem] font-medium uppercase tracking-wider text-brand-primary leading-tight mt-0.5">PLATFORM ADMIN</p>
             </div>
           </div>

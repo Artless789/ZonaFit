@@ -143,8 +143,11 @@ def test_02_embedded_signup_success_with_long_lived_token_exchange():
     exchanged_long_lived = False
     subscribed_waba = False
 
+    subscribed_auth_header = None
+    phone_auth_header = None
+
     def mock_urlopen(req, *args, **kwargs):
-        nonlocal exchanged_long_lived, subscribed_waba
+        nonlocal exchanged_long_lived, subscribed_waba, subscribed_auth_header, phone_auth_header
         url = req.full_url
         mock_cm = MagicMock()
         if "grant_type=fb_exchange_token" in url:
@@ -154,15 +157,21 @@ def test_02_embedded_signup_success_with_long_lived_token_exchange():
             mock_cm.read.return_value = json.dumps(mock_short_lived_response).encode("utf-8")
         elif "subscribed_apps" in url:
             subscribed_waba = True
+            subscribed_auth_header = req.headers.get("Authorization")
             mock_cm.read.return_value = b'{"success": true}'
         elif "phone_id_999" in url:
+            phone_auth_header = req.headers.get("Authorization")
             mock_cm.read.return_value = json.dumps(mock_phone_details).encode("utf-8")
         else:
             mock_cm.read.return_value = b"{}"
         mock_cm.__enter__.return_value = mock_cm
         return mock_cm
 
-    with patch.object(settings, "META_APP_ID", "app_123"), patch.object(settings, "META_APP_SECRET", "sec_456"):
+    with (
+        patch.object(settings, "META_APP_ID", "app_123"),
+        patch.object(settings, "META_APP_SECRET", "sec_456"),
+        patch.object(settings, "META_SYSTEM_USER_TOKEN", "PLATFORM_ADMIN_SYSTEM_USER_TOKEN"),
+    ):
         with patch("urllib.request.urlopen", side_effect=mock_urlopen):
             payload = {
                 "code": "AQB_valid_oauth_code_from_facebook_sdk",
@@ -185,11 +194,20 @@ def test_02_embedded_signup_success_with_long_lived_token_exchange():
             assert exchanged_long_lived is True
             assert subscribed_waba is True
 
-            # Verify in DB that the exchanged long-lived token is encrypted
+            # Platform admin token was used for administrative webhook subscription
+            assert subscribed_auth_header == "Bearer PLATFORM_ADMIN_SYSTEM_USER_TOKEN"
+
+            # Gym's own access token was used for phone queries
+            assert phone_auth_header == "Bearer EAAG_LONG_LIVED_TOKEN_60_DAYS"
+
+            # CRITICAL: Verify in DB that the gym's OWN long-lived token is encrypted and stored,
+            # NOT the platform's META_SYSTEM_USER_TOKEN!
             integ = db.query(WhatsAppIntegration).filter(WhatsAppIntegration.gym_id == 1).first()
             assert integ is not None
             assert integ.access_token_encrypted != "EAAG_LONG_LIVED_TOKEN_60_DAYS"
+            assert integ.access_token_encrypted != "PLATFORM_ADMIN_SYSTEM_USER_TOKEN"
             assert decrypt_token(integ.access_token_encrypted) == "EAAG_LONG_LIVED_TOKEN_60_DAYS"
+            assert decrypt_token(integ.access_token_encrypted) != "PLATFORM_ADMIN_SYSTEM_USER_TOKEN"
     db.close()
 
 

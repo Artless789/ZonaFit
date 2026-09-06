@@ -120,7 +120,7 @@ export function Login({ isApp = false }: { isApp?: boolean }) {
             <div className="absolute inset-0 bg-white/20 blur-xl rounded-full scale-150 -z-10 opacity-50 pointer-events-none"></div>
             <img 
               src="/logo.png" 
-              alt="ZonaFit Logo Oficial" 
+              alt="Merwil ZonaFit Logo Oficial" 
               className="w-24 object-contain drop-shadow-lg relative z-10"
               style={{ aspectRatio: '1664/1776' }}
             />

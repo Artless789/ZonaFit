@@ -20,17 +20,22 @@ export default defineConfig({
       },
       output: {
         manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            if (id.includes('react/') || id.includes('react-dom/') || id.includes('react-router-dom/')) {
+          const normalizedId = id.replace(/\\/g, '/');
+          if (normalizedId.includes('node_modules')) {
+            if (
+              normalizedId.includes('/react/') ||
+              normalizedId.includes('/react-dom/') ||
+              normalizedId.includes('/react-router-dom/')
+            ) {
               return 'vendor-react';
             }
-            if (id.includes('@tanstack/')) {
+            if (normalizedId.includes('/@tanstack/')) {
               return 'vendor-query';
             }
-            if (id.includes('lucide-react') || id.includes('framer-motion')) {
+            if (normalizedId.includes('/lucide-react/') || normalizedId.includes('/framer-motion/')) {
               return 'vendor-ui';
             }
-            if (id.includes('jspdf') || id.includes('html2canvas')) {
+            if (normalizedId.includes('/jspdf') || normalizedId.includes('/html2canvas/')) {
               return 'vendor-pdf';
             }
             return 'vendor';
@@ -58,8 +63,8 @@ export default defineConfig({
       injectRegister: null,
       scope: '/app/',
       manifest: {
-        name: 'ZonaFit',
-        short_name: 'ZonaFit',
+        name: 'Merwil ZonaFit',
+        short_name: 'Merwil ZonaFit',
         description: 'Sistema de gestión y operación para gimnasios.',
         theme_color: '#111214',
         background_color: '#111214',

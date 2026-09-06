@@ -58,7 +58,7 @@ export function WhatsAppSettingsTab({ onStatusChanged }: WhatsAppSettingsTabProp
 
   // Test Message state
   const [testPhone, setTestPhone] = useState('');
-  const [testMsg, setTestMsg] = useState('¡Hola! Este es un mensaje de prueba enviado desde ZonaFit.');
+  const [testMsg, setTestMsg] = useState('¡Hola! Este es un mensaje de prueba enviado desde Merwil ZonaFit.');
   const [isSendingTest, setIsSendingTest] = useState(false);
 
   // Disconnect modal / state

@@ -29,7 +29,7 @@ class WhatsAppIntegrationResponse(BaseModel):
 
 class WhatsAppTestMessageRequest(BaseModel):
     to_phone: str
-    message: Optional[str] = "Mensaje de prueba desde ZonaFit"
+    message: Optional[str] = "Mensaje de prueba desde Merwil ZonaFit"
 
 class WhatsAppMetaConfigResponse(BaseModel):
     app_id: Optional[str] = None

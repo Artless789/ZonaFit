@@ -23,7 +23,7 @@ export const NumericInput = forwardRef<HTMLInputElement, InputProps>(
     useImperativeHandle(ref, () => {
       if (!hiddenRef.current) return {} as HTMLInputElement;
       return new Proxy(hiddenRef.current, {
-        set(target, prop, val, receiver) {
+        set(target, prop, val) {
           if (prop === 'value') {
             if (val !== null && val !== undefined && val !== '') {
               const num = Number(val);
@@ -32,16 +32,17 @@ export const NumericInput = forwardRef<HTMLInputElement, InputProps>(
               setDisplayValue('');
             }
           }
-          return Reflect.set(target, prop, val, receiver);
+          (target as any)[prop] = val;
+          return true;
         },
-        get(target, prop, receiver) {
+        get(target, prop) {
           if (prop === 'focus') {
             return () => visibleRef.current?.focus();
           }
           if (prop === 'blur') {
             return () => visibleRef.current?.blur();
           }
-          const val = Reflect.get(target, prop, receiver);
+          const val = (target as any)[prop];
           if (typeof val === 'function') {
             return val.bind(target);
           }

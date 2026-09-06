@@ -119,7 +119,7 @@ export function Register() {
             <div className="absolute inset-0 bg-white/10 blur-[80px] rounded-full scale-150 -z-10 opacity-30 pointer-events-none"></div>
             <img 
               src="/logo.png" 
-              alt="ZonaFit Logo Oficial" 
+              alt="Merwil ZonaFit Logo Oficial" 
               className="w-20 object-contain drop-shadow-lg relative z-10"
               style={{ aspectRatio: '1664/1776' }}
             />
@@ -127,7 +127,7 @@ export function Register() {
           <h1 className="text-3xl font-bold text-white tracking-tight drop-shadow-md">
             Crear tu <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-brand-secondary">Gimnasio</span>
           </h1>
-          <p className="text-text-secondary mt-2 font-medium">Comienza a gestionar tu gimnasio con ZonaFit</p>
+          <p className="text-text-secondary mt-2 font-medium">Comienza a gestionar tu gimnasio con Merwil ZonaFit</p>
         </div>
 
         <Card variant="glass" padding="none" className="p-1 md:p-8 overflow-hidden relative">

@@ -522,7 +522,7 @@ export const CashRegisterPage = () => {
 
                           <div className="grid grid-cols-2 gap-3 text-xs">
                             <div>
-                              <span className="text-text-muted text-[10px] block">Registrado ZonaFit</span>
+                              <span className="text-text-muted text-[10px] block">Registrado Merwil ZonaFit</span>
                               <span className="font-semibold text-text-primary">
                                 {formatCurrency(item.registered)}
                               </span>
