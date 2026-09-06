@@ -110,6 +110,7 @@ def test_01_get_meta_config_endpoint():
         data = resp.json()
         assert data["app_id"] == "123456789"
         assert data["config_id"] == "cfg_987654"
+        assert data["api_version"] == "v22.0"
         assert data["is_configured"] is True
 
         # Test backwards compatibility alias
@@ -119,13 +120,17 @@ def test_01_get_meta_config_endpoint():
     db.close()
 
 
-def test_02_embedded_signup_success():
+def test_02_embedded_signup_success_with_long_lived_token_exchange():
     global current_test_user
     db = TestingSessionLocal()
     current_test_user = db.query(User).filter(User.id == 1).first()
 
-    mock_oauth_response = {
-        "access_token": "EAAG_MOCK_USER_TOKEN_FROM_META_CODE",
+    mock_short_lived_response = {
+        "access_token": "EAAG_SHORT_LIVED_TOKEN",
+        "token_type": "bearer",
+    }
+    mock_long_lived_response = {
+        "access_token": "EAAG_LONG_LIVED_TOKEN_60_DAYS",
         "token_type": "bearer",
     }
     mock_phone_details = {
@@ -135,11 +140,21 @@ def test_02_embedded_signup_success():
         "quality_rating": "GREEN",
     }
 
+    exchanged_long_lived = False
+    subscribed_waba = False
+
     def mock_urlopen(req, *args, **kwargs):
+        nonlocal exchanged_long_lived, subscribed_waba
         url = req.full_url
         mock_cm = MagicMock()
-        if "oauth/access_token" in url:
-            mock_cm.read.return_value = json.dumps(mock_oauth_response).encode("utf-8")
+        if "grant_type=fb_exchange_token" in url:
+            exchanged_long_lived = True
+            mock_cm.read.return_value = json.dumps(mock_long_lived_response).encode("utf-8")
+        elif "oauth/access_token" in url:
+            mock_cm.read.return_value = json.dumps(mock_short_lived_response).encode("utf-8")
+        elif "subscribed_apps" in url:
+            subscribed_waba = True
+            mock_cm.read.return_value = b'{"success": true}'
         elif "phone_id_999" in url:
             mock_cm.read.return_value = json.dumps(mock_phone_details).encode("utf-8")
         else:
@@ -166,11 +181,15 @@ def test_02_embedded_signup_success():
             assert "access_token" not in data
             assert "access_token_encrypted" not in data
 
-            # Verify in DB that access_token is encrypted
+            # Confirm long-lived token exchange and webhook subscription occurred
+            assert exchanged_long_lived is True
+            assert subscribed_waba is True
+
+            # Verify in DB that the exchanged long-lived token is encrypted
             integ = db.query(WhatsAppIntegration).filter(WhatsAppIntegration.gym_id == 1).first()
             assert integ is not None
-            assert integ.access_token_encrypted != "EAAG_MOCK_USER_TOKEN_FROM_META_CODE"
-            assert decrypt_token(integ.access_token_encrypted) == "EAAG_MOCK_USER_TOKEN_FROM_META_CODE"
+            assert integ.access_token_encrypted != "EAAG_LONG_LIVED_TOKEN_60_DAYS"
+            assert decrypt_token(integ.access_token_encrypted) == "EAAG_LONG_LIVED_TOKEN_60_DAYS"
     db.close()
 
 
@@ -210,7 +229,7 @@ def test_05_embedded_signup_meta_oauth_error():
     with patch.object(settings, "META_APP_ID", "app_123"), patch.object(settings, "META_APP_SECRET", "sec_456"):
         with patch("urllib.request.urlopen") as mock_urlopen:
             mock_error = urllib.error.HTTPError(
-                url="https://graph.facebook.com/v19.0/oauth/access_token",
+                url="https://graph.facebook.com/v22.0/oauth/access_token",
                 code=400,
                 msg="Bad Request",
                 hdrs={},
@@ -265,7 +284,10 @@ def test_07_disconnect_integration():
     db.close()
 
 
-def test_08_webhook_phone_quality_update():
+def test_08_webhook_phone_quality_update_with_valid_signature():
+    import hmac
+    import hashlib
+
     db = TestingSessionLocal()
     # Re-activate integration with UNKNOWN quality
     integ = db.query(WhatsAppIntegration).filter(WhatsAppIntegration.gym_id == 1).first()
@@ -292,9 +314,68 @@ def test_08_webhook_phone_quality_update():
         ]
     }
 
-    resp = client.post("/webhooks/whatsapp", json=webhook_payload)
+    secret = "meta_test_secret_123"
+    raw = json.dumps(webhook_payload).encode("utf-8")
+    sig = "sha256=" + hmac.new(secret.encode("utf-8"), raw, hashlib.sha256).hexdigest()
+
+    with patch.object(settings, "META_WEBHOOK_SECRET", secret):
+        resp = client.post(
+            "/webhooks/whatsapp",
+            content=raw,
+            headers={"X-Hub-Signature-256": sig, "Content-Type": "application/json"},
+        )
     assert resp.status_code == 200
 
     db.refresh(integ)
     assert integ.quality_rating == "GREEN"
     db.close()
+
+
+def test_09_webhook_fail_closed_valid_signature_accepted():
+    import hmac
+    import hashlib
+
+    payload = {"object": "whatsapp_business_account", "entry": []}
+    secret = "strict_webhook_secret_xyz"
+    raw = json.dumps(payload).encode("utf-8")
+    sig = "sha256=" + hmac.new(secret.encode("utf-8"), raw, hashlib.sha256).hexdigest()
+
+    with patch.object(settings, "META_WEBHOOK_SECRET", secret):
+        resp = client.post(
+            "/webhooks/whatsapp",
+            content=raw,
+            headers={"X-Hub-Signature-256": sig, "Content-Type": "application/json"},
+        )
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}
+
+
+def test_10_webhook_fail_closed_invalid_signature_rejected():
+    payload = {"object": "whatsapp_business_account", "entry": []}
+    secret = "strict_webhook_secret_xyz"
+    raw = json.dumps(payload).encode("utf-8")
+
+    with patch.object(settings, "META_WEBHOOK_SECRET", secret):
+        resp = client.post(
+            "/webhooks/whatsapp",
+            content=raw,
+            headers={"X-Hub-Signature-256": "sha256=invalid_forged_signature_999", "Content-Type": "application/json"},
+        )
+    assert resp.status_code == 401
+    assert "Invalid or missing webhook signature" in resp.json()["detail"]
+
+
+def test_11_webhook_fail_closed_missing_secret_rejected():
+    payload = {"object": "whatsapp_business_account", "entry": []}
+    raw = json.dumps(payload).encode("utf-8")
+
+    # When both secrets are empty/None on server, fail-closed MUST reject
+    with patch.object(settings, "META_WEBHOOK_SECRET", ""), patch.object(settings, "META_APP_SECRET", ""):
+        with patch.dict(os.environ, {"WHATSAPP_APP_SECRET": ""}):
+            resp = client.post(
+                "/webhooks/whatsapp",
+                content=raw,
+                headers={"X-Hub-Signature-256": "sha256=any_hash", "Content-Type": "application/json"},
+            )
+    assert resp.status_code == 401
+    assert "Invalid or missing webhook signature" in resp.json()["detail"]
