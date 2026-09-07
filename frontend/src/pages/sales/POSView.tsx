@@ -254,11 +254,11 @@ export function POSView({ products, categories, clients }: POSViewProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-200px)] min-h-[600px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto lg:h-[calc(100vh-170px)] min-h-0 lg:min-h-[600px]">
         
         {/* LEFT COLUMN: Catalog */}
-        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 lg:col-span-7 xl:col-span-8 flex flex-col h-full overflow-hidden p-0">
-          <div className="p-4 border-b border-border-light bg-bg-surface flex flex-col gap-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 lg:col-span-7 xl:col-span-8 flex flex-col h-[460px] sm:h-[500px] lg:h-full overflow-hidden p-0">
+          <div className="p-4 border-b border-border-light bg-bg-surface flex flex-col gap-4 shrink-0">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
               <input 
@@ -301,7 +301,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
           </div>
 
           {/* Product Grid */}
-          <div className="flex-1 overflow-y-auto p-4 bg-bg-page/50">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-bg-page/50">
             {filteredProducts.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-text-muted">
                 <ShoppingBag size={48} className="mb-4 opacity-20" />
@@ -346,10 +346,10 @@ export function POSView({ products, categories, clients }: POSViewProps) {
         </div>
 
         {/* RIGHT COLUMN: Cart & Checkout */}
-        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 lg:col-span-5 xl:col-span-4 flex flex-col h-full overflow-hidden p-0 border-brand-primary/20 shadow-glass-large">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 lg:col-span-5 xl:col-span-4 flex flex-col h-[580px] sm:h-[620px] lg:h-full overflow-hidden p-0 border-brand-primary/20 shadow-glass-large">
           
           {/* Sale Type Selector */}
-          <div className="p-3 border-b border-border-light bg-bg-surface">
+          <div className="p-3 border-b border-border-light bg-bg-surface shrink-0">
              <div className="bg-bg-page border border-border-medium p-1 rounded-lg flex relative">
                 <div 
                   className="absolute inset-y-1 rounded-md bg-bg-elevated border border-border-medium shadow-sm transition-all duration-300 ease-out z-0"
@@ -383,7 +383,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
           </div>
 
           {/* Client Selection */}
-          <div className="p-4 border-b border-border-light bg-bg-surface space-y-3 relative z-[var(--z-dropdown)]">
+          <div className="p-4 border-b border-border-light bg-bg-surface space-y-2 relative z-[var(--z-dropdown)] shrink-0">
             <label className="block text-sm font-medium text-text-secondary">
               Cliente {saleType === 'CREDIT' && <span className="text-danger">*</span>}
             </label>
@@ -401,117 +401,121 @@ export function POSView({ products, categories, clients }: POSViewProps) {
             )}
           </div>
 
-          {/* Cart Items List */}
-          <div className="flex-1 overflow-y-auto p-4 bg-bg-surface flex flex-col gap-3 min-h-[150px]">
-            {cart.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-text-muted text-sm text-center px-4">
-                <ShoppingCart size={32} className="mb-2 opacity-30" />
-                <p>El carrito está vacío. Selecciona productos del catálogo.</p>
-              </div>
-            ) : (
-              cart.map(item => (
-                <div key={item.product.id} className="flex flex-col gap-2 p-3 rounded-lg border border-border-medium bg-bg-page relative group">
-                  <div className="flex justify-between items-start pr-6">
-                    <span className="font-medium text-text-primary text-sm leading-tight">{item.product.name}</span>
-                    <span className="font-semibold text-text-primary text-sm whitespace-nowrap ml-2">
-                      {formatPrice(item.product.sale_price * item.quantity)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-1">
-                    <div className="text-xs text-text-muted">{formatPrice(item.product.sale_price)} c/u</div>
-                    
-                    {/* Quantity Controls */}
-                    <div className="flex items-center gap-3 bg-bg-surface border border-border-medium rounded-md px-2 py-1">
-                      <button 
-                        onClick={() => updateQuantity(item.product.id, -1)}
-                        disabled={item.quantity <= 1 || isCheckingOut}
-                        className="text-text-muted hover:text-text-primary disabled:opacity-30"
-                      >
-                        <Minus size={14} />
-                      </button>
-                      <span className="text-sm font-medium w-4 text-center">{item.quantity}</span>
-                      <button 
-                        onClick={() => updateQuantity(item.product.id, 1)}
-                        disabled={item.quantity >= item.product.stock || isCheckingOut}
-                        className="text-text-muted hover:text-text-primary disabled:opacity-30"
-                      >
-                        <Plus size={14} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Remove Button */}
-                  <button 
-                    onClick={() => removeFromCart(item.product.id)}
-                    disabled={isCheckingOut}
-                    className="absolute top-2 right-2 text-text-muted opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-danger/10 p-1 rounded transition-all"
-                  >
-                    <X size={14} />
-                  </button>
+          {/* Scrollable Middle Area: Cart Items List + Dynamic Sale Options */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 bg-bg-surface/50">
+            {/* Cart Items */}
+            <div className="flex flex-col gap-2.5">
+              {cart.length === 0 ? (
+                <div className="py-8 flex flex-col items-center justify-center text-text-muted text-sm text-center px-4">
+                  <ShoppingCart size={32} className="mb-2 opacity-30" />
+                  <p>El carrito está vacío. Selecciona productos del catálogo.</p>
                 </div>
-              ))
-            )}
+              ) : (
+                cart.map(item => (
+                  <div key={item.product.id} className="flex flex-col gap-2 p-3 rounded-lg border border-border-medium bg-bg-page relative group shadow-sm">
+                    <div className="flex justify-between items-start pr-6">
+                      <span className="font-medium text-text-primary text-sm leading-tight">{item.product.name}</span>
+                      <span className="font-semibold text-text-primary text-sm whitespace-nowrap ml-2">
+                        {formatPrice(item.product.sale_price * item.quantity)}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between mt-1">
+                      <div className="text-xs text-text-muted">{formatPrice(item.product.sale_price)} c/u</div>
+                      
+                      {/* Quantity Controls */}
+                      <div className="flex items-center gap-3 bg-bg-surface border border-border-medium rounded-md px-2 py-1">
+                        <button 
+                          onClick={() => updateQuantity(item.product.id, -1)}
+                          disabled={item.quantity <= 1 || isCheckingOut}
+                          className="text-text-muted hover:text-text-primary disabled:opacity-30"
+                        >
+                          <Minus size={14} />
+                        </button>
+                        <span className="text-sm font-medium w-4 text-center">{item.quantity}</span>
+                        <button 
+                          onClick={() => updateQuantity(item.product.id, 1)}
+                          disabled={item.quantity >= item.product.stock || isCheckingOut}
+                          className="text-text-muted hover:text-text-primary disabled:opacity-30"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Remove Button */}
+                    <button 
+                      onClick={() => removeFromCart(item.product.id)}
+                      disabled={isCheckingOut}
+                      className="absolute top-2 right-2 text-text-muted opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-danger/10 p-1 rounded transition-all"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Dynamic Options based on sale type & Notes */}
+            <div className="pt-3 border-t border-border-light flex flex-col gap-3">
+              {saleType === 'CREDIT' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input 
+                    type="date"
+                    label="Vencimiento (Opcional)"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    disabled={isCheckingOut}
+                    className="w-full"
+                  />
+                  <NumericInput 
+                    label="Abono Inicial (Opcional)"
+                    placeholder="0"
+                    leftIcon={<DollarSign size={16} />}
+                    value={initialPaymentStr}
+                    onChange={(e) => setInitialPaymentStr(e.target.value)}
+                    disabled={isCheckingOut}
+                    className="w-full"
+                    max={cartTotal}
+                  />
+                </div>
+              )}
+
+              {/* Payment Method */}
+              {(saleType === 'CASH' || (saleType === 'CREDIT' && initialPaymentNum > 0)) && (
+                 <Select
+                   label="Método de Pago"
+                   value={paymentMethod}
+                   onChange={(e) => setPaymentMethod(e.target.value)}
+                   options={PAYMENT_METHODS}
+                   disabled={isCheckingOut}
+                 />
+              )}
+
+              <Input 
+                placeholder="Notas de la venta (opcional)" 
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                disabled={isCheckingOut}
+              />
+            </div>
           </div>
 
-          {/* Dynamic Fields & Checkout Section */}
-          <div className="p-4 border-t border-border-light bg-bg-page flex flex-col gap-4">
-            
-            {/* Options based on sale type */}
-            {saleType === 'CREDIT' ? (
-              <div className="grid grid-cols-2 gap-3 mb-2">
-                <Input 
-                  type="date"
-                  label="Vencimiento (Opcional)"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  disabled={isCheckingOut}
-                  className="w-full"
-                />
-                <NumericInput 
-                  label="Abono Inicial (Opcional)"
-                  placeholder="0"
-                  leftIcon={<DollarSign size={16} />}
-                  value={initialPaymentStr}
-                  onChange={(e) => setInitialPaymentStr(e.target.value)}
-                  disabled={isCheckingOut}
-                  className="w-full"
-                  max={cartTotal}
-                />
-              </div>
-            ) : null}
-
-            {/* Payment Method */}
-            {(saleType === 'CASH' || (saleType === 'CREDIT' && initialPaymentNum > 0)) && (
-               <Select
-                 label="Método de Pago"
-                 value={paymentMethod}
-                 onChange={(e) => setPaymentMethod(e.target.value)}
-                 options={PAYMENT_METHODS}
-                 disabled={isCheckingOut}
-               />
-            )}
-
-            <Input 
-              placeholder="Notas de la venta (opcional)" 
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              disabled={isCheckingOut}
-            />
-            
-            <div className="flex flex-col gap-1 mb-2">
+          {/* Pinned Totals & Action Button Footer (Always visible, never pushed out) */}
+          <div className="shrink-0 p-4 border-t border-border-light bg-bg-page/95 backdrop-blur-md flex flex-col gap-3 shadow-lg">
+            <div className="flex flex-col gap-1">
               <div className="flex justify-between items-center text-text-secondary text-sm">
                 <span>Subtotal</span>
-                <span>{formatPrice(cartTotal)}</span>
+                <span className="font-medium">{formatPrice(cartTotal)}</span>
               </div>
               {saleType === 'CREDIT' && (
                 <>
                   <div className="flex justify-between items-center text-text-secondary text-sm">
                     <span>Abono Inicial</span>
-                    <span className="text-brand-primary">{formatPrice(initialPaymentNum)}</span>
+                    <span className="text-brand-primary font-medium">{formatPrice(initialPaymentNum)}</span>
                   </div>
-                  <div className="flex justify-between items-end mt-2 pt-2 border-t border-border-light">
-                    <span className="text-text-primary font-medium">Saldo Pendiente</span>
+                  <div className="flex justify-between items-end mt-1 pt-1.5 border-t border-border-light">
+                    <span className="text-text-primary font-medium text-sm">Saldo Pendiente</span>
                     <span className="text-xl font-bold text-text-primary">
                       {formatPrice(balanceDue)}
                     </span>
@@ -519,9 +523,9 @@ export function POSView({ products, categories, clients }: POSViewProps) {
                 </>
               )}
               {saleType === 'CASH' && (
-                <div className="flex justify-between items-end mt-2 pt-2 border-t border-border-light">
-                  <span className="text-text-primary font-medium">Total a Cobrar</span>
-                  <span className="text-3xl font-bold text-text-primary tracking-tight">
+                <div className="flex justify-between items-end mt-1 pt-1.5 border-t border-border-light">
+                  <span className="text-text-primary font-medium text-sm">Total a Cobrar</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight">
                     {formatPrice(cartTotal)}
                   </span>
                 </div>
@@ -532,9 +536,9 @@ export function POSView({ products, categories, clients }: POSViewProps) {
               onClick={handleCheckoutIntent}
               disabled={cart.length === 0 || isCheckingOut}
               isLoading={isCheckingOut}
-              className="w-full py-4 text-lg"
+              className="w-full py-3.5 text-base font-semibold shadow-md"
             >
-              <CreditCard className="mr-2" />
+              <CreditCard className="mr-2" size={18} />
               {isCheckingOut ? 'Procesando...' : (saleType === 'CREDIT' ? 'Generar Crédito' : 'Procesar Venta')}
             </ActionGlowButton>
           </div>
