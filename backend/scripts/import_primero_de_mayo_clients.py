@@ -140,7 +140,15 @@ def validate_user_and_gym(
             f"Validación crítica fallida: El gimnasio con ID {user.gym_id} no fue encontrado en la base de datos."
         )
 
-    if gym.name.strip().lower() != target_gym_name.strip().lower():
+    gym_name_clean = gym.name.strip().lower()
+    # Acepta tanto el nombre objetivo configurado como la denominación real en producción:
+    # "MerwilFit Primero de Mayo" y la variante abreviada "Primero de Mayo"
+    valid_gym_names = {
+        target_gym_name.strip().lower(),
+        "merwilfit primero de mayo",
+        "primero de mayo",
+    }
+    if gym_name_clean not in valid_gym_names:
         raise ValueError(
             f"Validación crítica fallida: El gimnasio asociado (ID: {gym.id}, '{gym.name}') "
             f"no coincide con el gimnasio objetivo '{target_gym_name}'."
@@ -164,7 +172,7 @@ def run_import(
     markdown_path: Path,
     dry_run: bool = True,
     target_email: str = "merwilcompany@gmail.com",
-    target_gym_name: str = "Primero de Mayo",
+    target_gym_name: str = "MerwilFit Primero de Mayo",
 ) -> Dict[str, any]:
     """
     Ejecuta el flujo de importación (dry-run o real).
@@ -316,8 +324,8 @@ def main():
     parser.add_argument(
         "--target-gym",
         type=str,
-        default="Primero de Mayo",
-        help="Nombre del gimnasio esperado.",
+        default="MerwilFit Primero de Mayo",
+        help="Nombre del gimnasio esperado (acepta 'MerwilFit Primero de Mayo' y 'Primero de Mayo').",
     )
 
     args = parser.parse_args()

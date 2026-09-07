@@ -99,7 +99,34 @@ def test_validation_fails_if_gym_name_mismatch():
     db.query.side_effect = query_side_effect
 
     with pytest.raises(ValueError, match="no coincide con el gimnasio objetivo"):
-        validate_user_and_gym(db, "merwilcompany@gmail.com", "Primero de Mayo")
+        validate_user_and_gym(db, "merwilcompany@gmail.com", "MerwilFit Primero de Mayo")
+
+
+def test_validation_accepts_real_production_gym_name():
+    """Valida que acepte el nombre exacto de producción 'MerwilFit Primero de Mayo' y el alias 'Primero de Mayo'."""
+    db = MagicMock()
+    fake_user = User(id=1, email="merwilcompany@gmail.com", gym_id=1)
+    fake_gym = Gym(id=1, name="MerwilFit Primero de Mayo", email="merwilcompany@gmail.com")
+
+    def query_side_effect(model):
+        m = MagicMock()
+        if model == User:
+            m.filter.return_value.first.return_value = fake_user
+        elif model == Gym:
+            m.filter.return_value.first.return_value = fake_gym
+        return m
+
+    db.query.side_effect = query_side_effect
+
+    # 1. Nombre real de producción
+    u1, g1 = validate_user_and_gym(db, "merwilcompany@gmail.com", "MerwilFit Primero de Mayo")
+    assert g1.name == "MerwilFit Primero de Mayo"
+    assert g1.id == 1
+
+    # 2. Variante 'Primero de Mayo'
+    u2, g2 = validate_user_and_gym(db, "merwilcompany@gmail.com", "Primero de Mayo")
+    assert g2.name == "MerwilFit Primero de Mayo"
+    assert g2.id == 1
 
 
 @pytest.fixture
@@ -110,7 +137,8 @@ def sqlite_test_db(tmp_path):
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    gym = Gym(id=1, name="Primero de Mayo", email="primerodemayo@zonafit.com", is_active=True)
+    # Nombre real verificado en producción: MerwilFit Primero de Mayo
+    gym = Gym(id=1, name="MerwilFit Primero de Mayo", email="primerodemayo@zonafit.com", is_active=True)
     session.add(gym)
     session.flush()
 
@@ -128,11 +156,11 @@ def test_run_import_dry_run(sqlite_test_db):
         markdown_path=DATA_FILE,
         dry_run=True,
         target_email="merwilcompany@gmail.com",
-        target_gym_name="Primero de Mayo"
+        target_gym_name="MerwilFit Primero de Mayo"
     )
 
     assert summary["target_user_email"] == "merwilcompany@gmail.com"
-    assert summary["target_gym_name"] == "Primero de Mayo"
+    assert summary["target_gym_name"] == "MerwilFit Primero de Mayo"
     assert summary["target_gym_id"] == 1
     assert summary["total_read"] == 279
     assert summary["valid_count"] == 279
@@ -153,7 +181,7 @@ def test_run_import_real_and_idempotent(sqlite_test_db):
         markdown_path=DATA_FILE,
         dry_run=False,
         target_email="merwilcompany@gmail.com",
-        target_gym_name="Primero de Mayo"
+        target_gym_name="MerwilFit Primero de Mayo"
     )
 
     assert summary["inserted_count"] == 279
