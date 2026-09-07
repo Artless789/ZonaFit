@@ -35,13 +35,22 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
   const title = pageTitles[location.pathname] ?? 'Centro de operaciones';
   const isSuperadmin = user?.role?.toUpperCase() === 'SUPERADMIN';
   const gymName = isSuperadmin ? 'PLATAFORMA' : (query.data?.trade_name || 'MERWIL ZONAFIT');
+  const isLight = theme === 'light';
 
   return (
     <div className="sticky top-0 z-[var(--z-navbar)] w-full px-4 pt-4 sm:px-6 pointer-events-none">
       <header
-        className="zonafit-navbar-surface pointer-events-auto flex h-[var(--navbar-height)] w-full items-center justify-between rounded-[var(--radius-xl)] px-4 sm:px-6 transition-all border border-white/[0.08] shadow-md bg-[#121216]"
+        className={`zonafit-navbar-surface pointer-events-auto flex h-[var(--navbar-height)] w-full items-center justify-between rounded-[var(--radius-xl)] px-4 sm:px-6 transition-all shadow-md ${
+          isLight
+            ? 'bg-white border border-black/[0.08]'
+            : 'bg-[#121216] border border-white/[0.08]'
+        }`}
         style={{
-          backgroundColor: '#121216',
+          backgroundColor: isLight ? '#FFFFFF' : '#121216',
+          borderColor: isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)',
+          boxShadow: isLight
+            ? '0 10px 30px -5px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.04)'
+            : '0 10px 30px -5px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.12)',
           opacity: 1,
         }}
       >
@@ -65,7 +74,11 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4">
-          <div className="group flex items-center gap-3 rounded-full border border-border-light bg-bg-surface/60 backdrop-blur-md py-1.5 pl-4 pr-1.5 shadow-xs transition-all duration-300 hover:bg-glass-overlay hover:border-border-medium hover:shadow-glass cursor-pointer">
+          <div className={`group flex items-center gap-3 rounded-full border py-1.5 pl-4 pr-1.5 shadow-xs transition-all duration-300 cursor-pointer ${
+            isLight
+              ? 'border-black/[0.08] bg-slate-100/80 hover:bg-slate-200/70 hover:border-black/[0.12]'
+              : 'border-border-light bg-bg-surface/60 backdrop-blur-md hover:bg-glass-overlay hover:border-border-medium hover:shadow-glass'
+          }`}>
             <div className="hidden text-right sm:block">
               <p className="text-sm font-semibold leading-none text-text-primary mb-0.5 transition-colors">{user?.full_name || 'Administrador'}</p>
               <p className="text-xs text-text-muted leading-none">{user?.role || 'Admin'}</p>
@@ -73,7 +86,7 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
             <Avatar fallback={user?.full_name?.substring(0,2).toUpperCase() || 'AD'} className="h-8 w-8 border border-border-medium shadow-sm transition-transform duration-300 group-hover:scale-105" />
           </div>
 
-          <div className="hidden h-6 w-px bg-border-light sm:block" />
+          <div className={`hidden h-6 w-px sm:block ${isLight ? 'bg-black/[0.08]' : 'bg-border-light'}`} />
 
           <Button
             variant="ghost"
