@@ -38,7 +38,13 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
 
   return (
     <div className="sticky top-0 z-[var(--z-navbar)] w-full px-4 pt-4 sm:px-6 pointer-events-none">
-      <header className="zonafit-navbar-surface pointer-events-auto flex h-[var(--navbar-height)] w-full items-center justify-between rounded-[var(--radius-xl)] px-4 sm:px-6 transition-all">
+      <header
+        className="zonafit-navbar-surface pointer-events-auto flex h-[var(--navbar-height)] w-full items-center justify-between rounded-[var(--radius-xl)] px-4 sm:px-6 transition-all border border-white/[0.08] shadow-md bg-[#121216]"
+        style={{
+          backgroundColor: '#121216',
+          opacity: 1,
+        }}
+      >
         
         <div className="flex min-w-0 items-center gap-4">
           <button
