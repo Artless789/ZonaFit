@@ -717,6 +717,12 @@ export function Landing() {
                   Política de privacidad
                 </Link>
               </li>
+              <li>
+                <Link to="/data-deletion" className="text-text-muted hover:text-brand-primary transition-colors text-sm flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-transparent group-hover:bg-brand-primary transition-colors"></span>
+                  Eliminación de datos
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

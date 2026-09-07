@@ -22,6 +22,7 @@ const SuperadminPlans = lazy(() => import('../pages/superadmin/SuperadminPlans')
 const SuperadminSubscriptions = lazy(() => import('../pages/superadmin/SuperadminSubscriptions').then(module => ({ default: module.SuperadminSubscriptions })));
 const PrivacyPage = lazy(() => import('../pages/legal/PrivacyPage').then(module => ({ default: module.PrivacyPage })));
 const TermsPage = lazy(() => import('../pages/legal/TermsPage').then(module => ({ default: module.TermsPage })));
+const DataDeletionPage = lazy(() => import('../pages/legal/DataDeletionPage').then(module => ({ default: module.DataDeletionPage })));
 
 // Demo requires App routes, so we keep them for Demo
 const DashboardPage = lazy(() => import('../pages/dashboard/DashboardPage').then(module => ({ default: module.DashboardPage })));
@@ -53,6 +54,7 @@ export function WebRoutes() {
         <Route path="/register" element={<Register />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        <Route path="/data-deletion" element={<DataDeletionPage />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/subscription/checkout" element={<SubscriptionCheckoutPage />} />
         

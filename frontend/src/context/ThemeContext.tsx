@@ -20,7 +20,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const root = window.document.documentElement;
-    const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+    const publicRoutes = [
+      '/',
+      '/login',
+      '/register',
+      '/forgot-password',
+      '/reset-password',
+      '/terms',
+      '/privacy',
+      '/data-deletion',
+    ];
     
     // Check if current path matches any of the exact public routes
     const isPublicRoute = publicRoutes.some(route => {
