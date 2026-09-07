@@ -142,7 +142,8 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
       // Filtro por texto de búsqueda
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const matchClient = m.clientName?.toLowerCase().includes(q);
+        const clientDisplayName = (m.clientName && m.clientName !== 'Desconocido' ? m.clientName : m.client?.full_name || m.client_name || '');
+        const matchClient = clientDisplayName.toLowerCase().includes(q);
         const matchPlan = m.planName?.toLowerCase().includes(q);
         const matchId = String(m.client_id).includes(q) || String(m.id).includes(q);
         const matchTrainer = m.trainer_name?.toLowerCase().includes(q);
@@ -373,7 +374,11 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
                     )}
                   >
                     <td className="px-6 py-3.5">
-                      <div className="font-semibold text-text-primary">{membership.clientName}</div>
+                      <div className="font-semibold text-text-primary">
+                        {membership.clientName && membership.clientName !== 'Desconocido'
+                          ? membership.clientName
+                          : membership.client?.full_name || membership.client_name || `Cliente #${membership.client_id}`}
+                      </div>
                       <div className="flex items-center gap-2 text-xs text-text-muted mt-0.5">
                         <span>ID Cliente: {membership.client_id}</span>
                         {membership.historyCount > 1 && (
@@ -382,7 +387,9 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
                             <button
                               type="button"
                               onClick={() => setHistoryModalData({
-                                clientName: membership.clientName,
+                                clientName: (membership.clientName && membership.clientName !== 'Desconocido')
+                                ? membership.clientName
+                                : membership.client?.full_name || membership.client_name || `Cliente #${membership.client_id}`,
                                 memberships: membership.history,
                               })}
                               className="inline-flex items-center gap-1 text-brand-primary hover:text-brand-primary-hover hover:underline font-medium cursor-pointer"
@@ -425,7 +432,9 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
                           <button
                             type="button"
                             onClick={() => setHistoryModalData({
-                              clientName: membership.clientName,
+                              clientName: (membership.clientName && membership.clientName !== 'Desconocido')
+                              ? membership.clientName
+                              : membership.client?.full_name || membership.client_name || `Cliente #${membership.client_id}`,
                               memberships: membership.history,
                             })}
                             className="p-2 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-md transition-colors"

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.database_transaction import DatabaseTransaction
 from app.exceptions.not_found_exception import NotFoundException
@@ -256,6 +256,10 @@ class MembershipService:
 
         query = (
             db.query(Membership)
+            .options(
+                joinedload(Membership.client),
+                joinedload(Membership.membership_plan),
+            )
             .filter(
                 Membership.gym_id == current_user.gym_id,
                 Membership.is_active == True,
@@ -345,6 +349,10 @@ class MembershipService:
 
         membership = (
             db.query(Membership)
+            .options(
+                joinedload(Membership.client),
+                joinedload(Membership.membership_plan),
+            )
             .filter(
                 Membership.id == membership_id,
                 Membership.gym_id == current_user.gym_id,

@@ -79,7 +79,9 @@ class MembershipResponse(BaseModel):
     trainer_name: str | None = None
 
     client: ClientMembershipSummary | None = None
+    client_name: str | None = None
     membership_plan: PlanMembershipSummary | None = None
+    plan_name: str | None = None
     payments: list[PaymentMembershipSummary] = []
     total_paid: float = 0.0
     pending_balance: float = 0.0

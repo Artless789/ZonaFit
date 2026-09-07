@@ -38,7 +38,9 @@ export interface Membership {
   is_active: boolean;
   trainer_name?: string | null;
   client?: ClientMembershipSummary | null;
+  client_name?: string | null;
   membership_plan?: PlanMembershipSummary | null;
+  plan_name?: string | null;
   payments?: PaymentMembershipSummary[];
   total_paid?: number;
   pending_balance?: number;

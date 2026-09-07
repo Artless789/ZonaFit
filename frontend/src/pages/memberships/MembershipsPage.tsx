@@ -28,15 +28,15 @@ export function MembershipsPage() {
   const memberships = (Array.isArray(membershipsQuery.query.data) ? membershipsQuery.query.data : membershipsQuery.query.data?.items) || [];
   const clients = (Array.isArray(clientsQuery.query.data) ? clientsQuery.query.data : clientsQuery.query.data?.items) || [];
 
-  // Enriched Memberships (Map IDs to Names)
+  // Enriched Memberships (Prioritizes server-embedded client/plan with client list fallback)
   const enrichedMemberships: EnrichedMembership[] = useMemo(() => {
     return memberships.map(m => {
-      const client = clients.find(c => c.id === m.client_id);
-      const plan = plans.find(p => p.id === m.membership_plan_id);
+      const client = m.client || clients.find(c => c.id === m.client_id);
+      const plan = m.membership_plan || plans.find(p => p.id === m.membership_plan_id);
       return {
         ...m,
-        clientName: client ? client.full_name : 'Desconocido',
-        planName: plan ? plan.name : 'Plan Eliminado',
+        clientName: m.client?.full_name || m.client_name || client?.full_name || 'Desconocido',
+        planName: m.membership_plan?.name || m.plan_name || plan?.name || 'Plan Eliminado',
       };
     });
   }, [memberships, clients, plans]);

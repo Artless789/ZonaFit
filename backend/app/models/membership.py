@@ -93,6 +93,14 @@ class Membership(Base):
         back_populates="memberships",
     )
     payments = relationship(
-    "Payment",
-    back_populates="membership",
-)
+        "Payment",
+        back_populates="membership",
+    )
+
+    @property
+    def client_name(self) -> str | None:
+        return self.client.full_name if self.client else None
+
+    @property
+    def plan_name(self) -> str | None:
+        return self.membership_plan.name if self.membership_plan else None
