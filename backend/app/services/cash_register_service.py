@@ -5,7 +5,13 @@ from sqlalchemy.exc import IntegrityError
 from app.models.cash_register import CashRegister
 from app.models.cash_movement import CashMovement
 from app.models.user import User
-from app.schemas.cash_register import CashRegisterCreate, CashRegisterClose, CashMovementCreate
+from app.schemas.cash_register import (
+    CashRegisterCreate,
+    CashRegisterClose,
+    CashMovementCreate,
+    CashRegisterSummaryResponse,
+    PaymentMethodSummaryItem,
+)
 from app.core.database_transaction import DatabaseTransaction
 from app.exceptions.business_exception import BusinessException
 from datetime import datetime, timedelta
@@ -95,7 +101,6 @@ class CashRegisterService:
         register_id: int | None = None
     ) -> CashRegisterSummaryResponse:
         from app.models.payment import Payment
-        from app.schemas.cash_register import CashRegisterSummaryResponse, PaymentMethodSummaryItem
 
         if register_id:
             register = db.query(CashRegister).filter(
