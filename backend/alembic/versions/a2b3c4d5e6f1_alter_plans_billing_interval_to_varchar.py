@@ -27,12 +27,13 @@ def upgrade() -> None:
     op.execute(sa.text("""
         DO $$
         BEGIN
-            -- 1. Detectar el tipo real de la columna y migrar a VARCHAR(30)
+            -- 1. Detectar el tipo real de la columna en el esquema actual y migrar a VARCHAR(30)
             IF EXISTS (
                 SELECT 1 
                 FROM information_schema.columns 
                 WHERE table_name = 'plans' 
                   AND column_name = 'billing_interval' 
+                  AND table_schema = current_schema()
                   AND udt_name = 'billinginterval'
             ) THEN
                 ALTER TABLE plans ALTER COLUMN billing_interval DROP DEFAULT;
@@ -43,15 +44,32 @@ def upgrade() -> None:
                 ALTER TABLE plans ALTER COLUMN billing_interval SET DEFAULT 'MONTHLY';
             END IF;
 
-            -- 2. Eliminar el tipo enum únicamente si ya no tiene dependencias
-            IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'billinginterval') THEN
+            -- 2. Intentar eliminar de forma segura el tipo enum únicamente si no tiene dependencias
+            IF EXISTS (
+                SELECT 1 
+                FROM pg_type t
+                JOIN pg_namespace n ON t.typnamespace = n.oid
+                WHERE t.typname = 'billinginterval'
+                  AND n.nspname = current_schema()
+            ) THEN
                 IF NOT EXISTS (
                     SELECT 1 
                     FROM pg_attribute a 
                     JOIN pg_type t ON a.atttypid = t.oid 
+                    JOIN pg_namespace n ON t.typnamespace = n.oid
                     WHERE t.typname = 'billinginterval'
+                      AND n.nspname = current_schema()
+                      AND a.attnum > 0
+                      AND NOT a.attisdropped
                 ) THEN
-                    DROP TYPE billinginterval;
+                    BEGIN
+                        DROP TYPE billinginterval;
+                    EXCEPTION
+                        WHEN insufficient_privilege OR dependent_objects_still_exist THEN
+                            -- Si el usuario de la migración no es el propietario del tipo
+                            -- o persisten dependencias externas, se preserva el tipo sin abortar
+                            NULL;
+                    END;
                 END IF;
             END IF;
         END $$;
@@ -69,8 +87,14 @@ def downgrade() -> None:
     op.execute(sa.text("""
         DO $$
         BEGIN
-            -- 1. Recrear el tipo enum original si no existe
-            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'billinginterval') THEN
+            -- 1. Recrear el tipo enum original si no existe en el esquema actual
+            IF NOT EXISTS (
+                SELECT 1 
+                FROM pg_type t
+                JOIN pg_namespace n ON t.typnamespace = n.oid
+                WHERE t.typname = 'billinginterval'
+                  AND n.nspname = current_schema()
+            ) THEN
                 CREATE TYPE billinginterval AS ENUM ('MONTHLY', 'YEARLY');
             END IF;
 
