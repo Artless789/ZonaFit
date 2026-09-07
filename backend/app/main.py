@@ -209,8 +209,16 @@ if _frontend_dist_path.is_dir():
             return FileResponse(_web_index)
 
         @app.get("/{full_path:path}", include_in_schema=False)
-        async def serve_fallback(full_path: str):
+        async def serve_fallback(request: Request, full_path: str):
             first_segment = full_path.split("/")[0] if full_path else ""
+            accept = request.headers.get("accept", "")
+            # If the client is explicitly requesting HTML (browser navigation/reload), serve SPA
+            if "text/html" in accept:
+                file_path = _frontend_dist_path / full_path
+                if full_path and file_path.is_file():
+                    return FileResponse(file_path)
+                return FileResponse(_web_index)
+
             if first_segment in _API_PREFIXES:
                 return JSONResponse(status_code=404, content={"detail": "Not Found"})
             file_path = _frontend_dist_path / full_path
