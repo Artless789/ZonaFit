@@ -35,6 +35,22 @@ if [ "${IMPORT_PRIMERO_DE_MAYO}" = "true" ]; then
     echo "Primero de Mayo client import completed successfully."
 fi
 
+# Optional automated active memberships import for Primero de Mayo
+if [ "${IMPORT_PRIMERO_DE_MAYO_MEMBERSHIPS}" = "true" ]; then
+    echo "================================================="
+    echo " Executing Primero de Mayo active memberships import..."
+    echo "================================================="
+    if [ -f "scripts/import_primero_de_mayo_memberships.py" ]; then
+        python scripts/import_primero_de_mayo_memberships.py
+    elif [ -f "backend/scripts/import_primero_de_mayo_memberships.py" ]; then
+        python backend/scripts/import_primero_de_mayo_memberships.py
+    else
+        echo "ERROR: import_primero_de_mayo_memberships.py not found!"
+        exit 1
+    fi
+    echo "Primero de Mayo active memberships import completed successfully."
+fi
+
 # If custom command arguments are passed, execute them instead
 if [ "$#" -gt 0 ]; then
     exec "$@"
