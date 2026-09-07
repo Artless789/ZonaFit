@@ -9,9 +9,21 @@ import { OfflineBanner } from '../shared/network/OfflineBanner';
 import { SyncIndicator } from '../shared/offline/SyncIndicator';
 import { queryClient, persister, dehydrateQueryFilter } from '@shared/queryClient'
 
-// Registramos el SW exclusivo para la App
+// Registramos el SW exclusivo para la App de forma diferida tras window.load / idle
 if ('serviceWorker' in navigator) {
-  registerSW({ immediate: true })
+  const scheduleSW = () => {
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(() => registerSW());
+    } else {
+      setTimeout(() => registerSW(), 1000);
+    }
+  };
+
+  if (document.readyState === 'complete') {
+    scheduleSW();
+  } else {
+    window.addEventListener('load', scheduleSW);
+  }
 }
 
 export { queryClient };

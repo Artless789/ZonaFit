@@ -39,7 +39,7 @@ export function SuperadminSidebar({
       {isMobileOpen && (
         <button
           type="button"
-          className="fixed inset-0 z-overlay bg-text-primary/35 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-[var(--z-drawer)] bg-text-primary/35 backdrop-blur-sm md:hidden"
           onClick={onCloseMobile}
           aria-label="Cerrar menú de navegación"
         />
@@ -47,7 +47,7 @@ export function SuperadminSidebar({
 
       <aside
         className={cn(
-          'zonafit-floating-surface fixed inset-y-0 left-0 z-fixed flex h-screen flex-col border-r transition-[width,transform] duration-300',
+          'zonafit-floating-surface fixed inset-y-0 left-0 z-[calc(var(--z-drawer)+10)] md:z-[var(--z-sidebar)] flex h-screen flex-col border-r transition-[width,transform] duration-300',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
           isCollapsed ? 'w-[var(--sidebar-width)] md:w-20' : 'w-[var(--sidebar-width)]',
         )}

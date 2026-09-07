@@ -89,6 +89,7 @@ export default defineConfig({
         navigateFallback: '/app/index.html',
         navigateFallbackAllowlist: [/^\/app\//],
         globPatterns: ['**/*.{js,css,html,woff2,png,svg,json}'],
+        globIgnores: ['**/vendor-pdf*.js'],
       }
     }),
     {

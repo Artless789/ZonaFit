@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@fontsource/inter";
+@import "@fontsource/inter/latin.css";
 
 /* ==================================================
    ZONAFIT DESIGN TOKENS v1.0
@@ -305,6 +305,27 @@
     .ambient-light-3 {
       animation: none !important;
       transform: none !important;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .ambient-light-1,
+    .ambient-light-2,
+    .ambient-light-3 {
+      animation: none !important;
+      filter: none !important;
+      transform: none !important;
+    }
+    .ambient-light-1 {
+      background: radial-gradient(circle at 15% 15%, var(--color-ambient-brand) 0%, transparent 65%);
+      opacity: 0.85;
+    }
+    .ambient-light-2 {
+      background: radial-gradient(circle at 85% 85%, var(--color-ambient-neutral) 0%, transparent 60%);
+      opacity: 0.6;
+    }
+    .ambient-light-3 {
+      display: none !important;
     }
   }
 
