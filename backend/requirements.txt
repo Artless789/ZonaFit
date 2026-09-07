@@ -41,3 +41,4 @@ typing_extensions==4.16.0
 uvicorn==0.51.0
 wrapt==2.3.0
 tzdata>=2024.1
+asyncpg>=0.30.0
