@@ -52,6 +52,10 @@ COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 # Ensure client upload directories exist
 RUN mkdir -p /app/uploads/clients
 
+# Create compatibility symlink /app/backend -> /app so both
+# python backend/scripts/... and python scripts/... work seamlessly
+RUN ln -s /app /app/backend
+
 # Copy container entrypoint script and ensure execution permissions
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh

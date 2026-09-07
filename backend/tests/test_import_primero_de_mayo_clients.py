@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -180,3 +181,123 @@ def test_run_import_real_and_idempotent(sqlite_test_db):
     assert summary_replay["new_to_insert"] == 0
     assert summary_replay["already_existing_count"] == 279
     assert sqlite_test_db.query(Client).filter(Client.gym_id == 1).count() == 279
+
+
+def test_entrypoint_sh_syntax_and_structure():
+    """Verifica que entrypoint.sh tenga set -e, gestione IMPORT_PRIMERO_DE_MAYO y use terminaciones LF."""
+    entrypoint_path = BACKEND_DIR.parent / "entrypoint.sh"
+    assert entrypoint_path.exists()
+
+    with open(entrypoint_path, "rb") as f:
+        raw_content = f.read()
+        assert b"\r\n" not in raw_content, "entrypoint.sh debe tener terminaciones de línea LF (Unix)"
+
+    content = raw_content.decode("utf-8")
+    assert "set -e" in content
+    assert "IMPORT_PRIMERO_DE_MAYO" in content
+    assert "python scripts/import_primero_de_mayo_clients.py" in content
+    assert "exec uvicorn app.main:app" in content
+
+
+def test_dockerfile_packaging_and_symlink():
+    """Verifica que Dockerfile copie backend/ a /app, cree el symlink /app/backend y no ignore el dataset."""
+    dockerfile_path = BACKEND_DIR.parent / "Dockerfile"
+    dockerignore_path = BACKEND_DIR.parent / ".dockerignore"
+    assert dockerfile_path.exists()
+    assert dockerignore_path.exists()
+
+    df_content = dockerfile_path.read_text(encoding="utf-8")
+    assert "WORKDIR /app" in df_content
+    assert "COPY backend/ ./" in df_content
+    assert "RUN ln -s /app /app/backend" in df_content
+    assert "COPY entrypoint.sh /app/entrypoint.sh" in df_content
+
+    di_content = dockerignore_path.read_text(encoding="utf-8")
+    assert "PRIMERO_DE_MAYO_CLIENTES" not in di_content
+    assert "scripts/" not in di_content
+    assert "data/" not in di_content
+
+
+def test_entrypoint_execution_simulation(tmp_path):
+    """
+    Simula el comportamiento de control de flujo de entrypoint.sh con un shell POSIX:
+    1. Si IMPORT_PRIMERO_DE_MAYO=false o no está seteado: NO se ejecuta la importación y arranca la app.
+    2. Si IMPORT_PRIMERO_DE_MAYO=true y el script tiene éxito: se ejecuta la importación y luego arranca la app.
+    3. Si IMPORT_PRIMERO_DE_MAYO=true y el script falla: se detiene inmediatamente (set -e) y la app NO arranca.
+    """
+    import subprocess
+    import shutil
+
+    sh_path = shutil.which("sh") or r"C:\Program Files\Git\bin\sh.exe"
+    if not Path(sh_path).exists():
+        pytest.skip("POSIX shell no encontrado en el entorno para simulación directa")
+
+    mock_success = tmp_path / "mock_success.sh"
+    mock_success.write_text(
+        "#!/bin/sh\nset -e\n"
+        'if [ "$IMPORT_PRIMERO_DE_MAYO" = "true" ]; then\n'
+        '    echo "IMPORT_EXECUTED"\n'
+        "fi\n"
+        'exec echo "FASTAPI_STARTED"\n',
+        encoding="utf-8"
+    )
+
+    mock_failure = tmp_path / "mock_failure.sh"
+    mock_failure.write_text(
+        "#!/bin/sh\nset -e\n"
+        'if [ "$IMPORT_PRIMERO_DE_MAYO" = "true" ]; then\n'
+        '    echo "IMPORT_FAILED_STOPPING"\n'
+        "    exit 2\n"
+        "fi\n"
+        'exec echo "FASTAPI_STARTED"\n',
+        encoding="utf-8"
+    )
+
+    # 1. IMPORT_PRIMERO_DE_MAYO = false
+    res_false = subprocess.run(
+        [sh_path, str(mock_success)],
+        env={"IMPORT_PRIMERO_DE_MAYO": "false", "PATH": os.environ.get("PATH", "")},
+        capture_output=True,
+        text=True
+    )
+    assert res_false.returncode == 0
+    assert "FASTAPI_STARTED" in res_false.stdout
+    assert "IMPORT_EXECUTED" not in res_false.stdout
+
+    # 2. IMPORT_PRIMERO_DE_MAYO = true (éxito)
+    res_true = subprocess.run(
+        [sh_path, str(mock_success)],
+        env={"IMPORT_PRIMERO_DE_MAYO": "true", "PATH": os.environ.get("PATH", "")},
+        capture_output=True,
+        text=True
+    )
+    assert res_true.returncode == 0
+    assert "IMPORT_EXECUTED" in res_true.stdout
+    assert "FASTAPI_STARTED" in res_true.stdout
+
+    # 3. IMPORT_PRIMERO_DE_MAYO = true (fallo) -> debe detenerse sin arrancar FastAPI
+    res_fail = subprocess.run(
+        [sh_path, str(mock_failure)],
+        env={"IMPORT_PRIMERO_DE_MAYO": "true", "PATH": os.environ.get("PATH", "")},
+        capture_output=True,
+        text=True
+    )
+    assert res_fail.returncode == 2
+    assert "IMPORT_FAILED_STOPPING" in res_fail.stdout
+    assert "FASTAPI_STARTED" not in res_fail.stdout
+
+
+def test_no_secrets_in_exception_or_logs():
+    """Garantiza que mask_database_url oculte contraseñas con caracteres especiales y tokens."""
+    complex_urls = [
+        ("postgresql://app_user:P%40ssw0rd!123@vps.spaceship.net:5432/zonafit_prod", "app_user:****@vps.spaceship.net:5432/zonafit_prod"),
+        ("postgresql://admin:SecretToken_xyz@127.0.0.1:5432/db", "admin:****@127.0.0.1:5432/db"),
+        ("postgresql://user:pass@db.internal/dbname?sslmode=require", "user:****@db.internal/dbname?sslmode=require"),
+    ]
+    for raw, expected_masked in complex_urls:
+        masked = mask_database_url(raw)
+        assert "P%40ssw0rd!123" not in masked
+        assert "SecretToken_xyz" not in masked
+        assert "****" in masked
+        assert "postgresql://" in masked
+

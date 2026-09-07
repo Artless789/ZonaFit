@@ -19,6 +19,22 @@ if [ "${RUN_MIGRATIONS}" = "true" ]; then
     echo "Migrations applied successfully."
 fi
 
+# Optional automated client import for Primero de Mayo
+if [ "${IMPORT_PRIMERO_DE_MAYO}" = "true" ]; then
+    echo "================================================="
+    echo " Executing Primero de Mayo client import..."
+    echo "================================================="
+    if [ -f "scripts/import_primero_de_mayo_clients.py" ]; then
+        python scripts/import_primero_de_mayo_clients.py
+    elif [ -f "backend/scripts/import_primero_de_mayo_clients.py" ]; then
+        python backend/scripts/import_primero_de_mayo_clients.py
+    else
+        echo "ERROR: import_primero_de_mayo_clients.py not found!"
+        exit 1
+    fi
+    echo "Primero de Mayo client import completed successfully."
+fi
+
 # If custom command arguments are passed, execute them instead
 if [ "$#" -gt 0 ]; then
     exec "$@"
