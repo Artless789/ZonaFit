@@ -345,15 +345,15 @@
 }
 
 .zonafit-navbar-surface {
-  background: linear-gradient(135deg, var(--color-glass-overlay), transparent 58%), rgba(20, 20, 24, 0.72);
+  background: linear-gradient(135deg, var(--color-glass-overlay), transparent 58%), rgba(18, 20, 24, 0.92);
   border: 1px solid var(--color-glass-border);
   box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(var(--glass-blur)) saturate(155%);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(155%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 :root.light .zonafit-navbar-surface {
-  background: linear-gradient(135deg, var(--color-glass-overlay), transparent 58%), rgba(255, 255, 255, 0.85);
+  background: linear-gradient(135deg, var(--color-glass-overlay), transparent 58%), rgba(255, 255, 255, 0.95);
   border: 1px solid var(--color-glass-border);
 }
 
