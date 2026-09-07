@@ -38,9 +38,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Install Python production dependencies
-COPY backend/requirements.txt ./
+COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt asyncpg && \
+    python -c "import asyncpg; print('asyncpg verified successfully')"
 
 # Copy backend application code
 COPY backend/ ./
