@@ -26,8 +26,8 @@ export interface User {
 export const authService = {
   login: async (credentials: LoginCredentials) => {
     const formData = new URLSearchParams();
-    if (credentials.email) formData.append('username', credentials.email);
-    if (credentials.username) formData.append('username', credentials.username);
+    const rawUsername = credentials.username || credentials.email || '';
+    formData.append('username', rawUsername.trim().toLowerCase());
     if (credentials.password) formData.append('password', credentials.password);
     
     // Ensure demo mode is explicitly disabled on real login
@@ -43,7 +43,11 @@ export const authService = {
     // Ensure demo mode is explicitly disabled on real registration
     localStorage.removeItem('demo_mode');
     
-    const { data } = await api.post('/auth/register', payload);
+    const normalizedPayload = {
+      ...payload,
+      owner_email: payload.owner_email ? payload.owner_email.trim().toLowerCase() : payload.owner_email,
+    };
+    const { data } = await api.post('/auth/register', normalizedPayload);
     return data;
   },
 
@@ -66,7 +70,7 @@ export const authService = {
   },
 
   forgotPassword: async (email: string): Promise<{ message: string }> => {
-    const response = await api.post('/auth/forgot-password', { email });
+    const response = await api.post('/auth/forgot-password', { email: email.trim().toLowerCase() });
     return response.data;
   },
 

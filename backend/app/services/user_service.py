@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from typing import Optional
 from fastapi import HTTPException
 
@@ -9,7 +9,7 @@ from app.schemas.filter import FilterParams
 from app.schemas.sort import SortParams
 from app.schemas.pagination import PaginationParams
 from app.utils.query import apply_sort, paginate
-from app.core.security import hash_password
+from app.core.security import hash_password, normalize_email
 from app.services.audit_service import AuditService
 
 class UserService:
@@ -92,8 +92,9 @@ class UserService:
         db.info['bypass_rls'] = True
         db.execute(text("SELECT set_config('app.bypass_rls', 'on', true)"))
 
+        normalized_email = normalize_email(user_data.email)
         try:
-            existing_user = db.query(User).filter(User.email == user_data.email).first()
+            existing_user = db.query(User).filter(func.lower(func.trim(User.email)) == normalized_email).first()
             if existing_user:
                 raise ValueError("El correo electrónico ya está registrado.")
         finally:
@@ -105,8 +106,8 @@ class UserService:
                 db.execute(text("SELECT set_config('app.current_gym_id', :gym_id, true)"), {"gym_id": str(current_user.gym_id)})
 
         new_user = User(
-            full_name=user_data.full_name,
-            email=user_data.email,
+            full_name=user_data.full_name.strip(),
+            email=normalized_email,
             password=hash_password(user_data.password),
             role=user_data.role.upper(),
             gym_id=current_user.gym_id if current_user.role.upper() != "SUPERADMIN" else None,
@@ -159,24 +160,27 @@ class UserService:
             "is_active": user.is_active
         }
 
-        if user_data.email and user_data.email != user.email:
-             # Global check for email
-             from sqlalchemy import text
-             db.info['bypass_rls'] = True
-             db.execute(text("SELECT set_config('app.bypass_rls', 'on', true)"))
-             try:
-                 existing_user = db.query(User).filter(User.email == user_data.email).first()
-                 if existing_user and existing_user.id != user.id:
-                     raise ValueError("El correo electrónico ya está registrado.")
-             finally:
-                 # ALWAYS restore RLS after global check — prevents bypass leaking via connection pool
-                 if current_user.role.upper() != "SUPERADMIN":
-                     db.info.pop('bypass_rls', None)
-                     db.info['tenant_id'] = current_user.gym_id
-                     db.execute(text("SELECT set_config('app.bypass_rls', 'off', true)"))
-                     db.execute(text("SELECT set_config('app.current_gym_id', :gym_id, true)"), {"gym_id": str(current_user.gym_id)})
+        if user_data.email:
+            normalized_email = normalize_email(user_data.email)
+            current_normalized = normalize_email(user.email)
+            if normalized_email != current_normalized:
+                # Global check for email
+                from sqlalchemy import text
+                db.info['bypass_rls'] = True
+                db.execute(text("SELECT set_config('app.bypass_rls', 'on', true)"))
+                try:
+                    existing_user = db.query(User).filter(func.lower(func.trim(User.email)) == normalized_email).first()
+                    if existing_user and existing_user.id != user.id:
+                        raise ValueError("El correo electrónico ya está registrado.")
+                finally:
+                    # ALWAYS restore RLS after global check — prevents bypass leaking via connection pool
+                    if current_user.role.upper() != "SUPERADMIN":
+                        db.info.pop('bypass_rls', None)
+                        db.info['tenant_id'] = current_user.gym_id
+                        db.execute(text("SELECT set_config('app.bypass_rls', 'off', true)"))
+                        db.execute(text("SELECT set_config('app.current_gym_id', :gym_id, true)"), {"gym_id": str(current_user.gym_id)})
 
-             user.email = user_data.email
+                user.email = normalized_email
 
         if user_data.full_name is not None:
             user.full_name = user_data.full_name

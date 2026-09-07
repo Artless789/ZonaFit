@@ -80,3 +80,12 @@ def verify_access_token(token: str) -> dict:
 
     except JWTError:
         return None
+
+
+def normalize_email(email: str | None) -> str | None:
+    """
+    Normaliza un correo electrónico aplicando strip y lowercase.
+    """
+    if email is None:
+        return None
+    return email.strip().lower()

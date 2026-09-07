@@ -5,6 +5,14 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, v: str) -> str:
+        if isinstance(v, str):
+            return v.strip().lower()
+        return v
+
+
 class RegisterRequest(BaseModel):
     owner_name: str
     owner_email: EmailStr
@@ -15,8 +23,24 @@ class RegisterRequest(BaseModel):
     gym_address: str = ""
     gym_city: str = ""
 
+    @field_validator("owner_email", mode="before")
+    @classmethod
+    def normalize_owner_email(cls, v: str) -> str:
+        if isinstance(v, str):
+            return v.strip().lower()
+        return v
+
+
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, v: str) -> str:
+        if isinstance(v, str):
+            return v.strip().lower()
+        return v
+
 
 class ResetPasswordRequest(BaseModel):
     token: str

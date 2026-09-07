@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 
 from app.database.base import Base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
 
 
 class User(Base):
@@ -18,3 +18,9 @@ class User(Base):
 
     is_active = Column(Boolean, default=True)
     gym = relationship("Gym", back_populates="users", foreign_keys=[gym_id])
+
+    @validates("email")
+    def validate_email(self, key, address):
+        if address is not None:
+            return address.strip().lower()
+        return address

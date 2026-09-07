@@ -8,7 +8,7 @@ from app.models.gym import Gym
 from app.models.gym_settings import GymSettings
 from app.models.subscription import Subscription
 from datetime import datetime, timedelta, UTC
-from app.core.security import verify_password, hash_password, create_access_token
+from app.core.security import verify_password, hash_password, create_access_token, normalize_email
 from app.core.auth import get_current_user
 from app.middleware.rate_limiter import limiter, RateLimitConfig
 from fastapi.security import OAuth2PasswordRequestForm
@@ -19,7 +19,7 @@ from app.models.refresh_token import RefreshToken
 from app.schemas.auth import ForgotPasswordRequest, ResetPasswordRequest
 from app.services.email_service import email_service
 from app.core.config import settings
-from sqlalchemy import text
+from sqlalchemy import text, func
 
 router = APIRouter(
     prefix="/auth",
@@ -47,14 +47,16 @@ def register(
         db.info['bypass_rls'] = True
         db.execute(text("SELECT set_config('app.bypass_rls', 'on', true)"))
 
-        existing_user = db.query(User).filter(User.email == payload.owner_email).first()
+        normalized_owner_email = normalize_email(payload.owner_email)
+
+        existing_user = db.query(User).filter(func.lower(func.trim(User.email)) == normalized_owner_email).first()
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="El correo ya se encuentra registrado."
             )
 
-        existing_gym = db.query(Gym).filter(Gym.email == payload.owner_email).first()
+        existing_gym = db.query(Gym).filter(func.lower(func.trim(Gym.email)) == normalized_owner_email).first()
         if existing_gym:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -62,8 +64,8 @@ def register(
             )
 
         new_user = User(
-            full_name=payload.owner_name,
-            email=payload.owner_email,
+            full_name=payload.owner_name.strip(),
+            email=normalized_owner_email,
             password=hash_password(payload.owner_password),
             role="OWNER"
         )
@@ -71,8 +73,8 @@ def register(
         db.flush()
 
         new_gym = Gym(
-            name=payload.gym_name,
-            email=payload.owner_email,
+            name=payload.gym_name.strip(),
+            email=normalized_owner_email,
             phone=payload.gym_phone,
             address=f"{payload.gym_address}, {payload.gym_city}",
             owner_id=new_user.id,
@@ -89,7 +91,7 @@ def register(
             trade_name=payload.gym_name,
             tax_id="PENDIENTE", 
             official_phone=payload.gym_phone,
-            official_email=payload.owner_email,
+            official_email=normalized_owner_email,
             physical_address=payload.gym_address,
             city=payload.gym_city
         )
@@ -130,9 +132,10 @@ def login(
     db.execute(text("SELECT set_config('app.bypass_rls', 'on', true)"))
 
     try:
+        normalized_username = normalize_email(form_data.username) or ""
         user = (
             db.query(User)
-            .filter(User.email == form_data.username)
+            .filter(func.lower(func.trim(User.email)) == normalized_username)
             .first()
         )
 
@@ -156,7 +159,7 @@ def login(
 
         token = create_access_token(
             data={
-                "sub": user.email,
+                "sub": normalize_email(user.email) or "",
                 "user_id": user.id,
                 "gym_id": user.gym_id,
                 "role": user.role
@@ -288,7 +291,7 @@ def refresh_token(
 
             new_access_token = create_access_token(
                 data={
-                    "sub": user.email,
+                    "sub": normalize_email(user.email) or "",
                     "user_id": user.id,
                     "gym_id": user.gym_id,
                     "role": user.role
@@ -314,7 +317,7 @@ def refresh_token(
                         if user and user.is_active:
                             new_access_token = create_access_token(
                                 data={
-                                    "sub": user.email,
+                                    "sub": normalize_email(user.email) or "",
                                     "user_id": user.id,
                                     "gym_id": user.gym_id,
                                     "role": user.role
@@ -407,7 +410,7 @@ def get_me(
     return {
         "id": current_user.id,
         "name": current_user.full_name,
-        "email": current_user.email,
+        "email": normalize_email(current_user.email) or "",
         "role": current_user.role,
         "gym_id": current_user.gym_id,
         "onboarding_completed": current_user.gym.onboarding_completed if current_user.gym else True,
@@ -434,7 +437,8 @@ def forgot_password(
     db.execute(text("SELECT set_config('app.bypass_rls', 'on', true)"))
 
     try:
-        user = db.query(User).filter(User.email == payload.email).first()
+        normalized_email = normalize_email(payload.email) or ""
+        user = db.query(User).filter(func.lower(func.trim(User.email)) == normalized_email).first()
 
         # Generic success message to prevent user enumeration
         success_message = {"message": "Si existe una cuenta asociada a este correo, recibirás instrucciones para recuperar tu contraseña."}
@@ -468,7 +472,7 @@ def forgot_password(
 
         reset_url = f"{settings.FRONTEND_URL}/reset-password?token={raw_token}"
         try:
-            email_service.send_password_reset_email(user.email, reset_url)
+            email_service.send_password_reset_email(normalize_email(user.email) or user.email, reset_url)
         except RuntimeError:
             # Roll back the token so the user can retry with a fresh one
             try:
@@ -515,7 +519,7 @@ def validate_reset_token(
         if not user or not user.is_active:
             raise HTTPException(status_code=400, detail="El usuario asociado a este enlace no es válido.")
 
-        return {"valid": True, "email": user.email}
+        return {"valid": True, "email": normalize_email(user.email) or ""}
     finally:
         db.info.pop('bypass_rls', None)
         db.execute(text("SELECT set_config('app.bypass_rls', 'off', true)"))

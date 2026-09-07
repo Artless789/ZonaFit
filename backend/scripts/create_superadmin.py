@@ -40,18 +40,19 @@ def create_superadmin():
 
     db: Session = SessionLocal()
     try:
-        from sqlalchemy import text
+        from sqlalchemy import text, func
         db.info['bypass_rls'] = True
         db.execute(text("SELECT set_config('app.bypass_rls', 'on', true)"))
 
         # Check if user already exists
-        existing_user = db.query(User).filter(User.email == email).first()
+        email = email.strip().lower()
+        existing_user = db.query(User).filter(func.lower(func.trim(User.email)) == email).first()
         if existing_user:
             print(f"Error: El correo {email} ya está registrado.")
             return
 
         new_user = User(
-            full_name=full_name,
+            full_name=full_name.strip(),
             email=email,
             password=hash_password(password),
             role="SUPERADMIN",

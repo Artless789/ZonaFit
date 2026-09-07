@@ -67,7 +67,7 @@ export function Login({ isApp = false }: { isApp?: boolean }) {
     setIsLoading(true);
     
     try {
-      const profile = await login({ username: email, password });
+      const profile = await login({ username: email.trim().toLowerCase(), password });
       toast({ type: 'success', title: 'Bienvenido', message: 'Inicio de sesión exitoso.' });
       
       if (profile.role === 'SUPERADMIN') {
