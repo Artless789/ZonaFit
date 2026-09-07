@@ -76,9 +76,12 @@ def start_subscription(
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     
     if payload.intent == 'TRIAL':
+        # Holgura de 2 minutos retroactivos para blindar contra retraso de reloj cliente-servidor
+        starts_at = now - timedelta(minutes=2)
         ends_at = now + timedelta(days=14)
         audit_action = "TRIAL_STARTED"
     elif payload.intent == 'PURCHASE':
+        starts_at = now - timedelta(minutes=2)
         ends_at = now # Expira de inmediato, forzando el pago
         audit_action = "PURCHASE_INTENT_STARTED"
     else:
@@ -88,10 +91,15 @@ def start_subscription(
     if existing:
         # If existing is already active or lifetime, return it
         if SubscriptionService.is_active(existing):
-            return existing
+            resp = SubscriptionResponse.model_validate(existing)
+            resp.is_in_grace_period = SubscriptionService.is_in_grace_period(existing)
+            resp.grace_period_ends_at = SubscriptionService.get_grace_period_ends_at(existing)
+            resp.days_left_in_grace = SubscriptionService.get_days_left_in_grace(existing)
+            resp.can_request_emergency_extension = SubscriptionService.can_request_emergency_extension(existing)
+            return resp
         # If it was an inactive, expired, or dummy subscription, activate the requested intent
         existing.status = SubscriptionStatus.TRIAL
-        existing.starts_at = now
+        existing.starts_at = starts_at
         existing.ends_at = ends_at
         existing.is_lifetime = False
         existing.updated_at = now
@@ -103,7 +111,7 @@ def start_subscription(
             gym_id=current_user.gym_id,
             plan_id=None,
             status=SubscriptionStatus.TRIAL,
-            starts_at=now,
+            starts_at=starts_at,
             ends_at=ends_at,
             is_lifetime=False
         )
@@ -122,7 +130,12 @@ def start_subscription(
     db.add(audit)
     db.commit()
 
-    return sub_to_return
+    resp = SubscriptionResponse.model_validate(sub_to_return)
+    resp.is_in_grace_period = SubscriptionService.is_in_grace_period(sub_to_return)
+    resp.grace_period_ends_at = SubscriptionService.get_grace_period_ends_at(sub_to_return)
+    resp.days_left_in_grace = SubscriptionService.get_days_left_in_grace(sub_to_return)
+    resp.can_request_emergency_extension = SubscriptionService.can_request_emergency_extension(sub_to_return)
+    return resp
 
 @router.post("/{sub_id}/payment", response_model=SubscriptionPaymentInitResponse)
 def init_payment(

@@ -80,3 +80,39 @@ def test_payment_void_status():
     assert payment.status == TransactionStatus.VOIDED
     assert payment.refund_reason == "Solicitud dentro de garantía"
     assert payment.refunded_at is not None
+
+def test_trial_active_regardless_of_clock_drift():
+    """Test that a newly registered TRIAL subscription is always active even if starts_at appears in future due to clock skew."""
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    
+    # Trial created with starts_at slightly ahead (simulating server ahead of client or clock skew)
+    sub_trial = Subscription(
+        status=SubscriptionStatus.TRIAL,
+        starts_at=now + timedelta(seconds=30),
+        ends_at=now + timedelta(days=14),
+        is_lifetime=False
+    )
+    assert SubscriptionService.is_active(sub_trial) is True
+
+def test_active_clock_drift_tolerance():
+    """Test that ACTIVE subscriptions allow a 5-minute clock-drift tolerance."""
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    
+    # Starts in 2 minutes (within 5 min tolerance) -> considered active
+    sub_recent = Subscription(
+        status=SubscriptionStatus.ACTIVE,
+        starts_at=now + timedelta(minutes=2),
+        ends_at=now + timedelta(days=30),
+        is_lifetime=False
+    )
+    assert SubscriptionService.is_active(sub_recent) is True
+    
+    # Starts in 10 minutes (beyond 5 min tolerance) -> future-scheduled, not active yet
+    sub_future = Subscription(
+        status=SubscriptionStatus.ACTIVE,
+        starts_at=now + timedelta(minutes=10),
+        ends_at=now + timedelta(days=30),
+        is_lifetime=False
+    )
+    assert SubscriptionService.is_active(sub_future) is False
+

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Card } from '@shared/ui/Card';
 import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
 import { Button } from '@shared/ui/Button';
@@ -12,8 +12,15 @@ import { subscriptionService } from '../services/subscriptionService';
 
 export function SubscriptionGuard() {
   const queryClient = useQueryClient();
+  const location = useLocation();
   const { data: subscription, isLoading, isError, refetch } = useLicenseStatus();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Siempre permitir acceso a checkout y gestión de suscripción para no atrapar al usuario en bucle de bloqueo
+  const isBillingRoute = location.pathname.includes('/subscription/checkout') || location.pathname.includes('/settings/subscription');
+  if (isBillingRoute) {
+    return <Outlet />;
+  }
 
   const emergencyMutation = useMutation({
     mutationFn: subscriptionService.requestEmergencyExtension,
@@ -142,9 +149,11 @@ export function SubscriptionGuard() {
           )}
         </div>
 
-        <p className="text-xs text-text-muted text-center mt-2">
-          La prórroga de 24 horas te permite operar de emergencia mientras regularizas tu pago bancario.
-        </p>
+        {subscription.can_request_emergency_extension && (
+          <p className="text-xs text-text-muted text-center mt-2">
+            La prórroga de 24 horas te permite operar de emergencia mientras regularizas tu pago bancario.
+          </p>
+        )}
       </Card>
     );
   }

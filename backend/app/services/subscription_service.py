@@ -132,7 +132,9 @@ class SubscriptionService:
         if subscription.status != SubscriptionStatus.ACTIVE and subscription.status != SubscriptionStatus.TRIAL and subscription.status != SubscriptionStatus.PAST_DUE:
             return False
             
-        if starts_at and starts_at > now:
+        # TRIAL subscriptions are operational immediately upon assignment/creation.
+        # For other statuses, allow a 5-minute clock-drift tolerance buffer before treating as future-dated.
+        if subscription.status != SubscriptionStatus.TRIAL and starts_at and starts_at > (now + timedelta(minutes=5)):
             return False
             
         if ends_at and ends_at < now:

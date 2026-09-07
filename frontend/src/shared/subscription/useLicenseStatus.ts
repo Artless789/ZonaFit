@@ -13,6 +13,8 @@ function parseSubscriptionDate(value: string): Date {
   return new Date(normalized);
 }
 
+const CLOCK_DRIFT_TOLERANCE_MS = 15 * 60 * 1000; // 15 minutos de tolerancia para desajustes de reloj cliente-servidor
+
 export function isSubscriptionActive(subscription: SubscriptionInfo | null | undefined): boolean {
   if (!subscription) return false;
   if (subscription.is_lifetime) return true;
@@ -20,8 +22,22 @@ export function isSubscriptionActive(subscription: SubscriptionInfo | null | und
 
   const now = new Date();
   if (subscription.status !== 'ACTIVE' && subscription.status !== 'TRIAL') return false;
-  if (subscription.starts_at && parseSubscriptionDate(subscription.starts_at) > now) return false;
-  if (subscription.ends_at && parseSubscriptionDate(subscription.ends_at) < now) return false;
+
+  // Los periodos de prueba (TRIAL) inician inmediatamente al registrarse/activarse.
+  // Para otras suscripciones, se valida starts_at con tolerancia contra reloj desfasado.
+  if (subscription.status !== 'TRIAL' && subscription.starts_at) {
+    const startsAt = parseSubscriptionDate(subscription.starts_at);
+    if (startsAt.getTime() > now.getTime() + CLOCK_DRIFT_TOLERANCE_MS) {
+      return false;
+    }
+  }
+
+  // Validación de fecha de fin
+  if (subscription.ends_at) {
+    const endsAt = parseSubscriptionDate(subscription.ends_at);
+    if (endsAt < now) return false;
+  }
+
   return true;
 }
 
