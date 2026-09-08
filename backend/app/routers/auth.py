@@ -234,7 +234,7 @@ def _clear_refresh_cookie(response: Response, secure: bool, samesite: str):
     )
 
 @router.post("/refresh")
-@limiter.limit(RateLimitConfig.LOGIN)
+@limiter.limit(RateLimitConfig.REFRESH)
 def refresh_token(
     request: Request,
     response: Response,

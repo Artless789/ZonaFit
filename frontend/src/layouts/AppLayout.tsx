@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { Sidebar } from '../components/layout/Sidebar';
 import { Navbar } from '../components/layout/Navbar';
@@ -9,12 +9,52 @@ export function AppLayout() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
   const sidebarWidth = isSidebarCollapsed ? 80 : 280;
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!isLoading) {
+      setTimedOut(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setTimedOut(true);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
+  if (isLoading && !timedOut) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-transparent">
         <Spinner className="w-12 h-12" />
+      </div>
+    );
+  }
+
+  if (isLoading && timedOut) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-transparent p-4">
+        <div className="max-w-md w-full p-6 rounded-2xl bg-bg-surface border border-border-subtle shadow-xl text-center flex flex-col items-center gap-4">
+          <Spinner className="w-8 h-8 text-brand-primary" />
+          <h3 className="text-lg font-bold text-text-primary">Validando sesión...</h3>
+          <p className="text-sm text-text-secondary">
+            La conexión está tardando más de lo habitual en responder.
+          </p>
+          <div className="flex gap-3 mt-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-brand-primary text-text-white hover:bg-brand-primary-hover transition-colors"
+            >
+              Reintentar
+            </button>
+            <button
+              onClick={() => { window.location.assign('/login'); }}
+              className="px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+            >
+              Ir a Iniciar Sesión
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

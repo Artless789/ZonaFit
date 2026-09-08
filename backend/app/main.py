@@ -50,9 +50,10 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
         status_code=429,
         content={
             "success": False,
+            "detail": "Demasiadas solicitudes. Por favor, espera un momento antes de reintentar.",
             "error": {
                 "type": "RateLimitExceeded",
-                "message": "Too many requests. Please slow down and try again later.",
+                "message": "Demasiadas solicitudes. Por favor, espera un momento antes de reintentar.",
                 "status_code": 429,
                 "path": str(request.url.path),
             },

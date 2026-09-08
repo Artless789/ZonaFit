@@ -6,5 +6,7 @@ export function useDashboard() {
   return useQuery<DashboardData, Error>({
     queryKey: ['dashboard'],
     queryFn: dashboardService.getDashboard,
+    refetchOnWindowFocus: true,
+    staleTime: 1000 * 60 * 2,
   });
 }

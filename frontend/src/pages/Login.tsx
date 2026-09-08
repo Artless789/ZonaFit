@@ -86,11 +86,44 @@ export function Login({ isApp = false }: { isApp?: boolean }) {
         else navigate('/dashboard');
       }
     } catch (error: any) {
-      toast({ 
-        type: 'error', 
-        title: 'Error de Autenticación', 
-        message: error.response?.data?.message || 'Correo o contraseña incorrectos. Por favor, intenta de nuevo.' 
-      });
+      const status = error.response?.status;
+      const backendDetail = 
+        error.response?.data?.detail || 
+        error.response?.data?.error?.message || 
+        error.response?.data?.message || 
+        error.userMessage;
+
+      if (status === 429) {
+        toast({ 
+          type: 'error', 
+          title: 'Límite de Intentos Excedido', 
+          message: backendDetail || 'Demasiadas solicitudes. Por favor, espera un momento antes de volver a intentar.' 
+        });
+      } else if (!error.response || error.code === 'ECONNABORTED') {
+        toast({ 
+          type: 'error', 
+          title: 'Error de Conexión', 
+          message: 'No pudimos conectar con el servidor o el tiempo de espera se agotó. Por favor, verifica tu conexión.' 
+        });
+      } else if (status === 401) {
+        toast({ 
+          type: 'error', 
+          title: 'Error de Autenticación', 
+          message: backendDetail || 'Correo o contraseña incorrectos. Por favor, intenta de nuevo.' 
+        });
+      } else if (status === 403) {
+        toast({ 
+          type: 'error', 
+          title: 'Acceso Denegado', 
+          message: backendDetail || 'Tu cuenta se encuentra inactiva o restringida. Contacta al administrador.' 
+        });
+      } else {
+        toast({ 
+          type: 'error', 
+          title: 'Error de Inicio de Sesión', 
+          message: backendDetail || 'Ha ocurrido un error inesperado. Por favor, intenta de nuevo.' 
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -140,6 +173,9 @@ export function Login({ isApp = false }: { isApp?: boolean }) {
               placeholder="admin@ejemplo.com"
               required
               autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
             />
             <Input 
               label="Contraseña" 
@@ -149,6 +185,9 @@ export function Login({ isApp = false }: { isApp?: boolean }) {
               placeholder="••••••••"
               required
               autoComplete="current-password"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
             />
 
             <div className="flex justify-end mt-2 mb-4">
