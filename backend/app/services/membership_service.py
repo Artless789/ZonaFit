@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.database_transaction import DatabaseTransaction
 from app.exceptions.not_found_exception import NotFoundException
@@ -109,6 +109,16 @@ class MembershipService:
         from app.services.cash_register_service import CashRegisterService
 
         total_price = Decimal(str(plan.price))
+        discount = Decimal(str(membership_data.discount or "0.00"))
+        if discount < Decimal("0.00"):
+            raise ValueError("El descuento no puede ser negativo.")
+        if discount > total_price:
+            raise ValueError(
+                f"El descuento ({discount}) no puede superar el precio base del plan ({total_price})."
+            )
+
+        base_price = total_price
+        net_price = base_price - discount
         paid_amount = Decimal("0.00")
         payment_record = None
 
@@ -116,9 +126,9 @@ class MembershipService:
             paid_amount = Decimal(str(membership_data.amount_paid))
             if paid_amount < Decimal("0.00"):
                 raise ValueError("El monto a pagar no puede ser negativo.")
-            if paid_amount > total_price:
+            if paid_amount > net_price:
                 raise ValueError(
-                    f"El monto a pagar ({paid_amount}) no puede superar el total de la membresía ({total_price})."
+                    f"El monto a pagar ({paid_amount}) no puede superar el total de la membresía ({net_price})."
                 )
             if paid_amount > Decimal("0.00") and not membership_data.payment_method:
                 raise ValueError("Debe especificar un método de pago para registrar el pago.")
@@ -130,7 +140,7 @@ class MembershipService:
             if not active_register:
                 raise ValueError("No se puede registrar pago de membresía en efectivo sin una caja abierta.")
 
-        pending_balance = total_price - paid_amount
+        pending_balance = net_price - paid_amount
 
         membership = Membership(
             gym_id=current_user.gym_id,
@@ -138,7 +148,9 @@ class MembershipService:
             membership_plan_id=plan.id,
             start_date=start_date,
             end_date=end_date,
-            price=plan.price,
+            base_price=base_price,
+            discount=discount,
+            price=net_price,
             status=MembershipStatus.ACTIVE,
             trainer_name=membership_data.trainer_name,
         )
@@ -177,7 +189,7 @@ class MembershipService:
                 sale = Sale(
                     gym_id=current_user.gym_id,
                     client_id=client.id,
-                    total=total_price,
+                    total=net_price,
                     status=SaleStatus.COMPLETED,
                     notes=f"Membresía #{membership.id} - {plan.name}",
                 )
@@ -189,7 +201,7 @@ class MembershipService:
                     gym_id=current_user.gym_id,
                     client_id=client.id,
                     sale_id=sale.id,
-                    original_amount=total_price,
+                    original_amount=net_price,
                     paid_amount=paid_amount,
                     balance_due=pending_balance,
                     due_date=end_date,
@@ -213,7 +225,8 @@ class MembershipService:
                     "gym_name": gym_settings.trade_name if gym_settings else "ZonaFit Gym",
                     "membership_name": plan.name,
                     "plan_name": plan.name,
-                    "amount": str(paid_amount if paid_amount > 0 else plan.price),
+                    "amount": str(paid_amount if paid_amount > 0 else net_price),
+                    "discount": str(discount),
                     "balance_due": str(pending_balance),
                     "payment_method": membership_data.payment_method or "N/A",
                     "expiry_date": end_date.strftime("%Y-%m-%d"),
@@ -259,6 +272,7 @@ class MembershipService:
             .options(
                 joinedload(Membership.client),
                 joinedload(Membership.membership_plan),
+                selectinload(Membership.payments),
             )
             .filter(
                 Membership.gym_id == current_user.gym_id,
@@ -295,46 +309,65 @@ class MembershipService:
         from app.models.sale import Sale
         from app.models.accounts_receivable import AccountsReceivable
         from app.models.payment import Payment
+        import re
 
         now = datetime.now(timezone.utc)
-        for item in result.items:
-            if item.status == MembershipStatus.ACTIVE and ensure_utc(item.end_date) < now:
-                item.status = MembershipStatus.EXPIRED
-            
-            active_payments = [
-                p for p in (item.payments or [])
-                if getattr(p, "is_active", True) and p.gym_id == current_user.gym_id
-            ]
+        if result.items:
+            item_ids = {item.id for item in result.items}
+            client_ids = {item.client_id for item in result.items}
 
-            # Also check if there are AR payments for this membership's sale
+            # Batch fetch linked sales with accounts receivable and payments in 1 query
             linked_sales = (
                 db.query(Sale)
+                .options(
+                    joinedload(Sale.accounts_receivable).selectinload(AccountsReceivable.payments)
+                )
                 .filter(
                     Sale.gym_id == current_user.gym_id,
-                    Sale.client_id == item.client_id,
-                    Sale.notes.like(f"Membresía #{item.id}%")
+                    Sale.client_id.in_(client_ids),
+                    Sale.is_active == True,
+                    Sale.notes.like("Membresía #%"),
                 )
                 .all()
             )
-            for s in linked_sales:
-                if s.accounts_receivable:
-                    ar_payments = (
-                        db.query(Payment)
-                        .filter(
-                            Payment.accounts_receivable_id == s.accounts_receivable.id,
-                            Payment.is_active == True,
-                            Payment.gym_id == current_user.gym_id
-                        )
-                        .all()
-                    )
-                    for ap in ar_payments:
-                        if ap not in active_payments:
-                            active_payments.append(ap)
 
-            item.payments = active_payments
-            total_paid = sum(float(p.amount) for p in active_payments)
-            item.total_paid = total_paid
-            item.pending_balance = max(0.0, float(item.price) - total_paid)
+            # Map membership_id -> list of extra AR payments
+            extra_ar_payments = {}
+            for s in linked_sales:
+                if s.notes and s.accounts_receivable:
+                    match = re.search(r"Membresía #(\d+)", s.notes)
+                    if match:
+                        mem_id = int(match.group(1))
+                        if mem_id in item_ids:
+                            ar_pmts = [
+                                p for p in (s.accounts_receivable.payments or [])
+                                if getattr(p, "is_active", True) and p.gym_id == current_user.gym_id
+                            ]
+                            if ar_pmts:
+                                extra_ar_payments.setdefault(mem_id, []).extend(ar_pmts)
+
+            for item in result.items:
+                if item.status == MembershipStatus.ACTIVE and ensure_utc(item.end_date) < now:
+                    item.status = MembershipStatus.EXPIRED
+
+                active_payments = [
+                    p for p in (item.payments or [])
+                    if getattr(p, "is_active", True) and p.gym_id == current_user.gym_id
+                ]
+
+                # Merge extra AR payments if any
+                for ap in extra_ar_payments.get(item.id, []):
+                    if ap not in active_payments:
+                        active_payments.append(ap)
+
+                item.payments = active_payments
+                total_paid = sum(float(p.amount) for p in active_payments)
+                item.total_paid = total_paid
+                item.pending_balance = max(0.0, float(item.price) - total_paid)
+                if getattr(item, "base_price", None) is None:
+                    item.base_price = float(item.price)
+                if getattr(item, "discount", None) is None:
+                    item.discount = 0.0
 
         return result
 
@@ -352,6 +385,7 @@ class MembershipService:
             .options(
                 joinedload(Membership.client),
                 joinedload(Membership.membership_plan),
+                selectinload(Membership.payments),
             )
             .filter(
                 Membership.id == membership_id,
@@ -377,24 +411,23 @@ class MembershipService:
 
             linked_sales = (
                 db.query(Sale)
+                .options(
+                    joinedload(Sale.accounts_receivable).selectinload(AccountsReceivable.payments)
+                )
                 .filter(
                     Sale.gym_id == current_user.gym_id,
                     Sale.client_id == membership.client_id,
-                    Sale.notes.like(f"Membresía #{membership.id}%")
+                    Sale.notes.like(f"Membresía #{membership.id}%"),
+                    Sale.is_active == True,
                 )
                 .all()
             )
             for s in linked_sales:
                 if s.accounts_receivable:
-                    ar_payments = (
-                        db.query(Payment)
-                        .filter(
-                            Payment.accounts_receivable_id == s.accounts_receivable.id,
-                            Payment.is_active == True,
-                            Payment.gym_id == current_user.gym_id
-                        )
-                        .all()
-                    )
+                    ar_payments = [
+                        p for p in (s.accounts_receivable.payments or [])
+                        if getattr(p, "is_active", True) and p.gym_id == current_user.gym_id
+                    ]
                     for ap in ar_payments:
                         if ap not in active_payments:
                             active_payments.append(ap)
@@ -403,6 +436,10 @@ class MembershipService:
             total_paid = sum(float(p.amount) for p in active_payments)
             membership.total_paid = total_paid
             membership.pending_balance = max(0.0, float(membership.price) - total_paid)
+            if getattr(membership, "base_price", None) is None:
+                membership.base_price = float(membership.price)
+            if getattr(membership, "discount", None) is None:
+                membership.discount = 0.0
 
         return membership
 

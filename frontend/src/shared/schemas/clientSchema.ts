@@ -7,6 +7,16 @@ export const clientSchema = z.object({
   phone: z.string().min(7, 'El teléfono debe tener al menos 7 caracteres.'),
   email: z.union([z.literal(''), z.string().email('Debe ser un correo válido.')]).optional().nullable(),
   notes: z.string().optional().nullable(),
+  // Asignación de membresía inicial (opcional al crear cliente)
+  assign_membership: z.boolean().optional(),
+  membership_plan_id: z.number().optional(),
+  trainer_name: z.string().optional(),
+  start_date: z.string().optional(),
+  discount: z.number().min(0, 'El descuento no puede ser negativo.').optional(),
+  register_payment: z.boolean().optional(),
+  payment_method: z.string().optional(),
+  amount_paid: z.number().min(0, 'El monto a pagar no puede ser negativo.').optional(),
+  reference: z.string().optional(),
 });
 
 export type ClientFormValues = z.infer<typeof clientSchema>;

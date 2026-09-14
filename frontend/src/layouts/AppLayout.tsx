@@ -1,4 +1,4 @@
-import { useState, useEffect, type CSSProperties } from 'react';
+import { useState, useEffect, Suspense, type CSSProperties } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { Sidebar } from '../components/layout/Sidebar';
 import { Navbar } from '../components/layout/Navbar';
@@ -93,7 +93,15 @@ export function AppLayout() {
       >
         <Navbar onOpenMobileMenu={() => setIsMobileSidebarOpen(true)} />
         <main className="mx-auto w-full max-w-[var(--content-max-width)] flex-1 p-4 sm:p-6 lg:p-8">
-          <Outlet />
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center min-h-[50vh]">
+                <Spinner className="w-8 h-8 text-brand-primary" />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

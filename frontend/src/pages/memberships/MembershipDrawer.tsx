@@ -58,6 +58,7 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
       membership_plan_id: 0,
       trainer_name: '',
       start_date: todayStr,
+      discount: 0,
       register_payment: true,
       payment_method: 'CASH',
       amount_paid: 0,
@@ -68,6 +69,7 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
   const selectedClientId = watch('client_id');
   const selectedPlanId = watch('membership_plan_id');
   const startDateValue = watch('start_date') || todayStr;
+  const discountRaw = watch('discount');
   const registerPayment = watch('register_payment');
   const paymentMethod = watch('payment_method') || 'CASH';
   const amountPaidRaw = watch('amount_paid');
@@ -83,10 +85,22 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
     return activeClients.find(c => c.id === Number(selectedClientId)) || null;
   }, [activeClients, selectedClientId]);
 
+  const basePrice = selectedPlan ? Number(selectedPlan.price) : 0;
+  const discount = Math.min(
+    basePrice,
+    Math.max(
+      0,
+      typeof discountRaw === 'number'
+        ? discountRaw
+        : parseFloat(String(discountRaw || '').replace(/[^0-9.-]+/g, '')) || 0
+    )
+  );
+  const planTotal = Math.max(0, basePrice - discount);
+
   useEffect(() => {
     if (selectedPlan) {
       if (registerPayment) {
-        setValue('amount_paid', Number(selectedPlan.price), { shouldValidate: true });
+        setValue('amount_paid', planTotal, { shouldValidate: true });
       }
     }
   }, [selectedPlan, registerPayment, setValue]);
@@ -98,6 +112,7 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
         membership_plan_id: 0,
         trainer_name: '',
         start_date: format(new Date(), 'yyyy-MM-dd'),
+        discount: 0,
         register_payment: true,
         payment_method: 'CASH',
         amount_paid: 0,
@@ -122,7 +137,6 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
     }
   }, [selectedPlan, startDateValue]);
 
-  const planTotal = selectedPlan ? Number(selectedPlan.price) : 0;
   const paidAmount = registerPayment
     ? typeof amountPaidRaw === 'number'
       ? amountPaidRaw
@@ -161,6 +175,7 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
         membership_plan_id: data.membership_plan_id,
         trainer_name: data.trainer_name || undefined,
         start_date: new Date(`${data.start_date}T00:00:00Z`).toISOString(),
+        discount: discount,
         register_payment: data.register_payment,
         payment_method: data.register_payment ? data.payment_method : undefined,
         amount_paid: data.register_payment ? paidAmount : 0,
@@ -209,6 +224,8 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
         durationDays: selectedPlan?.duration_days,
         startDate: data.start_date,
         endDate: calculatedEndDate?.dateObj || (created?.end_date ? new Date(created.end_date) : new Date()),
+        basePrice: basePrice,
+        discount: discount,
         totalPrice: planTotal,
         paidAmount: paidAmount,
         pendingBalance: pendingBalance,
@@ -319,7 +336,39 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
             />
           </div>
 
-          {/* 5. Sección de Pago */}
+          {/* 5. Descuento Especial */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-text-secondary">Descuento Especial ($ COP)</label>
+              {discount > 0 && selectedPlan && (
+                <span className="text-xs text-brand-primary font-medium">
+                  Neto: {formatCurrency(planTotal)}
+                </span>
+              )}
+            </div>
+            <NumericInput
+              placeholder="0"
+              value={discountRaw !== undefined && discountRaw !== 0 ? discountRaw : ''}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value) || 0;
+                const capped = Math.min(basePrice, Math.max(0, val));
+                setValue('discount', capped, { shouldValidate: true });
+                if (registerPayment && selectedPlan) {
+                  const net = Math.max(0, basePrice - capped);
+                  setValue('amount_paid', net, { shouldValidate: true });
+                }
+              }}
+              disabled={isSaving || !selectedPlan}
+              leftIcon={<DollarSign size={16} />}
+            />
+            {discount > 0 && selectedPlan && (
+              <p className="text-xs text-text-muted">
+                Precio catálogo: <span className="line-through">{formatCurrency(basePrice)}</span> → Aplica descuento individual sin alterar el catálogo general.
+              </p>
+            )}
+          </div>
+
+          {/* 6. Sección de Pago */}
           <div className="pt-2">
             <div className="p-4 rounded-xl border border-border-medium bg-bg-surface/40 space-y-4">
               <div className="flex items-center justify-between">
@@ -337,7 +386,7 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
                     onClick={() => setValue('amount_paid', planTotal, { shouldValidate: true })}
                     className="text-xs text-brand-primary hover:underline font-medium"
                   >
-                    Pagar Totalidad
+                    Pagar Totalidad ({formatCurrency(planTotal)})
                   </button>
                 )}
               </div>
@@ -388,7 +437,17 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
               {/* Resumen Financiero Dinámico */}
               <div className="p-3 bg-bg-elevated/60 rounded-lg border border-border-light space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-text-secondary">Total Membresía:</span>
+                  <span className="text-text-secondary">Precio Base Plan:</span>
+                  <span className="font-semibold text-text-primary">{formatCurrency(basePrice)}</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-brand-primary">
+                    <span>Descuento Especial:</span>
+                    <span className="font-semibold">-{formatCurrency(discount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-text-secondary">Total a Pagar:</span>
                   <span className="font-semibold text-text-primary">{formatCurrency(planTotal)}</span>
                 </div>
                 <div className="flex justify-between">

@@ -22,12 +22,14 @@ class Membership(Base):
         Integer,
         ForeignKey("gyms.id"),
         nullable=False,
+        index=True,
     )
 
     client_id = Column(
         Integer,
         ForeignKey("clients.id"),
         nullable=False,
+        index=True,
     )
 
     membership_plan_id = Column(
@@ -44,6 +46,17 @@ class Membership(Base):
     end_date = Column(
         DateTime(timezone=True),
         nullable=False,
+    )
+
+    base_price = Column(
+        Numeric(10, 2),
+        nullable=True,
+    )
+
+    discount = Column(
+        Numeric(10, 2),
+        nullable=False,
+        default=0.00,
     )
 
     price = Column(

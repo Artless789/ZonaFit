@@ -2,7 +2,7 @@ import calendar
 from decimal import Decimal
 from datetime import datetime, timedelta, timezone, time
 from typing import Optional
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, case
 from sqlalchemy.orm import Session, joinedload
 
 from app.constants.membership_status import MembershipStatus
@@ -54,33 +54,31 @@ class DashboardService:
         next_week = today_start + timedelta(days=7)
 
         # 1. Ventas del día (Ventas POS + Membresías nuevas/renovadas creadas hoy)
-        pos_sales_query = db.query(Sale).filter(
+        pos_sales_filter = [
             Sale.gym_id == current_user.gym_id,
             Sale.status == SaleStatus.COMPLETED,
             Sale.is_active == True,
             Sale.created_at >= today_start,
             or_(Sale.notes.is_(None), ~Sale.notes.like("Membresía #%"))  # Excluir ventas shadow internas de membresías
-        )
-        pos_sales_count = pos_sales_query.count()
-        pos_sales_amount = db.query(func.sum(Sale.total)).filter(
-            Sale.gym_id == current_user.gym_id,
-            Sale.status == SaleStatus.COMPLETED,
-            Sale.is_active == True,
-            Sale.created_at >= today_start,
-            or_(Sale.notes.is_(None), ~Sale.notes.like("Membresía #%"))
-        ).scalar() or Decimal("0.00")
+        ]
+        pos_sales_query = db.query(Sale).filter(*pos_sales_filter)
+        pos_stats = db.query(
+            func.count(Sale.id),
+            func.coalesce(func.sum(Sale.total), Decimal("0.00"))
+        ).filter(*pos_sales_filter).first()
+        pos_sales_count = pos_stats[0] if pos_stats else 0
+        pos_sales_amount = pos_stats[1] if pos_stats else Decimal("0.00")
 
-        memberships_today_query = db.query(Membership).filter(
+        mem_stats = db.query(
+            func.count(Membership.id),
+            func.coalesce(func.sum(Membership.price), Decimal("0.00"))
+        ).filter(
             Membership.gym_id == current_user.gym_id,
             Membership.is_active == True,
             Membership.created_at >= today_start
-        )
-        memberships_today_count = memberships_today_query.count()
-        memberships_today_amount = db.query(func.sum(Membership.price)).filter(
-            Membership.gym_id == current_user.gym_id,
-            Membership.is_active == True,
-            Membership.created_at >= today_start
-        ).scalar() or Decimal("0.00")
+        ).first()
+        memberships_today_count = mem_stats[0] if mem_stats else 0
+        memberships_today_amount = mem_stats[1] if mem_stats else Decimal("0.00")
 
         sales_today = pos_sales_count + memberships_today_count
         sales_today_amount = pos_sales_amount + memberships_today_amount
@@ -100,18 +98,24 @@ class DashboardService:
         ).count()
 
         # 4. Total por cobrar y vencidos (Cubre PENDING y PARTIAL con balance_due > 0)
-        total_receivables = db.query(func.sum(AccountsReceivable.balance_due)).filter(
+        ar_stats = db.query(
+            func.coalesce(func.sum(AccountsReceivable.balance_due), Decimal("0.00")),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (AccountsReceivable.due_date < today_start, AccountsReceivable.balance_due),
+                        else_=Decimal("0.00")
+                    )
+                ),
+                Decimal("0.00")
+            )
+        ).filter(
             AccountsReceivable.gym_id == current_user.gym_id,
             AccountsReceivable.balance_due > Decimal("0.00"),
             AccountsReceivable.is_active == True
-        ).scalar() or Decimal("0.00")
-
-        overdue_receivables = db.query(func.sum(AccountsReceivable.balance_due)).filter(
-            AccountsReceivable.gym_id == current_user.gym_id,
-            AccountsReceivable.balance_due > Decimal("0.00"),
-            AccountsReceivable.is_active == True,
-            AccountsReceivable.due_date < today_start
-        ).scalar() or Decimal("0.00")
+        ).first()
+        total_receivables = ar_stats[0] if ar_stats else Decimal("0.00")
+        overdue_receivables = ar_stats[1] if ar_stats else Decimal("0.00")
 
         # 5. Membresías por vencer (próximos 7 días)
         expiring_memberships_query = db.query(Membership).options(

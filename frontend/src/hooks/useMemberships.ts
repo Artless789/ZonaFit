@@ -11,7 +11,7 @@ export const useMemberships = () => {
 
   const query = useQuery<Paginated<Membership>, Error>({
     queryKey,
-    queryFn: membershipService.getMemberships,
+    queryFn: () => membershipService.getMemberships(),
     enabled: !!user?.gym_id && user?.role?.toUpperCase() !== 'SUPERADMIN',
   });
 

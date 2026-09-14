@@ -31,24 +31,28 @@ class Payment(Base):
         Integer,
         ForeignKey("gyms.id"),
         nullable=False,
+        index=True,
     )
 
     membership_id = Column(
         Integer,
         ForeignKey("memberships.id"),
         nullable=True,
+        index=True,
     )
 
     sale_id = Column(
         Integer,
         ForeignKey("sales.id"),
         nullable=True,
+        index=True,
     )
 
     accounts_receivable_id = Column(
         Integer,
         ForeignKey("accounts_receivables.id"),
         nullable=True,
+        index=True,
     )
 
     amount = Column(

@@ -33,6 +33,8 @@ export interface Membership {
   membership_plan_id: number;
   start_date: string; // ISO datetime
   end_date: string;
+  base_price?: number;
+  discount?: number;
   price: number;
   status: string; // e.g. ACTIVE, EXPIRED, CANCELLED
   is_active: boolean;
@@ -53,6 +55,7 @@ export interface MembershipCreate {
   membership_plan_id: number;
   trainer_name?: string;
   start_date?: string;
+  discount?: number;
   register_payment?: boolean;
   payment_method?: string;
   amount_paid?: number;

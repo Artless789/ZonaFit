@@ -198,6 +198,8 @@ export interface GenerateMembershipReceiptProps {
   durationDays?: number;
   startDate: string | Date;
   endDate: string | Date;
+  basePrice?: number;
+  discount?: number;
   totalPrice: number;
   paidAmount: number;
   pendingBalance: number;
@@ -220,6 +222,8 @@ export const generateMembershipPaymentReceiptPDF = async ({
   durationDays,
   startDate,
   endDate,
+  basePrice,
+  discount,
   totalPrice,
   paidAmount,
   pendingBalance,
@@ -369,9 +373,13 @@ export const generateMembershipPaymentReceiptPDF = async ({
   yPos += 18;
 
   // 5. Table of Details
+  const planConcept = (discount && discount > 0)
+    ? `Membresía - ${planName} (Desc. ${formatPrice(discount)})`
+    : `Membresía - ${planName}`;
+
   const tableData = [
     [
-      `Membresía - ${planName}`,
+      planConcept,
       formatSafeDate(startDate),
       formatSafeDate(endDate),
       formatPrice(totalPrice),
@@ -395,17 +403,33 @@ export const generateMembershipPaymentReceiptPDF = async ({
   const summaryLabelX = 85;
   const summaryValueX = 185;
 
+  let currentSummaryY = finalY;
+
+  if (basePrice && discount && discount > 0) {
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Precio Base:', summaryLabelX, currentSummaryY);
+    doc.text(formatPrice(basePrice), summaryValueX, currentSummaryY, { align: 'right' });
+    currentSummaryY += 5;
+
+    doc.setTextColor(200, 100, 0);
+    doc.text('Descuento Aplicado:', summaryLabelX, currentSummaryY);
+    doc.text(`-${formatPrice(discount)}`, summaryValueX, currentSummaryY, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+    currentSummaryY += 5;
+  }
+
   doc.setFontSize(9.5);
   doc.setFont('helvetica', 'normal');
-  doc.text('Total Membresía:', summaryLabelX, finalY);
-  doc.text(formatPrice(totalPrice), summaryValueX, finalY, { align: 'right' });
+  doc.text('Total Membresía:', summaryLabelX, currentSummaryY);
+  doc.text(formatPrice(totalPrice), summaryValueX, currentSummaryY, { align: 'right' });
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('Monto Pagado en esta Operación:', summaryLabelX, finalY + 6);
-  doc.text(formatPrice(paidAmount), summaryValueX, finalY + 6, { align: 'right' });
+  doc.text('Monto Pagado en esta Operación:', summaryLabelX, currentSummaryY + 6);
+  doc.text(formatPrice(paidAmount), summaryValueX, currentSummaryY + 6, { align: 'right' });
 
-  let balanceY = finalY + 12.5;
+  let balanceY = currentSummaryY + 12.5;
   doc.setFontSize(10);
   if (pendingBalance > 0) {
     doc.setFont('helvetica', 'bold');

@@ -1,3 +1,14 @@
+export interface ClientInitialMembership {
+  membership_plan_id: number;
+  trainer_name?: string;
+  start_date?: string;
+  discount?: number;
+  register_payment?: boolean;
+  payment_method?: string;
+  amount_paid?: number;
+  reference?: string;
+}
+
 export interface Client {
   id: number;
   gym_id: number;
@@ -9,6 +20,7 @@ export interface Client {
   notes?: string | null;
   photo_url?: string | null;
   is_active: boolean;
+  initial_membership?: any;
   created_at: string;
   updated_at: string;
 }
@@ -38,5 +50,7 @@ export interface Client360Response {
   current_membership?: ClientMembershipSummary | null;
   financial: ClientFinancialSummary;
 }
-export type ClientCreate = Omit<Client, 'id' | 'gym_id' | 'is_active' | 'created_at' | 'updated_at'>;
+export type ClientCreate = Omit<Client, 'id' | 'gym_id' | 'is_active' | 'created_at' | 'updated_at'> & {
+  initial_membership?: ClientInitialMembership;
+};
 export type ClientUpdate = Partial<ClientCreate> & { is_active?: boolean };

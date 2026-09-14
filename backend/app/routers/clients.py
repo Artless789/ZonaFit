@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
 from fastapi.responses import FileResponse
 import os
 import uuid
@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
 from app.database.database import get_db
+from app.core.database_transaction import DatabaseTransaction
 from app.models.client import Client
 from app.models.user import User
 from app.schemas.client import (
@@ -47,55 +48,91 @@ router = APIRouter(
 )
 def create_client(
     client: ClientCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    existing_client = (
-        db.query(Client)
-        .filter(
-            Client.gym_id == current_user.gym_id,
-            Client.document == client.document,
-        )
-        .first()
-    )
-
-    if existing_client:
-        raise HTTPException(
-            status_code=400,
-            detail="Client already exists.",
+    with DatabaseTransaction(db):
+        existing_client = (
+            db.query(Client)
+            .filter(
+                Client.gym_id == current_user.gym_id,
+                Client.document == client.document,
+            )
+            .first()
         )
 
-    new_client = Client(
-        gym_id=current_user.gym_id,
-        full_name=client.full_name,
-        document_type=client.document_type,
-        document=client.document,
-        phone=client.phone,
-        email=client.email,
-        notes=client.notes,
-        photo_url=client.photo_url,
-    )
+        if existing_client:
+            raise HTTPException(
+                status_code=400,
+                detail="Client already exists.",
+            )
 
-    db.add(new_client)
-    db.commit()
-    db.refresh(new_client)
+        new_client = Client(
+            gym_id=current_user.gym_id,
+            full_name=client.full_name,
+            document_type=client.document_type,
+            document=client.document,
+            phone=client.phone,
+            email=client.email,
+            notes=client.notes,
+            photo_url=client.photo_url,
+        )
 
-    from app.services.audit_service import AuditService
-    AuditService.log(
-        db=db,
-        gym_id=current_user.gym_id,
-        action="CLIENT_CREATED",
-        entity_type="CLIENT",
-        user_id=current_user.id,
-        entity_id=new_client.id,
-        new_values={
-            "full_name": new_client.full_name,
-            "document": new_client.document,
-            "email": new_client.email,
-        },
-        ip_address=None,
-    )
-    db.commit()
+        db.add(new_client)
+        db.flush()
+
+        from app.services.audit_service import AuditService
+        AuditService.log(
+            db=db,
+            gym_id=current_user.gym_id,
+            action="CLIENT_CREATED",
+            entity_type="CLIENT",
+            user_id=current_user.id,
+            entity_id=new_client.id,
+            new_values={
+                "full_name": new_client.full_name,
+                "document": new_client.document,
+                "email": new_client.email,
+            },
+            ip_address=None,
+        )
+
+        created_membership = None
+        if client.initial_membership:
+            from app.schemas.membership import MembershipCreate
+            from app.services.membership_service import MembershipService
+
+            mem_input = client.initial_membership
+            membership_data = MembershipCreate(
+                client_id=new_client.id,
+                membership_plan_id=mem_input.membership_plan_id,
+                trainer_name=mem_input.trainer_name,
+                start_date=mem_input.start_date,
+                discount=mem_input.discount,
+                register_payment=mem_input.register_payment,
+                payment_method=mem_input.payment_method,
+                amount_paid=mem_input.amount_paid,
+                reference=mem_input.reference,
+            )
+
+            try:
+                created_membership = MembershipService.create(
+                    db=db,
+                    current_user=current_user,
+                    membership_data=membership_data,
+                    background_tasks=background_tasks,
+                )
+            except ValueError as ve:
+                raise HTTPException(
+                    status_code=400,
+                    detail=str(ve),
+                )
+
+        db.refresh(new_client)
+
+    if created_membership:
+        setattr(new_client, "initial_membership", created_membership)
 
     return new_client
 

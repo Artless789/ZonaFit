@@ -3,8 +3,10 @@ import type { Membership, MembershipCreate, MembershipUpdate } from '@shared/typ
 import type { Paginated } from './membershipPlanService';
 
 export const membershipService = {
-  getMemberships: async (): Promise<Paginated<Membership>> => {
-    const { data } = await api.get<Paginated<Membership>>('/memberships/?limit=500');
+  getMemberships: async (params?: { skip?: number; limit?: number }): Promise<Paginated<Membership>> => {
+    const limit = params?.limit ?? 500;
+    const skip = params?.skip ?? 0;
+    const { data } = await api.get<Paginated<Membership>>(`/memberships/?skip=${skip}&limit=${limit}`);
     return data;
   },
 

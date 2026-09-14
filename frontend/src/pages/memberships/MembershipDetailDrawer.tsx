@@ -93,10 +93,23 @@ export function MembershipDetailDrawer({
             <div>{renderStatus(membership.status, membership.is_active)}</div>
           </div>
           <div className="text-right">
-            <span className="text-xs font-semibold uppercase text-text-muted">Precio Cobrado</span>
-            <div className="text-xl font-bold text-text-primary">
-              {formatCurrency(membership.price)}
-            </div>
+            {membership.discount && membership.discount > 0 ? (
+              <>
+                <span className="text-[11px] text-brand-primary font-medium block">
+                  Desc: -{formatCurrency(membership.discount)}
+                </span>
+                <div className="text-xl font-bold text-text-primary">
+                  {formatCurrency(membership.price)}
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="text-xs font-semibold uppercase text-text-muted">Precio Cobrado</span>
+                <div className="text-xl font-bold text-text-primary">
+                  {formatCurrency(membership.price)}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -208,10 +221,27 @@ export function MembershipDetailDrawer({
             Resumen Financiero
           </h4>
           <div className="p-4 bg-bg-surface border border-border-light rounded-xl flex flex-col gap-3 shadow-sm">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-text-secondary">Precio Histórico:</span>
-              <span className="font-semibold text-text-primary">{formatCurrency(membership.price)}</span>
-            </div>
+            {membership.base_price && membership.discount && membership.discount > 0 ? (
+              <>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-text-secondary">Precio Base del Plan:</span>
+                  <span className="font-semibold text-text-primary">{formatCurrency(membership.base_price)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm text-brand-primary">
+                  <span>Descuento Otorgado:</span>
+                  <span className="font-semibold">-{formatCurrency(membership.discount)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-text-secondary">Total a Pagar:</span>
+                  <span className="font-semibold text-text-primary">{formatCurrency(membership.price)}</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-text-secondary">Precio Total:</span>
+                <span className="font-semibold text-text-primary">{formatCurrency(membership.price)}</span>
+              </div>
+            )}
             <div className="flex justify-between items-center text-sm">
               <span className="text-text-secondary">Total Pagado:</span>
               <span className="font-semibold text-success">{formatCurrency(totalPaid)}</span>
@@ -272,6 +302,8 @@ export function MembershipDetailDrawer({
                             durationDays: plan?.duration_days,
                             startDate: membership.start_date,
                             endDate: membership.end_date,
+                            basePrice: membership.base_price ? Number(membership.base_price) : Number(membership.price),
+                            discount: membership.discount ? Number(membership.discount) : 0,
                             totalPrice: Number(membership.price),
                             paidAmount: Number(pmt.amount),
                             pendingBalance: pendingBalance,

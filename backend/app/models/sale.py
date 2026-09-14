@@ -24,12 +24,14 @@ class Sale(Base):
         Integer,
         ForeignKey("gyms.id"),
         nullable=False,
+        index=True,
     )
 
     client_id = Column(
         Integer,
         ForeignKey("clients.id"),
         nullable=True,
+        index=True,
     )
 
     total = Column(

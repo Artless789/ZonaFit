@@ -13,6 +13,7 @@ interface AuthContextType {
 }
 
 const USER_CACHE_KEY = 'zf_user_cache';
+const USER_CACHE_TS_KEY = 'zf_user_cache_ts';
 
 const getCachedUser = (): User | null => {
   if (typeof window !== 'undefined' && window.sessionStorage) {
@@ -26,13 +27,27 @@ const getCachedUser = (): User | null => {
   return null;
 };
 
+const getCachedUserTimestamp = (): number => {
+  if (typeof window !== 'undefined' && window.sessionStorage) {
+    try {
+      const ts = window.sessionStorage.getItem(USER_CACHE_TS_KEY);
+      return ts ? Number(ts) : 0;
+    } catch {
+      return 0;
+    }
+  }
+  return 0;
+};
+
 const setCachedUser = (u: User | null): void => {
   if (typeof window !== 'undefined' && window.sessionStorage) {
     try {
       if (u) {
         window.sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify(u));
+        window.sessionStorage.setItem(USER_CACHE_TS_KEY, String(Date.now()));
       } else {
         window.sessionStorage.removeItem(USER_CACHE_KEY);
+        window.sessionStorage.removeItem(USER_CACHE_TS_KEY);
       }
     } catch {
       // Ignorar fallos de almacenamiento
@@ -68,9 +83,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const existingToken = sessionManager.getToken();
       if (existingToken) {
         const cached = getCachedUser();
+        const cachedTs = getCachedUserTimestamp();
+        const isFresh = cached && (Date.now() - cachedTs < 30000);
+
         if (cached && isMounted) {
           setUser(cached);
           setIsLoading(false);
+        }
+
+        // Si la caché es reciente (ej: justo después del login), no duplicar la llamada
+        if (isFresh) {
+          return;
         }
 
         // Validar / actualizar perfil en background sin congelar la UI

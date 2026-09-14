@@ -49,6 +49,7 @@ class MembershipBase(BaseModel):
 
 class MembershipCreate(MembershipBase):
     start_date: datetime | None = None
+    discount: Decimal | None = Decimal("0.00")
     register_payment: bool = False
     payment_method: Literal["CASH", "CARD", "TRANSFER"] | None = None
     amount_paid: Decimal | None = None
@@ -72,6 +73,8 @@ class MembershipResponse(BaseModel):
     start_date: datetime
     end_date: datetime
 
+    base_price: float | None = None
+    discount: float = 0.0
     price: float
 
     status: str

@@ -1,8 +1,9 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict
+from app.schemas.membership import MembershipResponse
 
 
 class ClientBase(BaseModel):
@@ -15,8 +16,19 @@ class ClientBase(BaseModel):
     photo_url: Optional[str] = None
 
 
+class ClientInitialMembership(BaseModel):
+    membership_plan_id: int
+    trainer_name: Optional[str] = None
+    start_date: Optional[datetime] = None
+    discount: Optional[Decimal] = Decimal("0.00")
+    register_payment: bool = False
+    payment_method: Optional[Literal["CASH", "CARD", "TRANSFER"]] = None
+    amount_paid: Optional[Decimal] = None
+    reference: Optional[str] = None
+
+
 class ClientCreate(ClientBase):
-    pass
+    initial_membership: Optional[ClientInitialMembership] = None
 
 
 class ClientUpdate(BaseModel):
@@ -34,6 +46,7 @@ class ClientResponse(ClientBase):
     id: int
     gym_id: int
     is_active: bool
+    initial_membership: Optional[MembershipResponse] = None
     created_at: datetime
     updated_at: datetime
 

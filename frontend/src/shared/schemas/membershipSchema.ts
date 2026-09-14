@@ -9,6 +9,7 @@ export const membershipSchema = z.object({
     .min(1, 'Debe seleccionar un plan válido.'),
   trainer_name: z.string().optional(),
   start_date: z.string().min(1, 'La fecha de inicio es requerida.'),
+  discount: z.number().min(0, 'El descuento no puede ser negativo.').optional(),
   register_payment: z.boolean(),
   payment_method: z.string().optional(),
   amount_paid: z.number().min(0, 'El monto a pagar no puede ser negativo.').optional(),
