@@ -9,7 +9,9 @@ export interface DashboardActivity {
 
 export interface DashboardExpiringMembership {
   id: number;
+  client_id?: number;
   client_name: string;
+  client_phone?: string | null;
   plan_name: string;
   end_date: string;
   days_left: number;
@@ -17,7 +19,9 @@ export interface DashboardExpiringMembership {
 
 export interface DashboardReceivable {
   id: number;
+  client_id?: number;
   client_name: string;
+  client_phone?: string | null;
   balance_due: number;
   due_date: string | null;
   days_overdue: number;

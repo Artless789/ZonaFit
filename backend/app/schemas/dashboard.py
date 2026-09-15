@@ -14,14 +14,18 @@ class DashboardActivity(BaseModel):
 
 class DashboardExpiringMembership(BaseModel):
     id: int
+    client_id: Optional[int] = None
     client_name: str
+    client_phone: Optional[str] = None
     plan_name: str
     end_date: datetime
     days_left: int
 
 class DashboardReceivable(BaseModel):
     id: int
+    client_id: Optional[int] = None
     client_name: str
+    client_phone: Optional[str] = None
     balance_due: Decimal
     due_date: Optional[datetime] = None
     days_overdue: int

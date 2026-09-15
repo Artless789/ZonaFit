@@ -49,8 +49,9 @@ COPY backend/ ./
 # Copy compiled frontend from Stage 1 into the container
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
-# Ensure client upload directories exist
+# Ensure client upload directories exist and declare persistent volume mount point
 RUN mkdir -p /app/uploads/clients
+VOLUME ["/app/uploads"]
 
 # Create compatibility symlink /app/backend -> /app so both
 # python backend/scripts/... and python scripts/... work seamlessly
@@ -64,6 +65,7 @@ RUN chmod +x /app/entrypoint.sh
 ENV PYTHONUNBUFFERED=1 \
     ENVIRONMENT=production \
     APPLICATION_PORT=8000 \
+    UPLOADS_DIR=/app/uploads \
     FRONTEND_DIST=/app/frontend/dist
 
 # Expose default application port

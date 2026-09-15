@@ -67,3 +67,4 @@ export interface MembershipUpdate {
   is_active?: boolean;
   trainer_name?: string;
 }
+

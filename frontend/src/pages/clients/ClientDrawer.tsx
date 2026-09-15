@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useEffect, useState, useMemo } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import axios from 'axios';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Drawer } from '@shared/ui/Drawer';
 import { Input } from '@shared/ui/Input';
@@ -9,21 +10,23 @@ import { NumericInput } from '@shared/ui/NumericInput';
 import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
 import { useToast } from '@shared/ui/Toast';
 import { clientSchema, ClientFormValues } from '@shared/schemas/clientSchema';
-import type { Client } from '@shared/types/client';
+import type { Client, ClientCreate } from '@shared/types/client';
 import { useClients } from '../../hooks/useClients';
 import { useMembershipPlans } from '../../hooks/useMembershipPlans';
 import { useGymSettings } from '../../hooks/useGymSettings';
-import { api } from '../../services/api';
+import { clientService } from '../../services/clientService';
 import { 
-  User as UserIcon, 
-  Upload, 
-  X, 
   Sparkles, 
   DollarSign, 
-  CheckCircle2, 
-  Download 
+  MessageSquare, 
+  Users 
 } from 'lucide-react';
-import { AuthorizedImage } from '@shared/ui/AuthorizedImage';
+import { Button } from '@shared/ui/Button';
+import { PaymentSuccessModal } from '@shared/ui/PaymentSuccessModal';
+import { useWhatsAppWeb } from '../../hooks/useWhatsAppWeb';
+import { whatsappGroupService } from '../../services/whatsappGroupService';
+import type { WhatsAppGroup } from '@shared/types/whatsappGroup';
+import { ClientPhotoUploader } from './ClientPhotoUploader';
 import { formatCurrency } from '@shared/utils/formatters';
 import { format, addDays, parse } from 'date-fns';
 import { es } from 'date-fns/locale/es';
@@ -57,20 +60,37 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoRemoved, setPhotoRemoved] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [completedReceipt, setCompletedReceipt] = useState<GenerateMembershipReceiptProps | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb();
+  const [availableGroups, setAvailableGroups] = useState<WhatsAppGroup[]>([]);
+  const [createdClientId, setCreatedClientId] = useState<number | null>(null);
+  const [groupInviteClient, setGroupInviteClient] = useState<{
+    id: number;
+    full_name: string;
+    phone: string;
+    group_name: string;
+  } | null>(null);
+  const [pendingGroupInvitation, setPendingGroupInvitation] = useState<{
+    id: number;
+    full_name: string;
+    phone: string;
+    group_name: string;
+  } | null>(null);
 
-  const rawPlans = (Array.isArray(plansQuery.data) ? plansQuery.data : plansQuery.data?.items) || [];
-  const activePlans = useMemo(() => rawPlans.filter(p => p.is_active), [rawPlans]);
+  const activePlans = useMemo(() => {
+    const rawPlans = (Array.isArray(plansQuery.data) ? plansQuery.data : plansQuery.data?.items) || [];
+    return rawPlans.filter(p => p.is_active);
+  }, [plansQuery.data]);
 
   const {
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     reset,
+    watch,
     formState: { errors, isDirty },
   } = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
@@ -90,16 +110,26 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
       payment_method: 'CASH',
       amount_paid: 0,
       reference: '',
+      whatsapp_opt_in: false,
+      whatsapp_group_id: null,
     },
   });
 
-  const assignMembership = watch('assign_membership');
-  const selectedPlanId = watch('membership_plan_id');
-  const startDateValue = watch('start_date') || todayStr;
-  const discountRaw = watch('discount');
-  const registerPayment = watch('register_payment');
-  const paymentMethod = watch('payment_method') || 'CASH';
-  const amountPaidRaw = watch('amount_paid');
+  useEffect(() => {
+    if (isOpen) {
+      whatsappGroupService.getAll(true).then(setAvailableGroups).catch(() => {});
+    }
+  }, [isOpen]);
+
+  const assignMembership = useWatch({ control, name: 'assign_membership' });
+  const selectedPlanId = useWatch({ control, name: 'membership_plan_id' });
+  const startDateWatched = useWatch({ control, name: 'start_date' });
+  const startDateValue = startDateWatched || todayStr;
+  const discountRaw = useWatch({ control, name: 'discount' });
+  const registerPayment = useWatch({ control, name: 'register_payment' });
+  const paymentMethodWatched = useWatch({ control, name: 'payment_method' });
+  const paymentMethod = paymentMethodWatched || 'CASH';
+  const amountPaidRaw = useWatch({ control, name: 'amount_paid' });
 
   const selectedPlan = useMemo(() => {
     return activePlans.find(p => p.id === Number(selectedPlanId)) || null;
@@ -143,7 +173,17 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
     if (selectedPlan && registerPayment) {
       setValue('amount_paid', planTotal, { shouldValidate: true });
     }
-  }, [selectedPlanId, setValue]);
+  }, [selectedPlan, registerPayment, planTotal, setValue]);
+
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) {
+      setPhotoFile(null);
+      setPhotoRemoved(false);
+      setCompletedReceipt(null);
+    }
+  }
 
   useEffect(() => {
     if (isOpen) {
@@ -155,6 +195,8 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
           phone: client.phone,
           email: client.email || '',
           notes: client.notes || '',
+          whatsapp_opt_in: client.whatsapp_opt_in ?? false,
+          whatsapp_group_id: client.whatsapp_group_id ?? null,
           assign_membership: false,
           membership_plan_id: 0,
           trainer_name: '',
@@ -173,6 +215,8 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
           phone: '',
           email: '',
           notes: '',
+          whatsapp_opt_in: false,
+          whatsapp_group_id: null,
           assign_membership: false,
           membership_plan_id: 0,
           trainer_name: '',
@@ -184,22 +228,8 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
           reference: '',
         });
       }
-      setPhotoFile(null);
-      setPhotoPreview(null);
-      setCompletedReceipt(null);
     }
   }, [isOpen, client, reset, todayStr]);
-
-  const uploadPhoto = async (clientId: number) => {
-    if (!photoFile) return;
-    const formData = new FormData();
-    formData.append('file', photoFile);
-    await api.post(`/clients/${clientId}/photo`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    queryClient.invalidateQueries({ queryKey: ['clients'] });
-    queryClient.invalidateQueries({ queryKey: ['client360'] });
-  };
 
   const handleDownloadReceipt = async () => {
     if (!completedReceipt) return;
@@ -214,18 +244,33 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
     try {
       setIsUploading(true);
       if (isEditing) {
-        await updateMutation.mutateAsync({ id: client.id, data });
-        if (photoFile) await uploadPhoto(client.id);
+        await updateMutation.mutateAsync({ 
+          id: client.id, 
+          data: {
+            ...data,
+            whatsapp_opt_in: !!data.whatsapp_opt_in,
+            whatsapp_group_id: data.whatsapp_group_id ? Number(data.whatsapp_group_id) : null,
+          }
+        });
+        if (photoFile) {
+          await clientService.uploadPhoto(client.id, photoFile);
+        } else if (photoRemoved) {
+          await clientService.deletePhoto(client.id);
+        }
+        queryClient.invalidateQueries({ queryKey: ['clients'] });
+        queryClient.invalidateQueries({ queryKey: ['client360'] });
         toast({ type: 'success', title: 'Cliente Actualizado', message: 'Datos guardados correctamente.' });
         onClose();
       } else {
-        const payload: any = {
+        const payload: ClientCreate = {
           full_name: data.full_name,
           document_type: data.document_type,
           document: data.document,
           phone: data.phone,
           email: data.email || null,
           notes: data.notes || null,
+          whatsapp_opt_in: !!data.whatsapp_opt_in,
+          whatsapp_group_id: data.whatsapp_group_id ? Number(data.whatsapp_group_id) : null,
         };
 
         if (data.assign_membership && data.membership_plan_id) {
@@ -252,9 +297,16 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
         }
 
         const newClient = await createMutation.mutateAsync(payload);
-        if (photoFile) await uploadPhoto(newClient.id);
+        setCreatedClientId(newClient.id);
+        const hasGroup = !!newClient.whatsapp_group_id;
+        const selectedGroup = hasGroup ? availableGroups.find(g => g.id === newClient.whatsapp_group_id) : null;
+
+        if (photoFile) {
+          await clientService.uploadPhoto(newClient.id, photoFile);
+        }
 
         queryClient.invalidateQueries({ queryKey: ['clients'] });
+        queryClient.invalidateQueries({ queryKey: ['client360'] });
         queryClient.invalidateQueries({ queryKey: ['memberships'] });
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
         queryClient.invalidateQueries({ queryKey: ['cash-registers'] });
@@ -287,6 +339,22 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
             receiptFooterNotes: gymSettings?.receipt_footer_notes,
           };
           setCompletedReceipt(receiptData);
+          if (hasGroup && selectedGroup && newClient.phone) {
+            setPendingGroupInvitation({
+              id: newClient.id,
+              full_name: newClient.full_name,
+              phone: newClient.phone,
+              group_name: selectedGroup.name,
+            });
+          }
+          onClose();
+        } else if (hasGroup && selectedGroup && newClient.phone) {
+          setGroupInviteClient({
+            id: newClient.id,
+            full_name: newClient.full_name,
+            phone: newClient.phone,
+            group_name: selectedGroup.name,
+          });
           onClose();
         } else {
           toast({ 
@@ -299,11 +367,17 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
           onClose();
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      let errorDetail = 'No se pudo guardar la información del cliente.';
+      if (axios.isAxiosError(error)) {
+        errorDetail = error.response?.data?.detail || errorDetail;
+      } else if (error instanceof Error) {
+        errorDetail = error.message;
+      }
       toast({
         type: 'error',
         title: 'Error',
-        message: error.response?.data?.detail || 'No se pudo guardar la información del cliente.',
+        message: errorDetail,
       });
     } finally {
       setIsUploading(false);
@@ -311,23 +385,6 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending || isUploading;
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    if (!file.type.startsWith('image/')) {
-      toast({ type: 'error', title: 'Archivo Inválido', message: 'Solo se permiten imágenes.' });
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ type: 'error', title: 'Archivo muy grande', message: 'La imagen no debe superar los 5MB.' });
-      return;
-    }
-
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
-  };
 
   const planOptions = activePlans.map(p => ({
     value: p.id,
@@ -345,46 +402,18 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
           <div className="flex flex-col gap-5 flex-1 pb-4">
             
             {/* Photo Upload Section */}
-            <div className="flex items-center gap-4 p-4 bg-bg-surface/50 border border-border-light rounded-xl">
-              <div className="relative w-20 h-20 rounded-full bg-bg-elevated border border-border-medium flex items-center justify-center overflow-hidden shrink-0">
-                {photoPreview ? (
-                  <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
-                ) : client?.photo_url ? (
-                  <AuthorizedImage src={client.photo_url} alt="Cliente" className="w-full h-full object-cover" />
-                ) : (
-                  <UserIcon size={32} className="text-text-muted" />
-                )}
-                {photoPreview && (
-                  <button
-                    type="button"
-                    onClick={() => { setPhotoFile(null); setPhotoPreview(null); if(fileInputRef.current) fileInputRef.current.value=''; }}
-                    className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity"
-                  >
-                    <X className="text-white" size={24} />
-                  </button>
-                )}
-              </div>
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-text-primary mb-1">Fotografía del Cliente</h4>
-                <p className="text-xs text-text-muted mb-2">JPG, PNG o WEBP. Máximo 5MB.</p>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isSaving}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 rounded-lg transition-colors"
-                >
-                  <Upload size={14} />
-                  {(photoPreview || client?.photo_url) ? 'Cambiar Foto' : 'Subir Foto'}
-                </button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept="image/jpeg, image/png, image/webp"
-                  onChange={handleFileChange}
-                />
-              </div>
-            </div>
+            <ClientPhotoUploader
+              currentPhotoUrl={client?.photo_url}
+              onPhotoSelected={(file) => {
+                setPhotoFile(file);
+                if (file) setPhotoRemoved(false);
+              }}
+              onPhotoRemoved={() => {
+                setPhotoFile(null);
+                setPhotoRemoved(true);
+              }}
+              disabled={isSaving}
+            />
 
             <Input
               label="Nombre Completo"
@@ -428,6 +457,50 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
               disabled={isSaving}
               {...register('phone')}
             />
+
+            {/* SECCIÓN COMUNICACIÓN & GRUPOS DE WHATSAPP */}
+            <div className="p-3.5 rounded-xl border border-border-light bg-bg-surface/60 space-y-3">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-text-muted flex items-center gap-1.5">
+                <MessageSquare size={13} className="text-emerald-400" />
+                <span>COMUNICACIÓN</span>
+              </div>
+
+              <label className="flex items-center gap-2.5 cursor-pointer text-sm text-text-primary select-none">
+                <input
+                  type="checkbox"
+                  {...register('whatsapp_opt_in')}
+                  disabled={isSaving}
+                  className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-bg-surface border-border-medium"
+                />
+                <span className="text-xs sm:text-sm font-medium">Desea recibir comunicaciones por WhatsApp</span>
+              </label>
+
+              <div className="space-y-1.5 pt-1 border-t border-border-light/60">
+                <label className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
+                  <Users size={12} className="text-brand-primary" />
+                  <span>GRUPO DE WHATSAPP (OPCIONAL)</span>
+                </label>
+                <select
+                  value={watch('whatsapp_group_id') || ''}
+                  onChange={(e) => {
+                    const val = e.target.value ? Number(e.target.value) : null;
+                    setValue('whatsapp_group_id', val, { shouldValidate: true });
+                  }}
+                  disabled={isSaving}
+                  className="w-full rounded-xl border border-border-medium bg-bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/50 transition-colors"
+                >
+                  <option value="">No agregar a ningún grupo</option>
+                  {availableGroups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-text-muted">
+                  Asigna un grupo para preparar invitaciones automáticas con el enlace de WhatsApp.
+                </p>
+              </div>
+            </div>
 
             <Input
               label="Correo Electrónico (Opcional)"
@@ -493,7 +566,7 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
                             setValue('membership_plan_id', planId, { shouldValidate: true });
                             const p = activePlans.find(item => item.id === planId);
                             if (p && registerPayment) {
-                              const disc = Math.min(Number(p.price), Math.max(0, Number(watch('discount') || 0)));
+                              const disc = Math.min(Number(p.price), Math.max(0, Number(discountRaw || 0)));
                               setValue('amount_paid', Math.max(0, Number(p.price) - disc), { shouldValidate: true });
                             }
                           }}
@@ -673,43 +746,94 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
         </form>
       </Drawer>
 
-      {/* Success & Invoice Modal */}
-      <Modal
+      {/* Success Payment & Receipt Modal */}
+      <PaymentSuccessModal
         isOpen={!!completedReceipt}
-        onClose={() => setCompletedReceipt(null)}
-        title="Membresía Registrada Exitosamente"
+        onClose={() => {
+          setCompletedReceipt(null);
+          if (pendingGroupInvitation) {
+            setGroupInviteClient(pendingGroupInvitation);
+            setPendingGroupInvitation(null);
+          }
+        }}
+        clientName={completedReceipt?.clientName || ''}
+        concept={completedReceipt?.planName || 'Mensualidad'}
+        amount={completedReceipt ? formatCurrency(completedReceipt.paidAmount) : '$0'}
+        receiptNumber={completedReceipt?.receiptNumber}
+        onDownloadReceipt={handleDownloadReceipt}
+        onWhatsApp={() => {
+          if (!completedReceipt) return;
+          openWhatsAppModal({
+            client: {
+              id: createdClientId || 0,
+              full_name: completedReceipt.clientName || 'Cliente',
+              phone: completedReceipt.clientPhone,
+            },
+            eventType: 'PAYMENT_RECEIVED',
+            eventLabel: 'Pago Recibido',
+            contextData: {
+              payment_concept: completedReceipt.planName,
+              amount: formatCurrency(completedReceipt.paidAmount),
+            },
+          });
+        }}
+      />
+
+      {/* Invitación Opcional a Grupo de WhatsApp */}
+      <Modal
+        isOpen={!!groupInviteClient}
+        onClose={() => setGroupInviteClient(null)}
+        title="Cliente Registrado Correctamente"
+        className="max-w-md"
       >
-        <div className="flex flex-col items-center justify-center space-y-6 py-4">
-          <div className="h-20 w-20 bg-success/10 rounded-full flex items-center justify-center">
-            <CheckCircle2 size={40} className="text-success" />
+        <div className="flex flex-col items-center justify-center space-y-4 py-2 text-center">
+          <div className="h-16 w-16 bg-emerald-500/15 border border-emerald-500/30 rounded-full flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-900/20">
+            <Users size={32} />
           </div>
-          
-          <div className="text-center">
-            <h3 className="text-xl font-bold text-text-primary">¡Cliente y Membresía Creados!</h3>
-            <p className="text-text-secondary mt-1">
-              Se ha generado el comprobante <strong>{completedReceipt?.receiptNumber}</strong>
+          <div className="space-y-1">
+            <h4 className="text-lg font-bold text-text-primary">Invitación a Grupo</h4>
+            <p className="text-xs text-text-muted">
+              Grupo asignado: <strong className="text-emerald-400">{groupInviteClient?.group_name}</strong>
             </p>
           </div>
-
-          <div className="flex flex-col w-full gap-3 mt-4">
-            <ActionGlowButton 
-              onClick={handleDownloadReceipt}
-              className="w-full flex justify-center py-3"
+          <p className="text-xs text-text-secondary leading-relaxed bg-bg-surface border border-border-light rounded-xl p-3">
+            El cliente fue guardado. ¿Deseas preparar el mensaje oficial de bienvenida por WhatsApp con el enlace de invitación al grupo?
+          </p>
+          <div className="w-full space-y-2 pt-2">
+            <Button
+              type="button"
+              variant="primary"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-lg shadow-emerald-900/30"
+              onClick={() => {
+                if (!groupInviteClient) return;
+                const clientObj = {
+                  id: groupInviteClient.id,
+                  full_name: groupInviteClient.full_name,
+                  phone: groupInviteClient.phone,
+                };
+                setGroupInviteClient(null);
+                openWhatsAppModal({
+                  client: clientObj,
+                  eventType: 'GROUP_INVITATION',
+                  eventLabel: 'Invitación a grupo',
+                });
+              }}
             >
-              <Download className="mr-2" size={18} />
-              Descargar Comprobante PDF
-            </ActionGlowButton>
-            
+              <MessageSquare size={16} />
+              <span>Invitar al grupo</span>
+            </Button>
             <button
               type="button"
-              onClick={() => setCompletedReceipt(null)}
-              className="w-full py-3 text-sm font-medium text-text-secondary hover:text-text-primary bg-bg-surface hover:bg-bg-elevated border border-border-medium rounded-lg transition-colors"
+              onClick={() => setGroupInviteClient(null)}
+              className="w-full py-2.5 text-xs text-text-muted hover:text-text-primary transition-colors font-medium"
             >
-              Continuar
+              Continuar sin invitar
             </button>
           </div>
         </div>
       </Modal>
+
+      <WhatsAppModalComponent />
     </>
   );
 }

@@ -24,6 +24,8 @@ export interface NotificationTemplate {
   id: number;
   gym_id: number;
   event_type: string;
+  custom_event_name?: string | null;
+  description?: string | null;
   channel: string;
   template_body: string;
   is_active: boolean;
@@ -33,11 +35,16 @@ export interface NotificationTemplate {
 
 export interface NotificationTemplateCreate {
   event_type: string;
+  custom_event_name?: string | null;
+  description?: string | null;
   channel: string;
   template_body: string;
 }
 
 export interface NotificationTemplateUpdate {
   template_body?: string;
+  custom_event_name?: string | null;
+  description?: string | null;
   is_active?: boolean;
 }
+

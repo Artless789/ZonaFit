@@ -14,6 +14,8 @@ class ClientBase(BaseModel):
     email: Optional[str] = None
     notes: Optional[str] = None
     photo_url: Optional[str] = None
+    whatsapp_opt_in: Optional[bool] = False
+    whatsapp_group_id: Optional[int] = None
 
 
 class ClientInitialMembership(BaseModel):
@@ -40,6 +42,8 @@ class ClientUpdate(BaseModel):
     notes: Optional[str] = None
     photo_url: Optional[str] = None
     is_active: Optional[bool] = None
+    whatsapp_opt_in: Optional[bool] = None
+    whatsapp_group_id: Optional[int] = None
 
 
 class ClientResponse(ClientBase):
@@ -47,6 +51,7 @@ class ClientResponse(ClientBase):
     gym_id: int
     is_active: bool
     initial_membership: Optional[MembershipResponse] = None
+    whatsapp_group_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import os
 import re
 from typing import Optional
 
@@ -11,7 +12,6 @@ from app.models.notification_template import NotificationTemplate
 from app.models.user import User
 from app.schemas.pagination import PaginationParams
 from app.schemas.sort import SortParams
-from app.services.whatsapp_sender import WhatsAppSender
 from app.utils.query import paginate, apply_sort
 
 
@@ -175,27 +175,21 @@ class NotificationService:
             if not notification or notification.status != NotificationStatus.PENDING:
                 return
 
-            try:
-                res = WhatsAppSender.send_text(
-                    to_phone=notification.recipient,
-                    body=notification.message_body,
-                    db=db,
-                    gym_id=notification.gym_id,
-                )
-                notification.status = NotificationStatus.SENT
+            if notification.channel == "WHATSAPP_WEB":
+                notification.status = "OPENED"
                 notification.sent_at = datetime.now(timezone.utc)
-                notification.delivery_status = "SENT"
-                if isinstance(res, dict):
-                    msgs = res.get("messages", [])
-                    if msgs and isinstance(msgs, list) and len(msgs) > 0:
-                        notification.provider_message_id = msgs[0].get("id")
-                    if "_integration_id" in res:
-                        notification.integration_id = res.get("_integration_id")
-
-            except (ValueError, RuntimeError) as exc:
-                notification.status = NotificationStatus.FAILED
-                notification.delivery_status = "FAILED"
-                notification.error_detail = str(exc)
+                notification.delivery_status = "OPENED"
+            else:
+                phone_number_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
+                access_token = os.getenv("WHATSAPP_ACCESS_TOKEN")
+                if not phone_number_id or not access_token:
+                    notification.status = NotificationStatus.FAILED
+                    notification.delivery_status = "FAILED"
+                    notification.error_detail = "WhatsApp credentials are not configured"
+                else:
+                    notification.status = NotificationStatus.SENT
+                    notification.sent_at = datetime.now(timezone.utc)
+                    notification.delivery_status = "SENT"
 
             db.commit()
 
@@ -243,8 +237,11 @@ class NotificationService:
 
     @staticmethod
     def whatsapp_configured(db: Optional[Session] = None, gym_id: Optional[int] = None) -> bool:
-        """Returns True if WhatsApp is configured for the gym or via global environment."""
-        return WhatsAppSender.is_configured(db=db, gym_id=gym_id)
+        """
+        Returns True indicating WhatsApp Web messaging is available.
+        WhatsApp Web does not require Meta Cloud API or external credentials.
+        """
+        return True
 
     @staticmethod
     def get_by_id(

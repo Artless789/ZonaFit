@@ -41,6 +41,9 @@ class NotificationTemplate(Base):
     # Supports variables: {client_name} {expiry_date} {gym_name} {amount} {plan_name}
     template_body = Column(Text, nullable=False)
 
+    custom_event_name = Column(String(100), nullable=True)
+    description = Column(String(255), nullable=True)
+
     is_active = Column(Boolean, default=True)
 
     created_at = Column(

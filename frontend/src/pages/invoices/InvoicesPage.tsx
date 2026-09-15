@@ -6,7 +6,8 @@ import { Select } from '@shared/ui/Select';
 import { useInvoices } from '../../hooks/useInvoices';
 import { useClients } from '../../hooks/useClients';
 import { InvoiceDrawer } from './InvoiceDrawer';
-import { Search, FileText, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Search, FileText, ChevronLeft, ChevronRight, Eye, MessageCircle } from 'lucide-react';
+import { useWhatsAppWeb } from '@/hooks/useWhatsAppWeb';
 import type { Invoice } from '@shared/types/invoice';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -23,6 +24,7 @@ export function InvoicesPage() {
   
   const { query: invoicesQuery } = useInvoices({ page, limit, search, status: statusFilter });
   const { query: clientsQuery } = useClients();
+  const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb();
 
   const handleOpenDrawer = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -148,13 +150,41 @@ export function InvoicesPage() {
                       {getStatusBadge(invoice.status)}
                     </td>
                     <td className="p-4 text-right">
-                      <button
-                        onClick={() => handleOpenDrawer(invoice)}
-                        className="p-2 text-text-muted hover:text-primary transition-colors bg-bg-surface/50 hover:bg-bg-surface rounded-lg"
-                        title="Ver detalle"
-                      >
-                        <Eye size={18} />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        {invoice.client_id && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const client = clientsQuery.data?.items?.find((c: any) => c.id === invoice.client_id);
+                              openWhatsAppModal({
+                                client: {
+                                  id: invoice.client_id!,
+                                  full_name: client ? client.full_name : getClientName(invoice.client_id),
+                                  phone: client?.phone || null,
+                                },
+                                eventType: 'PAYMENT_RECEIVED',
+                                eventLabel: 'Enviar comprobante',
+                                contextData: {
+                                  invoice_number: invoice.invoice_number,
+                                  amount: formatPrice(invoice.total),
+                                  payment_method: invoice.payment_method || 'CASH',
+                                },
+                              });
+                            }}
+                            className="p-2 text-emerald-400 hover:text-emerald-300 transition-colors bg-bg-surface/50 hover:bg-emerald-500/10 rounded-lg cursor-pointer"
+                            title="Enviar comprobante por WhatsApp"
+                          >
+                            <MessageCircle size={18} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleOpenDrawer(invoice)}
+                          className="p-2 text-text-muted hover:text-primary transition-colors bg-bg-surface/50 hover:bg-bg-surface rounded-lg"
+                          title="Ver detalle"
+                        >
+                          <Eye size={18} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -196,6 +226,8 @@ export function InvoicesPage() {
         clientName={selectedInvoice ? getClientName(selectedInvoice.client_id) : undefined}
         clientDocument={selectedInvoice ? getClientDocument(selectedInvoice.client_id) : undefined}
       />
+
+      <WhatsAppModalComponent />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Ban, CheckCircle2, UserCheck, Clock, Eye, Search, AlertTriangle, X, ShieldAlert, History } from 'lucide-react';
+import { Ban, CheckCircle2, UserCheck, Clock, Eye, Search, AlertTriangle, X, ShieldAlert, History, MessageCircle } from 'lucide-react';
 import type { Membership } from '@shared/types/membership';
 import { Badge } from '@shared/ui/Badge';
 import { Modal } from '@shared/ui/Modal';
@@ -8,6 +8,7 @@ import { cn } from '@shared/utils/cn';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { formatCurrency } from '@shared/utils/formatters';
+import { useWhatsAppWeb } from '@/hooks/useWhatsAppWeb';
 
 export type EnrichedMembership = Membership & { 
   clientName: string; 
@@ -32,6 +33,7 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [historyModalData, setHistoryModalData] = useState<{ clientName: string; memberships: EnrichedMembership[] } | null>(null);
+  const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb();
   const pageSize = 10;
 
   const formatPrice = formatCurrency;
@@ -54,6 +56,61 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
     } catch {
       return 999;
     }
+  };
+
+  const getMembershipWhatsAppContext = (m: CanonicalEnrichedMembership | Membership) => {
+    const totalPaid = m.total_paid ?? (m.payments || []).reduce((acc, p) => acc + Number(p.amount), 0);
+    const pendingBalance = m.pending_balance ?? Math.max(0, Number(m.price) - totalPaid);
+    const daysLeft = getDaysRemaining(m.end_date);
+    const isExpired = !m.is_active || m.status === 'EXPIRED' || daysLeft < 0;
+
+    if (pendingBalance > 0) {
+      return {
+        eventType: 'CREDIT_OVERDUE',
+        eventLabel: 'Recordar saldo',
+        tooltip: `Recordar saldo pendiente (${formatPrice(pendingBalance)})`,
+        contextData: {
+          balance_due: formatPrice(pendingBalance),
+          membership_name: (m as any).planName || m.membership_plan?.name || 'Membresía',
+          expiry_date: formatDate(m.end_date),
+        },
+      };
+    }
+
+    if (isExpired) {
+      return {
+        eventType: 'MEMBERSHIP_EXPIRED',
+        eventLabel: 'Avisar vencida',
+        tooltip: 'Avisar membresía vencida',
+        contextData: {
+          membership_name: (m as any).planName || m.membership_plan?.name || 'Membresía',
+          expiry_date: formatDate(m.end_date),
+        },
+      };
+    }
+
+    if (daysLeft <= 7) {
+      return {
+        eventType: 'MEMBERSHIP_EXPIRY',
+        eventLabel: 'Recordar vencimiento',
+        tooltip: `Recordar vencimiento (${daysLeft === 0 ? 'vence hoy' : `${daysLeft} días restantes`})`,
+        contextData: {
+          membership_name: (m as any).planName || m.membership_plan?.name || 'Membresía',
+          expiry_date: formatDate(m.end_date),
+          days_left: daysLeft.toString(),
+        },
+      };
+    }
+
+    return {
+      eventType: 'GENERAL',
+      eventLabel: 'Contactar por WhatsApp',
+      tooltip: 'Contactar cliente por WhatsApp',
+      contextData: {
+        membership_name: (m as any).planName || m.membership_plan?.name || 'Membresía',
+        expiry_date: formatDate(m.end_date),
+      },
+    };
   };
 
   // Agrupación por Cliente: Prioriza la membresía ACTIVA y luego la más reciente
@@ -427,44 +484,71 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
                       {renderStatus(membership.status, membership.is_active, membership.end_date)}
                     </td>
                     <td className="px-6 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {membership.historyCount > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => setHistoryModalData({
-                              clientName: (membership.clientName && membership.clientName !== 'Desconocido')
-                              ? membership.clientName
-                              : membership.client?.full_name || membership.client_name || `Cliente #${membership.client_id}`,
-                              memberships: membership.history,
-                            })}
-                            className="p-2 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-md transition-colors"
-                            title={`Ver Historial (${membership.historyCount} registros)`}
-                          >
-                            <History size={16} />
-                          </button>
-                        )}
-                        {onViewDetails && (
-                          <button
-                            onClick={() => onViewDetails(membership)}
-                            className="p-2 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-md transition-colors"
-                            title="Ver Detalle"
-                          >
-                            <Eye size={16} />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => onToggleStatus(membership)}
-                          className={cn(
-                            "p-2 rounded-md transition-colors",
-                            membership.is_active 
-                              ? "text-text-muted hover:text-danger hover:bg-danger/10" 
-                              : "text-text-muted hover:text-success hover:bg-success/10"
-                          )}
-                          title={membership.is_active ? "Cancelar Suscripción" : "Reactivar Suscripción"}
-                        >
-                          <Ban size={16} />
-                        </button>
-                      </div>
+                      {(() => {
+                        const ctx = getMembershipWhatsAppContext(membership);
+                        return (
+                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                    const clientInfo = {
+                                      id: membership.client_id,
+                                      full_name: (membership.clientName && membership.clientName !== 'Desconocido')
+                                        ? membership.clientName
+                                        : membership.client?.full_name || membership.client_name || `Cliente #${membership.client_id}`,
+                                      phone: membership.client?.phone || null,
+                                    };
+                                    openWhatsAppModal({
+                                      client: clientInfo,
+                                      eventType: ctx.eventType,
+                                      eventLabel: ctx.eventLabel,
+                                      contextData: ctx.contextData,
+                                    });
+                                  }}
+                                  className="p-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-md transition-colors inline-flex items-center justify-center cursor-pointer"
+                                  title={ctx.tooltip}
+                                >
+                                  <MessageCircle size={16} />
+                                </button>
+                            {membership.historyCount > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => setHistoryModalData({
+                                  clientName: (membership.clientName && membership.clientName !== 'Desconocido')
+                                  ? membership.clientName
+                                  : membership.client?.full_name || membership.client_name || `Cliente #${membership.client_id}`,
+                                  memberships: membership.history,
+                                })}
+                                className="p-2 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-md transition-colors"
+                                title={`Ver Historial (${membership.historyCount} registros)`}
+                              >
+                                <History size={16} />
+                              </button>
+                            )}
+                            {onViewDetails && (
+                              <button
+                                onClick={() => onViewDetails(membership)}
+                                className="p-2 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-md transition-colors"
+                                title="Ver Detalle"
+                              >
+                                <Eye size={16} />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => onToggleStatus(membership)}
+                              className={cn(
+                                "p-2 rounded-md transition-colors",
+                                membership.is_active 
+                                  ? "text-text-muted hover:text-danger hover:bg-danger/10" 
+                                  : "text-text-muted hover:text-success hover:bg-success/10"
+                              )}
+                              title={membership.is_active ? "Cancelar Suscripción" : "Reactivar Suscripción"}
+                            >
+                              <Ban size={16} />
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </td>
                   </tr>
                 ))}
@@ -534,20 +618,48 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
                       {renderStatus(m.status, m.is_active, m.end_date)}
                     </td>
                     <td className="px-4 py-2.5 text-right">
-                      {onViewDetails && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setHistoryModalData(null);
-                            onViewDetails(m);
-                          }}
-                          className="px-2.5 py-1 text-xs text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-md transition-colors inline-flex items-center gap-1 font-medium"
-                          title="Ver Detalle Completo"
-                        >
-                          <Eye size={13} />
-                          <span>Ver</span>
-                        </button>
-                      )}
+                      {(() => {
+                        const mCtx = getMembershipWhatsAppContext(m);
+                        return (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const clientInfo = {
+                                  id: m.client_id,
+                                  full_name: historyModalData?.clientName || m.client?.full_name || `Cliente #${m.client_id}`,
+                                  phone: m.client?.phone || null,
+                                };
+                                openWhatsAppModal({
+                                  client: clientInfo,
+                                  eventType: mCtx.eventType,
+                                  eventLabel: mCtx.eventLabel,
+                                  contextData: mCtx.contextData,
+                                });
+                              }}
+                              className="px-2 py-1 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-md transition-colors inline-flex items-center gap-1 font-medium cursor-pointer"
+                              title={mCtx.tooltip}
+                            >
+                              <MessageCircle size={13} />
+                              <span>{mCtx.eventLabel}</span>
+                            </button>
+                            {onViewDetails && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setHistoryModalData(null);
+                                  onViewDetails(m);
+                                }}
+                                className="px-2.5 py-1 text-xs text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-md transition-colors inline-flex items-center gap-1 font-medium"
+                                title="Ver Detalle Completo"
+                              >
+                                <Eye size={13} />
+                                <span>Ver</span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                   </tr>
                 ))}
@@ -566,6 +678,8 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
           </div>
         </div>
       </Modal>
+
+      <WhatsAppModalComponent />
     </div>
   );
 }

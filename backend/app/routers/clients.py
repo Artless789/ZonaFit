@@ -1,7 +1,13 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
+from app.services.client_excel_service import ClientExcelService
+from app.schemas.client_excel import (
+    ClientImportPreviewResponse,
+    ClientImportApplyRequest,
+    ClientImportApplyResponse,
+)
 import os
 import uuid
 import shutil
@@ -26,7 +32,7 @@ from app.models.sale import Sale
 from app.models.accounts_receivable import AccountsReceivable
 from app.constants.membership_status import MembershipStatus
 from decimal import Decimal
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from app.core.idempotency import IdempotentRoute
 
@@ -68,6 +74,18 @@ def create_client(
                 detail="Client already exists.",
             )
 
+        if client.whatsapp_group_id:
+            from app.models.whatsapp_group import WhatsAppGroup
+            group = db.query(WhatsAppGroup).filter(
+                WhatsAppGroup.id == client.whatsapp_group_id,
+                WhatsAppGroup.gym_id == current_user.gym_id,
+            ).first()
+            if not group:
+                raise HTTPException(
+                    status_code=400,
+                    detail="El grupo de WhatsApp no existe o pertenece a otro gimnasio.",
+                )
+
         new_client = Client(
             gym_id=current_user.gym_id,
             full_name=client.full_name,
@@ -77,6 +95,8 @@ def create_client(
             email=client.email,
             notes=client.notes,
             photo_url=client.photo_url,
+            whatsapp_opt_in=bool(client.whatsapp_opt_in),
+            whatsapp_group_id=client.whatsapp_group_id,
         )
 
         db.add(new_client)
@@ -137,7 +157,7 @@ def create_client(
     return new_client
 
 
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from app.schemas.pagination import PaginationResponse, calculate_total_pages
 
 # ==========================
@@ -153,6 +173,7 @@ def get_clients(
     page_size: int = 20,
     search: str | None = None,
     is_active: bool | None = None,
+    filter_type: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -169,12 +190,59 @@ def get_clients(
             or_(
                 Client.full_name.ilike(search_term),
                 Client.document.ilike(search_term),
+                Client.phone.ilike(search_term),
                 Client.email.ilike(search_term),
             )
         )
 
     if is_active is not None:
         query = query.filter(Client.is_active == is_active)
+
+    if filter_type:
+        now = datetime.now(timezone.utc)
+        ft = filter_type.strip().lower()
+        if ft == "active":
+            query = query.filter(Client.is_active == True)
+        elif ft == "inactive":
+            query = query.filter(Client.is_active == False)
+        elif ft == "expiring_membership":
+            in_7_days = now + timedelta(days=7)
+            subq = (
+                db.query(Membership.client_id)
+                .filter(
+                    Membership.gym_id == current_user.gym_id,
+                    Membership.is_active == True,
+                    Membership.status == MembershipStatus.ACTIVE,
+                    Membership.end_date >= now,
+                    Membership.end_date <= in_7_days,
+                )
+            )
+            query = query.filter(Client.id.in_(subq))
+        elif ft == "expired_membership":
+            subq = (
+                db.query(Membership.client_id)
+                .filter(
+                    Membership.gym_id == current_user.gym_id,
+                    or_(
+                        Membership.status == MembershipStatus.EXPIRED,
+                        and_(
+                            Membership.status == MembershipStatus.ACTIVE,
+                            Membership.end_date < now,
+                        ),
+                    ),
+                )
+            )
+            query = query.filter(Client.id.in_(subq))
+        elif ft == "pending_balance":
+            subq = (
+                db.query(AccountsReceivable.client_id)
+                .filter(
+                    AccountsReceivable.gym_id == current_user.gym_id,
+                    AccountsReceivable.status.in_(["PENDING", "PARTIAL"]),
+                    AccountsReceivable.balance_due > 0,
+                )
+            )
+            query = query.filter(Client.id.in_(subq))
 
     # Order by newest first
     query = query.order_by(Client.created_at.desc())
@@ -195,6 +263,110 @@ def get_clients(
 
 
 
+
+
+# ==========================
+# Exportar clientes (Excel)
+# ==========================
+
+@router.get("/export")
+def export_clients(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    excel_stream = ClientExcelService.export_clients_to_excel(db=db, gym_id=current_user.gym_id)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"clientes_zonafit_{current_user.gym_id}_{timestamp}.xlsx"
+
+    return StreamingResponse(
+        excel_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Access-Control-Expose-Headers": "Content-Disposition",
+        },
+    )
+
+
+# ==========================
+# Descargar plantilla oficial
+# ==========================
+
+@router.get("/import/template")
+def download_import_template(
+    current_user: User = Depends(get_current_user),
+):
+    excel_stream = ClientExcelService.generate_import_template()
+    filename = "plantilla_clientes_zonafit.xlsx"
+
+    return StreamingResponse(
+        excel_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Access-Control-Expose-Headers": "Content-Disposition",
+        },
+    )
+
+
+# ==========================
+# Previsualizar importación
+# ==========================
+
+@router.post(
+    "/import/preview",
+    response_model=ClientImportPreviewResponse,
+)
+def preview_client_import(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not file.filename or not file.filename.lower().endswith(".xlsx"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Formato no soportado. El archivo debe ser un libro de Excel con extensión .xlsx.",
+        )
+
+    MAX_EXCEL_SIZE = 10 * 1024 * 1024
+    if file.size and file.size > MAX_EXCEL_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El archivo excede el tamaño máximo permitido de 10MB.",
+        )
+
+    file_bytes = file.file.read()
+    if len(file_bytes) > MAX_EXCEL_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El archivo excede el tamaño máximo permitido de 10MB.",
+        )
+
+    return ClientExcelService.preview_import_excel(
+        db=db,
+        gym_id=current_user.gym_id,
+        file_bytes=file_bytes,
+    )
+
+
+# ==========================
+# Aplicar importación confirmada
+# ==========================
+
+@router.post(
+    "/import/apply",
+    response_model=ClientImportApplyResponse,
+)
+def apply_client_import(
+    payload: ClientImportApplyRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return ClientExcelService.apply_confirmed_import(
+        db=db,
+        current_user=current_user,
+        payload=payload,
+    )
 
 
 # ==========================
@@ -423,6 +595,18 @@ def update_client(
                 detail="Another client already has this document.",
             )
 
+    if "whatsapp_group_id" in update_data and update_data["whatsapp_group_id"] is not None:
+        from app.models.whatsapp_group import WhatsAppGroup
+        group = db.query(WhatsAppGroup).filter(
+            WhatsAppGroup.id == update_data["whatsapp_group_id"],
+            WhatsAppGroup.gym_id == current_user.gym_id,
+        ).first()
+        if not group:
+            raise HTTPException(
+                status_code=400,
+                detail="El grupo de WhatsApp no existe o pertenece a otro gimnasio.",
+            )
+
     for key, value in update_data.items():
         setattr(client, key, value)
 
@@ -469,12 +653,35 @@ def delete_client(
 # Client photo management
 # ==========================
 
-UPLOAD_DIR = os.path.join(os.getcwd(), "uploads", "clients")
+import re
+from app.core.config import settings
+
+# Base upload directory from settings with fallback
+UPLOAD_DIR = os.path.join(settings.UPLOADS_DIR, "clients")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Resilient fallback search paths
+FALLBACK_UPLOAD_DIRS = [
+    os.path.join(os.getcwd(), "uploads", "clients"),
+    os.path.join(os.getcwd(), "backend", "uploads", "clients"),
+    "/app/uploads/clients",
+]
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+SAFE_FILENAME_REGEX = re.compile(r"^[a-f0-9]{32}\.(jpg|jpeg|png|webp)$", re.IGNORECASE)
+
+
+def validate_image_header(header: bytes) -> tuple[bool, str]:
+    """Validate image magic bytes to prevent masqueraded executables or scripts."""
+    if header.startswith(b"\xff\xd8\xff"):
+        return True, "jpg"
+    if header.startswith(b"\x89PNG\r\n\x1a\n"):
+        return True, "png"
+    if header.startswith(b"RIFF") and len(header) >= 12 and header[8:12] == b"WEBP":
+        return True, "webp"
+    return False, ""
 
 
 @router.post(
@@ -499,41 +706,89 @@ def upload_client_photo(
     if not client:
         raise HTTPException(status_code=404, detail="Client not found.")
 
-    # Validate file type
+    # Validate declared MIME type
     if not file.content_type or file.content_type.lower() not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(
             status_code=400,
             detail="File must be a valid image (JPEG, PNG, WEBP).",
         )
 
+    # Validate file size if reported
     if file.size and file.size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="File too large. Maximum 5MB.")
 
-    # Generate safe extension
+    # Validate actual file header magic bytes
+    try:
+        header_bytes = file.file.read(32)
+        file.file.seek(0)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Unable to read uploaded file.")
+
+    is_valid_magic, detected_ext = validate_image_header(header_bytes)
+    if not is_valid_magic:
+        raise HTTPException(
+            status_code=400,
+            detail="File must be a valid image (JPEG, PNG, WEBP).",
+        )
+
+    # Generate server-side UUID filename
     original_filename = file.filename or ""
-    ext = original_filename.split(".")[-1].lower() if "." in original_filename else "jpg"
-    if ext not in ALLOWED_EXTENSIONS:
-        ext = "jpg"
-        
+    original_ext = original_filename.split(".")[-1].lower() if "." in original_filename else ""
+    ext = detected_ext or (original_ext if original_ext in ALLOWED_EXTENSIONS else "jpg")
+
     filename = f"{uuid.uuid4().hex}.{ext}"
     file_path = os.path.join(UPLOAD_DIR, filename)
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    # Delete old photo if it exists locally
-    if client.photo_url and client.photo_url.startswith("/clients/photo/"):
-        old_filename = client.photo_url.split("/")[-1]
-        old_path = os.path.join(UPLOAD_DIR, old_filename)
-        if os.path.exists(old_path):
+    # Write file safely with stream size verification
+    total_written = 0
+    try:
+        with open(file_path, "wb") as buffer:
+            while chunk := file.file.read(64 * 1024):
+                total_written += len(chunk)
+                if total_written > MAX_FILE_SIZE:
+                    raise HTTPException(status_code=400, detail="File too large. Maximum 5MB.")
+                buffer.write(chunk)
+    except HTTPException:
+        if os.path.exists(file_path):
             try:
-                os.remove(old_path)
+                os.remove(file_path)
             except OSError:
                 pass
+        raise
+    except Exception:
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except OSError:
+                pass
+        raise HTTPException(status_code=500, detail="Failed to save uploaded photo.")
 
+    # Preserve old photo filename for atomic cleanup ONLY after DB commit succeeds
+    old_photo_url = client.photo_url
     client.photo_url = f"/clients/photo/{filename}"
-    db.commit()
-    db.refresh(client)
+
+    try:
+        db.commit()
+        db.refresh(client)
+    except Exception:
+        db.rollback()
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except OSError:
+                pass
+        raise HTTPException(status_code=500, detail="Failed to update client record.")
+
+    # Commit succeeded: remove old photo file safely
+    if old_photo_url and old_photo_url.startswith("/clients/photo/"):
+        old_filename = old_photo_url.split("/")[-1]
+        for dir_path in [UPLOAD_DIR] + FALLBACK_UPLOAD_DIRS:
+            old_path = os.path.join(dir_path, old_filename)
+            if os.path.exists(old_path) and old_path != file_path:
+                try:
+                    os.remove(old_path)
+                except OSError:
+                    pass
 
     return client
 
@@ -559,18 +814,20 @@ def delete_client_photo(
     if not client:
         raise HTTPException(status_code=404, detail="Client not found.")
 
-    if client.photo_url and client.photo_url.startswith("/clients/photo/"):
-        old_filename = client.photo_url.split("/")[-1]
-        old_path = os.path.join(UPLOAD_DIR, old_filename)
-        if os.path.exists(old_path):
-            try:
-                os.remove(old_path)
-            except OSError:
-                pass
-
+    old_photo_url = client.photo_url
     client.photo_url = None
     db.commit()
     db.refresh(client)
+
+    if old_photo_url and old_photo_url.startswith("/clients/photo/"):
+        old_filename = old_photo_url.split("/")[-1]
+        for dir_path in [UPLOAD_DIR] + FALLBACK_UPLOAD_DIRS:
+            old_path = os.path.join(dir_path, old_filename)
+            if os.path.exists(old_path):
+                try:
+                    os.remove(old_path)
+                except OSError:
+                    pass
 
     return client
 
@@ -581,10 +838,11 @@ def get_client_photo(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if ".." in filename or "/" in filename or "\\" in filename:
+    # Strict filename verification: prevent directory traversal or non-uuid filenames
+    if not SAFE_FILENAME_REGEX.match(filename) or ".." in filename or "/" in filename or "\\" in filename:
         raise HTTPException(status_code=400, detail="Invalid filename.")
 
-    # RLS: the photo_url format is /clients/photo/{filename}
+    # Multi-tenancy RLS: client must belong to current_user.gym_id
     client = (
         db.query(Client)
         .filter(
@@ -599,6 +857,17 @@ def get_client_photo(
 
     file_path = os.path.join(UPLOAD_DIR, filename)
     if not os.path.exists(file_path):
+        # Look in fallback directories and auto-migrate if found
+        for fallback_dir in FALLBACK_UPLOAD_DIRS:
+            candidate = os.path.join(fallback_dir, filename)
+            if os.path.exists(candidate):
+                try:
+                    shutil.copy2(candidate, file_path)
+                except Exception:
+                    file_path = candidate
+                break
+
+    if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found on disk.")
 
-    return FileResponse(file_path)
+    return FileResponse(file_path, headers={"Cache-Control": "private, max-age=86400"})

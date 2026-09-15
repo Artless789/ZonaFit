@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ShoppingCart, Search, Plus, Minus, X, CreditCard, ShoppingBag, Banknote, CalendarClock, Download, CheckCircle2, DollarSign } from 'lucide-react';
+import { ShoppingCart, Search, Plus, Minus, X, CreditCard, ShoppingBag, Banknote, CalendarClock, Download, CheckCircle2, DollarSign, MessageCircle } from 'lucide-react';
 import type { Product } from '@shared/types/product';
 import type { Category } from '@shared/types/category';
 import type { Client } from '@shared/types/client';
@@ -12,6 +12,7 @@ import { Select } from '@shared/ui/Select';
 import { useToast } from '@shared/ui/Toast';
 import { useSales } from '../../hooks/useSales';
 import { useGymSettings } from '../../hooks/useGymSettings';
+import { useWhatsAppWeb } from '@/hooks/useWhatsAppWeb';
 import { Modal } from '@shared/ui/Modal';
 import { cn } from '@shared/utils/cn';
 import { generateReceiptPDF } from '@shared/utils/pdfGenerator';
@@ -41,6 +42,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
   const { createMutation, createDetailMutation } = useSales();
   const { query: gymSettingsQuery } = useGymSettings();
   const gymSettings = gymSettingsQuery.data;
+  const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb();
 
   // State
   const [searchTerm, setSearchTerm] = useState('');
@@ -643,6 +645,33 @@ export function POSView({ products, categories, clients }: POSViewProps) {
               <Download className="mr-2" size={18} />
               Descargar Comprobante PDF
             </ActionGlowButton>
+
+            {completedInvoice?.client_id && (
+              <button
+                type="button"
+                onClick={() => {
+                  const client = clients.find(c => c.id === completedInvoice.client_id);
+                  openWhatsAppModal({
+                    client: {
+                      id: completedInvoice.client_id!,
+                      full_name: client ? client.full_name : `Cliente #${completedInvoice.client_id}`,
+                      phone: client?.phone || null,
+                    },
+                    eventType: 'PAYMENT_RECEIVED',
+                    eventLabel: 'Enviar comprobante',
+                    contextData: {
+                      invoice_number: completedInvoice.invoice_number,
+                      amount: formatPrice(completedInvoice.total),
+                      payment_method: completedInvoice.payment_method || 'CASH',
+                    },
+                  });
+                }}
+                className="w-full py-2.5 px-4 rounded-xl font-semibold text-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-md flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              >
+                <MessageCircle size={18} />
+                <span>Enviar comprobante por WhatsApp</span>
+              </button>
+            )}
             
             <button
               onClick={() => {
@@ -656,6 +685,8 @@ export function POSView({ products, categories, clients }: POSViewProps) {
           </div>
         </div>
       </Modal>
+
+      <WhatsAppModalComponent />
     </>
   );
 }

@@ -56,5 +56,8 @@ if [ "$#" -gt 0 ]; then
     exec "$@"
 fi
 
+# Ensure client uploads directory exists in persistent storage
+mkdir -p "${UPLOADS_DIR:-/app/uploads}/clients"
+
 # Execute FastAPI via Uvicorn ASGI server
 exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT}" --workers "${WORKERS}"

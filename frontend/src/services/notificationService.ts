@@ -52,7 +52,9 @@ export const EVENT_TYPE_OPTIONS = [
   { value: 'CREDIT_PAYMENT_RECEIVED', label: 'Abono a Crédito' },
   { value: 'CREDIT_OVERDUE', label: 'Crédito Vencido' },
   { value: 'WELCOME', label: 'Bienvenida al Gimnasio' },
-  { value: 'GENERAL', label: 'Aviso General' },
+  { value: 'GROUP_INVITATION', label: 'Invitación a Grupo de WhatsApp' },
+  { value: 'GENERAL', label: 'General / Directo' },
+  { value: 'CUSTOM', label: 'Evento personalizado' },
 ];
 
 export const CHANNEL_OPTIONS = [
@@ -60,14 +62,14 @@ export const CHANNEL_OPTIONS = [
 ];
 
 export const TEMPLATE_VARIABLES = [
-  '{{client_name}}',
-  '{{gym_name}}',
-  '{{membership_name}}',
-  '{{expiry_date}}',
-  '{{days_left}}',
-  '{{amount}}',
-  '{{payment_method}}',
-  '{{balance_due}}',
-  '{{invoice_number}}',
-  '{{plan_name}}',
+  '{client_name}',
+  '{gym_name}',
+  '{membership_name}',
+  '{expiry_date}',
+  '{amount}',
+  '{payment_concept}',
+  '{group_invite_url}',
+  '{balance_due}',
+  '{invoice_number}',
 ];
+

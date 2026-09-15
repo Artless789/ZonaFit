@@ -7,6 +7,8 @@ export const clientSchema = z.object({
   phone: z.string().min(7, 'El teléfono debe tener al menos 7 caracteres.'),
   email: z.union([z.literal(''), z.string().email('Debe ser un correo válido.')]).optional().nullable(),
   notes: z.string().optional().nullable(),
+  whatsapp_opt_in: z.boolean().optional(),
+  whatsapp_group_id: z.number().optional().nullable(),
   // Asignación de membresía inicial (opcional al crear cliente)
   assign_membership: z.boolean().optional(),
   membership_plan_id: z.number().optional(),

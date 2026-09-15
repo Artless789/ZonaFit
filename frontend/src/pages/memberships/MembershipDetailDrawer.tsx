@@ -18,10 +18,13 @@ import {
   Mail, 
   Hash, 
   Banknote,
-  Download
+  Download,
+  MessageCircle,
 } from 'lucide-react';
 import { useGymSettings } from '../../hooks/useGymSettings';
+import { useWhatsAppWeb } from '@/hooks/useWhatsAppWeb';
 import { generateMembershipPaymentReceiptPDF } from '@shared/utils/pdfGenerator';
+import { cn } from '@shared/utils/cn';
 
 interface MembershipDetailDrawerProps {
   isOpen: boolean;
@@ -40,6 +43,7 @@ export function MembershipDetailDrawer({
 }: MembershipDetailDrawerProps) {
   const { query: gymSettingsQuery } = useGymSettings();
   const gymSettings = gymSettingsQuery.data;
+  const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb();
 
   if (!membership) return null;
 
@@ -120,7 +124,7 @@ export function MembershipDetailDrawer({
             Información del Cliente
           </h4>
           <div className="p-4 bg-bg-surface border border-border-light rounded-xl flex items-start gap-4 shadow-sm">
-            <div className="w-14 h-14 rounded-full overflow-hidden border border-border-medium flex-shrink-0 bg-bg-elevated flex items-center justify-center">
+            <div className="w-14 h-14 rounded-full overflow-hidden border border-border-medium shrink-0 bg-bg-elevated flex items-center justify-center">
               {client?.photo_url ? (
                 <AuthorizedImage
                   src={client.photo_url}
@@ -252,6 +256,101 @@ export function MembershipDetailDrawer({
                 {formatCurrency(pendingBalance)}
               </span>
             </div>
+
+            {(() => {
+              const daysLeft = (() => {
+                try {
+                  const end = parseISO(membership.end_date);
+                  const now = new Date();
+                  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+                  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                  return Math.ceil((endDay - today) / (1000 * 60 * 60 * 24));
+                } catch {
+                  return 999;
+                }
+              })();
+
+              const isExpired = !membership.is_active || membership.status === 'EXPIRED' || daysLeft < 0;
+
+              const whatsAppContext = (() => {
+                if (pendingBalance > 0) {
+                  return {
+                    eventType: 'CREDIT_OVERDUE',
+                    eventLabel: 'Recordar saldo',
+                    buttonText: 'Recordar saldo por WhatsApp',
+                    contextData: {
+                      balance_due: formatCurrency(pendingBalance),
+                      membership_name: plan?.name || 'Membresía',
+                      expiry_date: formatDate(membership.end_date),
+                    },
+                  };
+                }
+                if (isExpired) {
+                  return {
+                    eventType: 'MEMBERSHIP_EXPIRED',
+                    eventLabel: 'Avisar vencida',
+                    buttonText: 'Avisar vencida por WhatsApp',
+                    contextData: {
+                      membership_name: plan?.name || 'Membresía',
+                      expiry_date: formatDate(membership.end_date),
+                    },
+                  };
+                }
+                if (daysLeft <= 7) {
+                  return {
+                    eventType: 'MEMBERSHIP_EXPIRY',
+                    eventLabel: 'Recordar vencimiento',
+                    buttonText: 'Recordar vencimiento por WhatsApp',
+                    contextData: {
+                      membership_name: plan?.name || 'Membresía',
+                      expiry_date: formatDate(membership.end_date),
+                      days_left: daysLeft.toString(),
+                    },
+                  };
+                }
+                return {
+                  eventType: 'GENERAL',
+                  eventLabel: 'Contactar por WhatsApp',
+                  buttonText: 'Contactar por WhatsApp',
+                  contextData: {
+                    membership_name: plan?.name || 'Membresía',
+                    expiry_date: formatDate(membership.end_date),
+                  },
+                };
+              })();
+
+              return (
+                <div className="pt-3 border-t border-border-light flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const clientInfo = {
+                        id: membership.client_id,
+                        full_name: client?.full_name || membership.client_name || `Cliente #${membership.client_id}`,
+                        phone: client?.phone || null,
+                      };
+                      openWhatsAppModal({
+                        client: clientInfo,
+                        eventType: whatsAppContext.eventType,
+                        eventLabel: whatsAppContext.eventLabel,
+                        contextData: whatsAppContext.contextData,
+                      });
+                    }}
+                    className={cn(
+                      "w-full py-2.5 px-4 rounded-xl font-semibold text-sm transition-all duration-200",
+                      "bg-emerald-600 hover:bg-emerald-500 text-white shadow-md flex items-center justify-center gap-2",
+                      "cursor-pointer"
+                    )}
+                  >
+                    <MessageCircle size={16} />
+                    <span>{whatsAppContext.buttonText}</span>
+                  </button>
+                  <p className="text-[11px] text-text-muted text-center">
+                    Prepara el mensaje y abre WhatsApp Web para que puedas revisarlo y enviarlo.
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
@@ -331,6 +430,8 @@ export function MembershipDetailDrawer({
           )}
         </div>
       </div>
+
+      <WhatsAppModalComponent />
     </Drawer>
   );
 }

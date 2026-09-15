@@ -18,22 +18,29 @@ VALID_EVENT_TYPES = {
     NotificationEventType.CREDIT_OVERDUE,
     NotificationEventType.WELCOME,
     NotificationEventType.GENERAL,
+    NotificationEventType.GROUP_INVITATION,
 }
 
-VALID_CHANNELS = {NotificationChannel.WHATSAPP}
+VALID_CHANNELS = {
+    NotificationChannel.WHATSAPP,
+    NotificationChannel.WHATSAPP_WEB,
+    NotificationChannel.WHATSAPP_CLOUD_API,
+}
 
 
 class NotificationTemplateBase(BaseModel):
     event_type: str
     channel: str
     template_body: str
+    custom_event_name: Optional[str] = None
+    description: Optional[str] = None
 
     @field_validator("event_type")
     @classmethod
     def validate_event_type(cls, v: str) -> str:
-        if v not in VALID_EVENT_TYPES:
+        if v not in VALID_EVENT_TYPES and not v.startswith("CUSTOM_") and v != "CUSTOM":
             raise ValueError(
-                f"event_type must be one of: {', '.join(VALID_EVENT_TYPES)}."
+                f"event_type must be one of: {', '.join(VALID_EVENT_TYPES)} or start with 'CUSTOM_'."
             )
         return v
 
@@ -61,6 +68,8 @@ class NotificationTemplateCreate(NotificationTemplateBase):
 class NotificationTemplateUpdate(BaseModel):
     template_body: Optional[str] = None
     is_active: Optional[bool] = None
+    custom_event_name: Optional[str] = None
+    description: Optional[str] = None
 
     @field_validator("template_body")
     @classmethod

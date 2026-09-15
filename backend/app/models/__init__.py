@@ -25,10 +25,12 @@ from .cash_movement import CashMovement
 from .refresh_token import RefreshToken
 from .idempotency_key import IdempotencyKey
 from .whatsapp_integration import WhatsAppIntegration
+from .whatsapp_group import WhatsAppGroup
 
 # Ensures Alembic can discover them
 __all__ = [
     "WhatsAppIntegration",
+    "WhatsAppGroup",
     "User",
     "Gym",
     "GymSettings",

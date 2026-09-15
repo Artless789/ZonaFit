@@ -24,12 +24,19 @@ export function TemplatesTable({ templates, onEdit, onToggleStatus }: TemplatesT
     );
   }
 
-  const translateEventType = (type: string) => {
+  const translateEventType = (type: string, customName?: string | null) => {
+    if (customName) return `${customName} (Personalizado)`;
     const types: Record<string, string> = {
       'MEMBERSHIP_EXPIRY': 'Vencimiento de Membresía',
+      'MEMBERSHIP_SOLD': 'Nueva Membresía',
+      'MEMBERSHIP_EXPIRED': 'Membresía Vencida',
       'PAYMENT_RECEIVED': 'Confirmación de Pago',
       'PAYMENT_OVERDUE': 'Aviso de Mora',
+      'CREDIT_CREATED': 'Nuevo Crédito',
+      'CREDIT_PAYMENT_RECEIVED': 'Abono a Crédito',
+      'CREDIT_OVERDUE': 'Crédito Vencido',
       'WELCOME': 'Bienvenida al Gimnasio',
+      'GROUP_INVITATION': 'Invitación a Grupo de WhatsApp',
       'GENERAL': 'Aviso General',
     };
     return types[type] || type;
@@ -48,8 +55,11 @@ export function TemplatesTable({ templates, onEdit, onToggleStatus }: TemplatesT
           <div className="flex justify-between items-start mb-4">
             <div>
               <h4 className="font-semibold text-text-primary text-sm mb-1">
-                {translateEventType(template.event_type)}
+                {translateEventType(template.event_type, template.custom_event_name)}
               </h4>
+              {template.description && (
+                <p className="text-xs text-text-muted mb-2 line-clamp-1">{template.description}</p>
+              )}
               <div className="flex items-center gap-2">
                 <Badge variant="default" className="text-[10px] uppercase">{template.channel}</Badge>
                 {template.is_active ? (

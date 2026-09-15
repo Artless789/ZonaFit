@@ -56,7 +56,15 @@ class Client(Base):
         onupdate=func.now(),
     )
 
+    whatsapp_opt_in = Column(Boolean, default=False, nullable=False, server_default="false")
+    whatsapp_group_id = Column(Integer, ForeignKey("whatsapp_groups.id", ondelete="SET NULL"), nullable=True, index=True)
+
     gym = relationship("Gym", back_populates="clients")
     memberships = relationship("Membership",back_populates="client",)
     sales = relationship("Sale", back_populates="client")
-    accounts_receivables = relationship("AccountsReceivable", back_populates="client")  
+    accounts_receivables = relationship("AccountsReceivable", back_populates="client")
+    whatsapp_group = relationship("WhatsAppGroup", back_populates="clients")
+
+    @property
+    def whatsapp_group_name(self) -> str | None:
+        return self.whatsapp_group.name if self.whatsapp_group else None

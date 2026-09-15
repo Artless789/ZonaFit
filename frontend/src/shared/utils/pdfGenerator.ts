@@ -1,14 +1,33 @@
+import type { jsPDF as JsPDFInstance } from 'jspdf';
 import type { UserOptions } from 'jspdf-autotable';
 import type { Invoice, InvoiceDetail } from '@shared/types/invoice';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+
+interface JsPDFWithAutoTable extends JsPDFInstance {
+  lastAutoTable?: {
+    finalY?: number;
+  };
+}
+
+type AutoTableFn = (doc: JsPDFInstance, options: UserOptions) => void;
+
+interface AutoTableModuleShape {
+  default?: AutoTableFn;
+  autoTable?: AutoTableFn;
+}
 
 const loadPdfModules = async () => {
   const [{ jsPDF }, autoTableModule] = await Promise.all([
     import('jspdf'),
     import('jspdf-autotable'),
   ]);
-  const autoTable = (autoTableModule.default || (autoTableModule as any).autoTable || autoTableModule) as (doc: any, options: UserOptions) => void;
+  const mod = autoTableModule as unknown as AutoTableModuleShape | AutoTableFn;
+  const autoTable = (
+    typeof mod === 'function'
+      ? mod
+      : mod.default || mod.autoTable || (mod as unknown as AutoTableFn)
+  ) as AutoTableFn;
   return { jsPDF, autoTable };
 };
 
@@ -143,7 +162,8 @@ export const generateReceiptPDF = async ({
     styles: { fontSize: 9, cellPadding: 3 },
   });
 
-  const finalY = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 8 : yPos + 40;
+  const docWithTable = doc as unknown as JsPDFWithAutoTable;
+  const finalY = docWithTable.lastAutoTable?.finalY ? docWithTable.lastAutoTable.finalY + 8 : yPos + 40;
 
   // Totals
   doc.setFontSize(9.5);
@@ -397,7 +417,8 @@ export const generateMembershipPaymentReceiptPDF = async ({
     styles: { fontSize: 9, cellPadding: 3.5 },
   });
 
-  const finalY = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 8 : yPos + 40;
+  const docWithTable = doc as unknown as JsPDFWithAutoTable;
+  const finalY = docWithTable.lastAutoTable?.finalY ? docWithTable.lastAutoTable.finalY + 8 : yPos + 40;
 
   // 6. Summary Breakdown
   const summaryLabelX = 85;
@@ -429,7 +450,7 @@ export const generateMembershipPaymentReceiptPDF = async ({
   doc.text('Monto Pagado en esta Operación:', summaryLabelX, currentSummaryY + 6);
   doc.text(formatPrice(paidAmount), summaryValueX, currentSummaryY + 6, { align: 'right' });
 
-  let balanceY = currentSummaryY + 12.5;
+  const balanceY = currentSummaryY + 12.5;
   doc.setFontSize(10);
   if (pendingBalance > 0) {
     doc.setFont('helvetica', 'bold');

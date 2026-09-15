@@ -1,12 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Drawer } from '@shared/ui/Drawer';
+import { Modal } from '@shared/ui/Modal';
 import { Skeleton } from '@shared/ui/Skeleton';
 import { ErrorState } from '@shared/ui/ErrorState';
 import { Badge } from '@shared/ui/Badge';
 import { formatCurrency } from '@shared/utils/formatters';
 import { Button } from '@shared/ui/Button';
 import { AuthorizedImage } from '@shared/ui/AuthorizedImage';
+import { useToast } from '@shared/ui/Toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { useClient360 } from '../../hooks/useClients';
+import { clientService } from '../../services/clientService';
+import { whatsappGroupService } from '../../services/whatsappGroupService';
+import type { WhatsAppGroup } from '@shared/types/whatsappGroup';
 import type { Client } from '@shared/types/client';
 import { 
   User as UserIcon, 
@@ -15,8 +21,11 @@ import {
   CreditCard, 
   FileText,
   Activity,
-  Edit2
+  Edit2,
+  MessageCircle,
+  Users,
 } from 'lucide-react';
+import { useWhatsAppWeb } from '@/hooks/useWhatsAppWeb';
 
 interface ClientProfileDrawerProps {
   isOpen: boolean;
@@ -32,8 +41,46 @@ const formatDate = (dateString: string) => {
 };
 
 export function ClientProfileDrawer({ isOpen, onClose, clientId, onEditClick }: ClientProfileDrawerProps) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data: profile, isLoading, isError, error, refetch } = useClient360(isOpen ? clientId : undefined);
   const [activeTab, setActiveTab] = useState<'resumen' | 'membresias' | 'financiero'>('resumen');
+  const [isChangeGroupModalOpen, setIsChangeGroupModalOpen] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null | undefined>(undefined);
+  const [availableGroups, setAvailableGroups] = useState<WhatsAppGroup[]>([]);
+  const [isSavingGroup, setIsSavingGroup] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      whatsappGroupService.getAll(true).then(setAvailableGroups).catch(() => {});
+    }
+  }, [isOpen]);
+
+  const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb(() => {
+    if (profile?.client) {
+      onEditClick(profile.client);
+    }
+  });
+
+  const handleSaveGroup = async () => {
+    if (!profile?.client) return;
+    try {
+      setIsSavingGroup(true);
+      const newGroupId = selectedGroupId === undefined ? (profile.client.whatsapp_group_id || null) : selectedGroupId;
+      await clientService.updateClient(profile.client.id, {
+        whatsapp_group_id: newGroupId,
+      });
+      await refetch();
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['client360'] });
+      toast({ type: 'success', title: 'Grupo Actualizado', message: 'Grupo de invitación actualizado correctamente.' });
+      setIsChangeGroupModalOpen(false);
+    } catch {
+      toast({ type: 'error', title: 'Error', message: 'No se pudo actualizar el grupo del cliente.' });
+    } finally {
+      setIsSavingGroup(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -85,15 +132,82 @@ export function ClientProfileDrawer({ isOpen, onClose, clientId, onEditClick }: 
                   <span className="text-sm font-medium text-text-secondary">{client.document_type} {client.document}</span>
                   {client.is_active ? <Badge variant="success">ACTIVO</Badge> : <Badge variant="danger">INACTIVO</Badge>}
                 </div>
-                <div className="flex items-center gap-4 mt-2 text-xs text-text-muted">
+                <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-text-muted">
                   <span className="flex items-center gap-1"><Phone size={12} /> {client.phone}</span>
                   {client.email && <span className="flex items-center gap-1"><Mail size={12} /> {client.email}</span>}
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-bg-elevated border border-border-light text-text-secondary text-[11px]">
+                    <Users size={11} className="text-brand-primary" />
+                    Grupo: <strong className="text-text-primary font-medium">{client.whatsapp_group_name || 'Sin grupo'}</strong>
+                  </span>
                 </div>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={() => onEditClick(client)} className="gap-2">
-              <Edit2 size={14} /> Editar
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => openWhatsAppModal({
+                  client: {
+                    id: client.id,
+                    full_name: client.full_name,
+                    phone: client.phone,
+                  },
+                  eventType: 'GENERAL',
+                  eventLabel: 'Contactar por WhatsApp',
+                })}
+                className="gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white border-0 cursor-pointer shadow-md text-xs"
+              >
+                <MessageCircle size={14} /> WhatsApp
+              </Button>
+
+              {client.whatsapp_group_id ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => openWhatsAppModal({
+                      client: {
+                        id: client.id,
+                        full_name: client.full_name,
+                        phone: client.phone,
+                      },
+                      eventType: 'GROUP_INVITATION',
+                      eventLabel: 'Invitar al grupo',
+                    })}
+                    className="gap-1.5 text-xs text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                  >
+                    <Users size={13} /> Invitar al grupo
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedGroupId(client.whatsapp_group_id);
+                      setIsChangeGroupModalOpen(true);
+                    }}
+                    className="gap-1.5 text-xs text-text-muted hover:text-text-primary"
+                  >
+                    Cambiar grupo
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedGroupId(null);
+                    setIsChangeGroupModalOpen(true);
+                  }}
+                  className="gap-1.5 text-xs text-text-secondary border-border-medium hover:bg-bg-elevated"
+                >
+                  <Users size={13} /> Asignar / Invitar a un grupo
+                </Button>
+              )}
+
+              <Button variant="outline" size="sm" onClick={() => onEditClick(client)} className="gap-1.5 text-xs">
+                <Edit2 size={13} /> Editar
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -231,6 +345,53 @@ export function ClientProfileDrawer({ isOpen, onClose, clientId, onEditClick }: 
       size="lg" // Hacerlo más ancho
     >
       {renderContent()}
+
+      {/* Modal Cambiar Grupo */}
+      <Modal
+        isOpen={isChangeGroupModalOpen}
+        onClose={() => setIsChangeGroupModalOpen(false)}
+        title="Grupo de WhatsApp del Cliente"
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={() => setIsChangeGroupModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              isLoading={isSavingGroup}
+              onClick={handleSaveGroup}
+            >
+              Guardar Grupo
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-text-secondary">
+            Selecciona el grupo de invitación asociado al cliente. Esto permite preparar invitaciones con el enlace correspondiente. Recuerda que no se agrega al cliente de forma automática a WhatsApp.
+          </p>
+          <div>
+            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
+              Grupo de invitación
+            </label>
+            <select
+              value={selectedGroupId === null || selectedGroupId === undefined ? '' : selectedGroupId}
+              onChange={(e) => setSelectedGroupId(e.target.value ? Number(e.target.value) : null)}
+              className="w-full px-3 py-2.5 bg-bg-surface border border-border-medium rounded-lg text-sm text-text-primary focus:outline-none focus:border-brand-primary"
+            >
+              <option value="">No agregar a ningún grupo</option>
+              {availableGroups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </Modal>
+
+      <WhatsAppModalComponent />
     </Drawer>
   );
 }
+

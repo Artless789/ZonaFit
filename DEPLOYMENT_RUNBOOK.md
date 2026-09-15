@@ -320,6 +320,22 @@ echo "0 3 * * * www-data /srv/zonafit/scripts/backup.sh >> /var/log/zonafit_back
 
 ---
 
+## PASO 14.1 — ALMACENAMIENTO PERSISTENTE DE FOTOGRAFÍAS (UPLOADS)
+
+Las fotografías de clientes se almacenan en el directorio configurado por `UPLOADS_DIR` (por defecto `/app/uploads` en Docker/Hyperlift o `/srv/zonafit/uploads` en VPS):
+
+- **En Hyperlift / PaaS:**
+  - Crear un **Persistent Volume** (disco persistente) en el panel de Hyperlift.
+  - Asignar el punto de montaje exacto: `/app/uploads`.
+  - Con esto, las fotografías se preservan automáticamente a través de redeploys, rebuilds y reinicios del contenedor.
+
+- **En VPS nativo / Systemd:**
+  - Asegurar que la carpeta `/srv/zonafit/uploads/clients` exista con permisos de lectura/escritura para `www-data`:
+    `sudo mkdir -p /srv/zonafit/uploads/clients && sudo chown -R www-data:www-data /srv/zonafit/uploads`
+  - Respaldar `/srv/zonafit/uploads` en los backups periódicos junto a la base de datos.
+
+---
+
 ## PASO 15 — SMOKE TESTS POST-DEPLOY
 
 ```bash

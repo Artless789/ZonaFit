@@ -1,2 +1,4 @@
 class NotificationChannel:
     WHATSAPP = "WHATSAPP"
+    WHATSAPP_WEB = "WHATSAPP_WEB"
+    WHATSAPP_CLOUD_API = "WHATSAPP_CLOUD_API"

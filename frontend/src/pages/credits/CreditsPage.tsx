@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Filter, WalletCards, Receipt, AlertTriangle } from 'lucide-react';
+import { Search, Filter, WalletCards, Receipt, AlertTriangle, MessageCircle } from 'lucide-react';
 import { Badge } from '@shared/ui/Badge';
 import { Spinner } from '@shared/ui/Spinner';
 import { ErrorState } from '@shared/ui/ErrorState';
@@ -7,6 +7,7 @@ import { Select } from '@shared/ui/Select';
 import { Pagination } from '@shared/ui/Pagination';
 import { useAccountsReceivables } from '../../hooks/useAccountsReceivables';
 import { useClients } from '../../hooks/useClients';
+import { useWhatsAppWeb } from '@/hooks/useWhatsAppWeb';
 import { CreditsDrawer } from './CreditsDrawer';
 import { PaymentModal } from './PaymentModal';
 import type { AccountsReceivable } from '@shared/types/accountsReceivable';
@@ -31,6 +32,7 @@ export function CreditsPage() {
   });
   
   const { query: clientsQuery } = useClients();
+  const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb();
 
   const handleOpenDrawer = (ar: AccountsReceivable) => {
     setSelectedAR(ar);
@@ -218,7 +220,34 @@ export function CreditsPage() {
                     <td className="px-6 py-4 text-text-secondary">{formatShortDate(ar.due_date)}</td>
                     <td className="px-6 py-4 text-center">{getStatusBadge(ar.status)}</td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-2 items-center">
+                        {ar.balance_due > 0 && ar.status !== 'CANCELLED' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const client = clientsQuery.data?.items.find((c) => c.id === ar.client_id);
+                              openWhatsAppModal({
+                                client: {
+                                  id: ar.client_id,
+                                  full_name: client ? client.full_name : `Cliente #${ar.client_id}`,
+                                  phone: client?.phone || null,
+                                },
+                                eventType: 'CREDIT_OVERDUE',
+                                eventLabel: 'Recordar saldo',
+                                contextData: {
+                                  balance_due: formatPrice(ar.balance_due),
+                                  amount: formatPrice(ar.balance_due),
+                                  sale_id: ar.sale_id.toString(),
+                                  due_date: formatShortDate(ar.due_date),
+                                },
+                              });
+                            }}
+                            className="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-emerald-500/20 rounded transition-colors inline-flex items-center justify-center cursor-pointer"
+                            title="Avisar por WhatsApp"
+                          >
+                            <MessageCircle size={14} />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleOpenDrawer(ar)}
                           className="px-3 py-1.5 text-xs font-medium bg-bg-elevated border border-border-medium rounded hover:bg-border-light transition-colors text-text-secondary"
@@ -259,6 +288,7 @@ export function CreditsPage() {
         onClose={() => setIsDrawerOpen(false)}
         ar={selectedAR}
         clientName={selectedAR ? getClientName(selectedAR.client_id) : ''}
+        clientPhone={selectedAR ? clientsQuery.data?.items.find(c => c.id === selectedAR.client_id)?.phone : undefined}
         onPay={() => {
           setIsDrawerOpen(false);
           setIsPaymentModalOpen(true);
@@ -270,6 +300,8 @@ export function CreditsPage() {
         onClose={() => setIsPaymentModalOpen(false)}
         ar={selectedAR}
       />
+
+      <WhatsAppModalComponent />
     </div>
   );
 }

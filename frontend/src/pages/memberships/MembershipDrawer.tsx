@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
+import axios from 'axios';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Drawer } from '@shared/ui/Drawer';
-import { Modal } from '@shared/ui/Modal';
 import { Select } from '@shared/ui/Select';
 import { NumericInput } from '@shared/ui/NumericInput';
 import { ClientSearchCombobox } from '@shared/ui/ClientSearchCombobox';
@@ -14,11 +14,14 @@ import { useGymSettings } from '../../hooks/useGymSettings';
 import { generateMembershipPaymentReceiptPDF, type GenerateMembershipReceiptProps } from '@shared/utils/pdfGenerator';
 import type { Client } from '@shared/types/client';
 import type { MembershipPlan } from '@shared/types/membershipPlan';
+import type { Membership, MembershipCreate } from '@shared/types/membership';
 import { formatCurrency } from '@shared/utils/formatters';
 import { format, addDays, parse } from 'date-fns';
 import { es } from 'date-fns/locale/es';
-import { DollarSign, ShieldCheck, CheckCircle2, Download } from 'lucide-react';
+import { DollarSign, ShieldCheck } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { PaymentSuccessModal } from '@shared/ui/PaymentSuccessModal';
+import { useWhatsAppWeb } from '../../hooks/useWhatsAppWeb';
 
 interface MembershipDrawerProps {
   isOpen: boolean;
@@ -41,6 +44,7 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
   const gymSettings = gymSettingsQuery.data;
 
   const [completedReceipt, setCompletedReceipt] = useState<GenerateMembershipReceiptProps | null>(null);
+  const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb();
 
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
@@ -48,7 +52,7 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     reset,
     formState: { errors },
   } = useForm<MembershipFormValues>({
@@ -66,13 +70,15 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
     },
   });
 
-  const selectedClientId = watch('client_id');
-  const selectedPlanId = watch('membership_plan_id');
-  const startDateValue = watch('start_date') || todayStr;
-  const discountRaw = watch('discount');
-  const registerPayment = watch('register_payment');
-  const paymentMethod = watch('payment_method') || 'CASH';
-  const amountPaidRaw = watch('amount_paid');
+  const selectedClientId = useWatch({ control, name: 'client_id' });
+  const selectedPlanId = useWatch({ control, name: 'membership_plan_id' });
+  const startDateWatched = useWatch({ control, name: 'start_date' });
+  const startDateValue = startDateWatched || todayStr;
+  const discountRaw = useWatch({ control, name: 'discount' });
+  const registerPayment = useWatch({ control, name: 'register_payment' });
+  const paymentMethodWatched = useWatch({ control, name: 'payment_method' });
+  const paymentMethod = paymentMethodWatched || 'CASH';
+  const amountPaidRaw = useWatch({ control, name: 'amount_paid' });
 
   const activeClients = useMemo(() => clients.filter(c => c.is_active), [clients]);
   const activePlans = useMemo(() => plans.filter(p => p.is_active), [plans]);
@@ -103,7 +109,15 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
         setValue('amount_paid', planTotal, { shouldValidate: true });
       }
     }
-  }, [selectedPlan, registerPayment, setValue]);
+  }, [selectedPlan, registerPayment, planTotal, setValue]);
+
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) {
+      setCompletedReceipt(null);
+    }
+  }
 
   useEffect(() => {
     if (isOpen) {
@@ -118,7 +132,6 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
         amount_paid: 0,
         reference: '',
       });
-      setCompletedReceipt(null);
     }
   }, [isOpen, reset]);
 
@@ -153,7 +166,7 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
     if (!completedReceipt) return;
     try {
       await generateMembershipPaymentReceiptPDF(completedReceipt);
-    } catch (err) {
+    } catch {
       toast({ type: 'error', title: 'Error', message: 'No se pudo descargar el comprobante.' });
     }
   };
@@ -168,9 +181,9 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
       return;
     }
 
-    let created: any = null;
+    let created: Membership | undefined;
     try {
-      const payload = {
+      const payload: MembershipCreate = {
         client_id: data.client_id,
         membership_plan_id: data.membership_plan_id,
         trainer_name: data.trainer_name || undefined,
@@ -182,13 +195,17 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
         reference: data.register_payment && data.reference ? data.reference : undefined,
       };
 
-      created = await createMutation.mutateAsync(payload as any);
-    } catch (error: any) {
-      const errorDetail =
-        error?.response?.data?.detail ||
-        error?.response?.data?.error?.message ||
-        error?.message ||
-        'Error desconocido al registrar la membresía.';
+      created = await createMutation.mutateAsync(payload);
+    } catch (error: unknown) {
+      let errorDetail = 'Error desconocido al registrar la membresía.';
+      if (axios.isAxiosError(error)) {
+        errorDetail =
+          error.response?.data?.detail ||
+          error.response?.data?.error?.message ||
+          error.message;
+      } else if (error instanceof Error) {
+        errorDetail = error.message;
+      }
       toast({
         type: 'error',
         title: 'Error al Guardar',
@@ -399,8 +416,8 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
                       options={PAYMENT_METHODS}
                       disabled={isSaving}
                       value={paymentMethod}
-                      onChange={(e) => setValue('payment_method', e.target.value as any, { shouldValidate: true })}
-                      onValueChange={(val) => setValue('payment_method', val as any, { shouldValidate: true })}
+                      onChange={(e) => setValue('payment_method', e.target.value, { shouldValidate: true })}
+                      onValueChange={(val) => setValue('payment_method', val, { shouldValidate: true })}
                     />
                     <div>
                       <label className="block text-sm font-medium text-text-secondary mb-1">
@@ -490,43 +507,32 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
       </form>
     </Drawer>
 
-    {/* Success & Invoice Modal */}
-    <Modal
+    <PaymentSuccessModal
       isOpen={!!completedReceipt}
       onClose={() => setCompletedReceipt(null)}
-      title="Venta Registrada Exitosamente"
-    >
-      <div className="flex flex-col items-center justify-center space-y-6 py-4">
-        <div className="h-20 w-20 bg-success/10 rounded-full flex items-center justify-center">
-          <CheckCircle2 size={40} className="text-success" />
-        </div>
-        
-        <div className="text-center">
-          <h3 className="text-xl font-bold text-text-primary">¡Venta Completada!</h3>
-          <p className="text-text-secondary mt-1">
-            Se ha generado el comprobante <strong>{completedReceipt?.receiptNumber}</strong>
-          </p>
-        </div>
-
-        <div className="flex flex-col w-full gap-3 mt-4">
-          <ActionGlowButton 
-            onClick={handleDownloadReceipt}
-            className="w-full flex justify-center py-3"
-          >
-            <Download className="mr-2" size={18} />
-            Descargar Comprobante PDF
-          </ActionGlowButton>
-          
-          <button
-            type="button"
-            onClick={() => setCompletedReceipt(null)}
-            className="w-full py-3 text-sm font-medium text-text-secondary hover:text-text-primary bg-bg-surface hover:bg-bg-elevated border border-border-medium rounded-lg transition-colors"
-          >
-            Continuar
-          </button>
-        </div>
-      </div>
-    </Modal>
+      clientName={completedReceipt?.clientName || ''}
+      concept={completedReceipt?.planName || 'Mensualidad'}
+      amount={completedReceipt ? formatCurrency(completedReceipt.paidAmount) : '$0'}
+      receiptNumber={completedReceipt?.receiptNumber}
+      onDownloadReceipt={handleDownloadReceipt}
+      onWhatsApp={() => {
+        if (!completedReceipt) return;
+        openWhatsAppModal({
+          client: {
+            id: selectedClientId || 0,
+            full_name: completedReceipt.clientName || 'Cliente',
+            phone: completedReceipt.clientPhone,
+          },
+          eventType: 'PAYMENT_RECEIVED',
+          eventLabel: 'Pago Recibido',
+          contextData: {
+            payment_concept: completedReceipt.planName,
+            amount: formatCurrency(completedReceipt.paidAmount),
+          },
+        });
+      }}
+    />
+    <WhatsAppModalComponent />
   </>
   );
 }

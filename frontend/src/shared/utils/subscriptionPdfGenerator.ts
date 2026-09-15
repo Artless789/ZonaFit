@@ -1,13 +1,26 @@
+import type { jsPDF as JsPDFInstance } from 'jspdf';
 import type { UserOptions } from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+
+type AutoTableFn = (doc: JsPDFInstance, options: UserOptions) => void;
+
+interface AutoTableModuleShape {
+  default?: AutoTableFn;
+  autoTable?: AutoTableFn;
+}
 
 const loadPdfModules = async () => {
   const [{ jsPDF }, autoTableModule] = await Promise.all([
     import('jspdf'),
     import('jspdf-autotable'),
   ]);
-  const autoTable = (autoTableModule.default || (autoTableModule as any).autoTable || autoTableModule) as (doc: any, options: UserOptions) => void;
+  const mod = autoTableModule as unknown as AutoTableModuleShape | AutoTableFn;
+  const autoTable = (
+    typeof mod === 'function'
+      ? mod
+      : mod.default || mod.autoTable || (mod as unknown as AutoTableFn)
+  ) as AutoTableFn;
   return { jsPDF, autoTable };
 };
 

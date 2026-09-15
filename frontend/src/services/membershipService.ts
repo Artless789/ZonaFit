@@ -1,5 +1,9 @@
 import { api } from './api';
-import type { Membership, MembershipCreate, MembershipUpdate } from '@shared/types/membership';
+import type {
+  Membership,
+  MembershipCreate,
+  MembershipUpdate,
+} from '@shared/types/membership';
 import type { Paginated } from './membershipPlanService';
 
 export const membershipService = {
@@ -29,3 +33,4 @@ export const membershipService = {
     await api.delete(`/memberships/${id}`);
   },
 };
+

@@ -1,8 +1,9 @@
-import { CheckCircle2, Ban, Eye } from 'lucide-react';
+import { CheckCircle2, Ban, Eye, MessageCircle } from 'lucide-react';
 import type { Client } from '@shared/types/client';
 import { Badge } from '@shared/ui/Badge';
 import { cn } from '@shared/utils/cn';
 import { AuthorizedImage } from '@shared/ui/AuthorizedImage';
+import { useWhatsAppWeb } from '@/hooks/useWhatsAppWeb';
 
 interface ClientsTableProps {
   clients: Client[];
@@ -11,6 +12,13 @@ interface ClientsTableProps {
 }
 
 export function ClientsTable({ clients, onEdit, onToggleStatus }: ClientsTableProps) {
+  const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb(
+    (clientId) => {
+      const target = clients.find((c) => c.id === clientId);
+      if (target) onEdit(target);
+    }
+  );
+
   if (clients.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-bg-surface rounded-xl border border-border-medium border-dashed">
@@ -74,6 +82,21 @@ export function ClientsTable({ clients, onEdit, onToggleStatus }: ClientsTablePr
               <td className="px-6 py-4 text-right">
                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
+                    onClick={() => openWhatsAppModal({
+                      client: {
+                        id: client.id,
+                        full_name: client.full_name,
+                        phone: client.phone,
+                      },
+                      eventType: 'GENERAL',
+                      eventLabel: 'Contactar por WhatsApp',
+                    })}
+                    className="p-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-md transition-colors cursor-pointer"
+                    title="Contactar por WhatsApp"
+                  >
+                    <MessageCircle size={16} />
+                  </button>
+                  <button
                     onClick={() => onEdit(client)}
                     className="p-2 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-md transition-colors"
                     title="Ver Perfil 360"
@@ -98,6 +121,9 @@ export function ClientsTable({ clients, onEdit, onToggleStatus }: ClientsTablePr
           ))}
         </tbody>
       </table>
+
+      <WhatsAppModalComponent />
     </div>
   );
 }
+

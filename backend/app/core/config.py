@@ -19,14 +19,6 @@ class Settings:
     SMTP_USER: str = os.getenv("SMTP_USER", "")
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     APPLICATION_PORT: int = int(os.getenv("APPLICATION_PORT", os.getenv("PORT", "8000")))
-
-    # ── Meta WhatsApp Cloud API / Embedded Signup ───────────────────────────────
-    META_APP_ID: str = os.getenv("META_APP_ID", os.getenv("WHATSAPP_APP_ID", ""))
-    META_APP_SECRET: str = os.getenv("META_APP_SECRET", os.getenv("WHATSAPP_APP_SECRET", ""))
-    META_CONFIG_ID: str = os.getenv("META_CONFIG_ID", "")
-    META_GRAPH_API_VERSION: str = os.getenv("META_GRAPH_API_VERSION", os.getenv("WHATSAPP_API_VERSION", "v22.0"))
-    META_WEBHOOK_VERIFY_TOKEN: str = os.getenv("META_WEBHOOK_VERIFY_TOKEN", os.getenv("WHATSAPP_WEBHOOK_VERIFY_TOKEN", "zonafit_webhook_verify_token"))
-    META_WEBHOOK_SECRET: str = os.getenv("META_WEBHOOK_SECRET", os.getenv("WHATSAPP_APP_SECRET", ""))
-    META_SYSTEM_USER_TOKEN: str = os.getenv("META_SYSTEM_USER_TOKEN", "")
+    UPLOADS_DIR: str = os.getenv("UPLOADS_DIR", os.path.join(os.getcwd(), "uploads"))
 
 settings = Settings()

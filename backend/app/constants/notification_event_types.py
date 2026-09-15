@@ -13,3 +13,4 @@ class NotificationEventType:
     # General
     WELCOME = "WELCOME"                              # Bienvenida cliente nuevo
     GENERAL = "GENERAL"                              # Aviso general
+    GROUP_INVITATION = "GROUP_INVITATION"            # Invitación a grupo de WhatsApp

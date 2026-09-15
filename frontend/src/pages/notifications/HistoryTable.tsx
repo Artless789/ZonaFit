@@ -1,4 +1,4 @@
-import { MessageCircle, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { MessageCircle, XCircle, Clock } from 'lucide-react';
 import type { Notification } from '@shared/types/notification';
 import type { Client } from '@shared/types/client';
 import { Badge } from '@shared/ui/Badge';
@@ -32,23 +32,25 @@ export function HistoryTable({ notifications, clients }: HistoryTableProps) {
     return client ? client.full_name : `ID: ${clientId}`;
   };
 
-  const renderStatus = (status: string, error?: string | null) => {
-    switch (status.toUpperCase()) {
-      case 'SENT':
-      case 'DELIVERED':
-        return <Badge variant="success" className="flex items-center gap-1"><CheckCircle2 size={12}/> Enviado</Badge>;
-      case 'FAILED':
-        return (
-          <div className="flex flex-col items-start gap-1">
-            <Badge variant="danger" className="flex items-center gap-1"><XCircle size={12}/> Falló</Badge>
-            {error && <span className="text-[10px] text-danger max-w-[150px] truncate" title={error}>{error}</span>}
-          </div>
-        );
-      case 'PENDING':
-        return <Badge variant="warning" className="flex items-center gap-1"><Clock size={12}/> Pendiente</Badge>;
-      default:
-        return <Badge variant="default">{status}</Badge>;
+  const renderStatus = (status: string, channel?: string, error?: string | null) => {
+    const s = (status || '').toUpperCase();
+    if (s === 'OPENED' || channel === 'WHATSAPP_WEB' || s === 'SENT' || s === 'DELIVERED') {
+      return (
+        <Badge variant="success" className="flex items-center gap-1.5 bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
+          <MessageCircle size={12} className="text-emerald-400" />
+          <span>Abierto en WhatsApp</span>
+        </Badge>
+      );
     }
+    if (s === 'FAILED') {
+      return (
+        <div className="flex flex-col items-start gap-1">
+          <Badge variant="danger" className="flex items-center gap-1"><XCircle size={12}/> Falló</Badge>
+          {error && <span className="text-[10px] text-danger max-w-[150px] truncate" title={error}>{error}</span>}
+        </div>
+      );
+    }
+    return <Badge variant="warning" className="flex items-center gap-1"><Clock size={12}/> Pendiente</Badge>;
   };
 
   const formatDate = (isoString: string) => {
@@ -62,8 +64,9 @@ export function HistoryTable({ notifications, clients }: HistoryTableProps) {
   const translateEventType = (type: string) => {
     const types: Record<string, string> = {
       'MEMBERSHIP_EXPIRY': 'Vencimiento',
+      'MEMBERSHIP_EXPIRED': 'Vencida',
       'PAYMENT_RECEIVED': 'Pago Recibido',
-      'PAYMENT_OVERDUE': 'Mora',
+      'CREDIT_OVERDUE': 'Saldo Pendiente',
       'WELCOME': 'Bienvenida',
       'GENERAL': 'General',
     };
@@ -77,7 +80,8 @@ export function HistoryTable({ notifications, clients }: HistoryTableProps) {
           <tr>
             <th scope="col" className="px-6 py-4 font-semibold">Fecha</th>
             <th scope="col" className="px-6 py-4 font-semibold">Destinatario</th>
-            <th scope="col" className="px-6 py-4 font-semibold">Tipo</th>
+            <th scope="col" className="px-6 py-4 font-semibold">Canal</th>
+            <th scope="col" className="px-6 py-4 font-semibold">Motivo</th>
             <th scope="col" className="px-6 py-4 font-semibold">Mensaje</th>
             <th scope="col" className="px-6 py-4 font-semibold">Estado</th>
           </tr>
@@ -93,6 +97,12 @@ export function HistoryTable({ notifications, clients }: HistoryTableProps) {
                 <div className="text-xs text-text-muted font-mono">{notif.recipient}</div>
               </td>
               <td className="px-6 py-4">
+                <span className="inline-flex items-center gap-1 text-xs text-emerald-400 font-medium">
+                  <MessageCircle size={13} />
+                  WhatsApp Web
+                </span>
+              </td>
+              <td className="px-6 py-4">
                 <Badge variant="default" className="bg-bg-page border-border-medium">
                   {translateEventType(notif.event_type)}
                 </Badge>
@@ -103,7 +113,7 @@ export function HistoryTable({ notifications, clients }: HistoryTableProps) {
                 </div>
               </td>
               <td className="px-6 py-4">
-                {renderStatus(notif.status, notif.error_detail)}
+                {renderStatus(notif.status, notif.channel, notif.error_detail)}
               </td>
             </tr>
           ))}

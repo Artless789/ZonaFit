@@ -1,7 +1,7 @@
 import { Select, SelectItem } from '@shared/ui/Select';
 import { useState } from 'react';
 import { useUsers } from '../../hooks/useUsers';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, Shield, ShieldCheck, UserCheck } from 'lucide-react';
 import { UserDrawer } from './UserDrawer';
 import type { User } from '@shared/types/user';
 import { Input } from '@shared/ui/Input';
@@ -78,30 +78,50 @@ export const UsersPage = () => {
             <tbody className="divide-y divide-border-light">
               {usersQuery.isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-3 text-sm text-center text-text-muted py-4">Cargando usuarios...</td>
+                  <td colSpan={5} className="px-4 py-6 text-sm text-center text-text-muted">Cargando usuarios...</td>
                 </tr>
               ) : usersQuery.data?.items.map((user) => (
-                <tr key={user.id} className="hover:bg-bg-surface/40 transition-colors">
-                  <td className="px-4 py-3 text-sm font-medium text-text-primary">{user.full_name}</td>
-                  <td className="px-4 py-3 text-sm text-text-secondary">{user.email}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <Badge variant={user.role === 'OWNER' ? 'default' : user.role === 'ADMIN' ? 'info' : 'neutral'}>
-                      {user.role}
-                    </Badge>
+                <tr key={user.id} className="hover:bg-bg-surface/40 transition-colors group">
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-brand-primary/10 border border-brand-primary/25 text-brand-primary font-bold text-xs flex items-center justify-center shrink-0">
+                        {user.full_name ? user.full_name.slice(0, 2).toUpperCase() : 'U'}
+                      </div>
+                      <span className="text-sm font-semibold text-text-primary">{user.full_name}</span>
+                    </div>
                   </td>
-                  <td className="px-4 py-3 text-sm">
-                    <Badge variant={user.is_active ? 'success' : 'danger'}>
+                  <td className="px-4 py-3.5 text-sm text-text-secondary">{user.email}</td>
+                  <td className="px-4 py-3.5 text-sm">
+                    {user.role === 'OWNER' ? (
+                      <Badge variant="warning" className="text-xs font-semibold inline-flex items-center gap-1.5 px-2.5 py-1">
+                        <Shield className="w-3.5 h-3.5 text-amber-400" />
+                        <span>PROPIETARIO</span>
+                      </Badge>
+                    ) : user.role === 'ADMIN' ? (
+                      <Badge variant="default" className="text-xs font-semibold inline-flex items-center gap-1.5 px-2.5 py-1">
+                        <ShieldCheck className="w-3.5 h-3.5 text-brand-primary" />
+                        <span>ADMINISTRADOR</span>
+                      </Badge>
+                    ) : (
+                      <Badge variant="neutral" className="text-xs font-semibold inline-flex items-center gap-1.5 px-2.5 py-1">
+                        <UserCheck className="w-3.5 h-3.5 text-text-muted" />
+                        <span>EMPLEADO</span>
+                      </Badge>
+                    )}
+                  </td>
+                  <td className="px-4 py-3.5 text-sm">
+                    <Badge variant={user.is_active ? 'success' : 'danger'} className="text-xs">
                       {user.is_active ? 'Activo' : 'Inactivo'}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-sm text-right">
+                  <td className="px-4 py-3.5 text-sm text-right">
                     <Button size="sm" variant="secondary" onClick={() => handleEdit(user)}>Editar</Button>
                   </td>
                 </tr>
               ))}
               {usersQuery.data?.items.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-3 text-sm text-center py-4 text-text-muted">
+                  <td colSpan={5} className="px-4 py-8 text-sm text-center text-text-muted">
                     No se encontraron usuarios.
                   </td>
                 </tr>

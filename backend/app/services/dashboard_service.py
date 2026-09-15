@@ -145,7 +145,9 @@ class DashboardService:
             if days_left < 0: days_left = 0
             expiring_memberships.append(DashboardExpiringMembership(
                 id=m.id,
+                client_id=m.client_id,
                 client_name=m.client.full_name if m.client else "Desconocido",
+                client_phone=m.client.phone if m.client else None,
                 plan_name=m.membership_plan.name if m.membership_plan else "Desconocido",
                 end_date=m.end_date,
                 days_left=days_left
@@ -172,7 +174,9 @@ class DashboardService:
                 
             receivables.append(DashboardReceivable(
                 id=r.id,
+                client_id=r.client_id,
                 client_name=r.client.full_name if r.client else "Desconocido",
+                client_phone=r.client.phone if r.client else None,
                 balance_due=r.balance_due,
                 due_date=r.due_date,
                 days_overdue=days_overdue

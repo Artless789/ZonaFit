@@ -12,13 +12,15 @@ import {
   Clock,
   CalendarCheck,
   CreditCard,
-  UserCheck
+  UserCheck,
+  MessageCircle,
 } from 'lucide-react';
 
 import { Skeleton } from '@shared/ui/Skeleton';
 import { ErrorState } from '@shared/ui/ErrorState';
 import { SubscriptionStatusBanner } from '@shared/ui/SubscriptionStatusBanner';
 import { useDashboard } from '../../hooks/useDashboard';
+import { useWhatsAppWeb } from '@/hooks/useWhatsAppWeb';
 import { formatCurrency } from '@shared/utils/formatters';
 import { Badge } from '@shared/ui/Badge';
 import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
@@ -54,6 +56,7 @@ export function DashboardPage() {
   const isDemo = location.pathname.startsWith('/demo');
   const getRoute = (path: string) => (isDemo ? `/demo${path}` : path);
   const [isIncomeDetailsOpen, setIsIncomeDetailsOpen] = useState(false);
+  const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb();
 
   const dashboard = useDashboard();
   const data = dashboard.data;
@@ -300,9 +303,31 @@ export function DashboardPage() {
                               )}
                             </td>
                             <td className="py-3 text-right">
-                              <Link to={getRoute('/memberships')} className="text-xs font-medium text-brand-primary hover:text-brand-primary-hover opacity-0 group-hover:opacity-100 transition-opacity">
-                                Renovar <ArrowRight size={12} className="inline" />
-                              </Link>
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openWhatsAppModal({
+                                    client: {
+                                      id: mem.client_id || mem.id,
+                                      full_name: mem.client_name,
+                                      phone: mem.client_phone || null,
+                                    },
+                                    eventType: mem.days_left === 0 ? 'MEMBERSHIP_EXPIRED' : 'MEMBERSHIP_EXPIRY',
+                                    eventLabel: mem.days_left === 0 ? 'Avisar vencida' : 'Recordar vencimiento',
+                                    contextData: {
+                                      membership_name: mem.plan_name,
+                                      days_left: mem.days_left.toString(),
+                                    },
+                                  })}
+                                  className="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-md transition-colors inline-flex items-center justify-center cursor-pointer"
+                                  title="WhatsApp"
+                                >
+                                  <MessageCircle size={14} />
+                                </button>
+                                <Link to={getRoute('/memberships')} className="text-xs font-medium text-brand-primary hover:text-brand-primary-hover opacity-0 group-hover:opacity-100 transition-opacity">
+                                  Renovar <ArrowRight size={12} className="inline" />
+                                </Link>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -359,9 +384,31 @@ export function DashboardPage() {
                               )}
                             </td>
                             <td className="py-3 text-right">
-                              <Link to={getRoute('/credits')} className="text-xs font-medium text-brand-primary hover:text-brand-primary-hover opacity-0 group-hover:opacity-100 transition-opacity">
-                                Abonar <ArrowRight size={12} className="inline" />
-                              </Link>
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openWhatsAppModal({
+                                    client: {
+                                      id: rec.client_id || rec.id,
+                                      full_name: rec.client_name,
+                                      phone: rec.client_phone || null,
+                                    },
+                                    eventType: 'CREDIT_OVERDUE',
+                                    eventLabel: 'Recordar saldo',
+                                    contextData: {
+                                      balance_due: formatCurrency(rec.balance_due),
+                                      amount: formatCurrency(rec.balance_due),
+                                    },
+                                  })}
+                                  className="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-md transition-colors inline-flex items-center justify-center cursor-pointer"
+                                  title="Avisar por WhatsApp"
+                                >
+                                  <MessageCircle size={14} />
+                                </button>
+                                <Link to={getRoute('/credits')} className="text-xs font-medium text-brand-primary hover:text-brand-primary-hover opacity-0 group-hover:opacity-100 transition-opacity">
+                                  Abonar <ArrowRight size={12} className="inline" />
+                                </Link>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -380,6 +427,8 @@ export function DashboardPage() {
         isOpen={isIncomeDetailsOpen}
         onClose={() => setIsIncomeDetailsOpen(false)}
       />
+
+      <WhatsAppModalComponent />
     </div>
   );
 }

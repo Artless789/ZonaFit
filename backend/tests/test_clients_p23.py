@@ -1,4 +1,4 @@
-﻿import os
+import os
 import io
 import pytest
 from decimal import Decimal
@@ -310,3 +310,80 @@ def test_12_path_traversal_in_filename_rejected():
 
     resp = client.get("/clients/photo/..%2F..%2Fsecret.txt")
     assert resp.status_code in [400, 404]
+
+
+def test_13_upload_webp_valid_image():
+    global current_test_user
+    db = TestingSessionLocal()
+    current_test_user = db.query(User).filter(User.id == 1).first()
+
+    # Create dummy valid WebP header
+    fake_webp = b"RIFF\x1a\x00\x00\x00WEBPVP8 \x0e\x00\x00\x00\x30\x01\x00\x9d\x01\x2a\x01\x00\x01\x00\x02\x00\x34\x25"
+    files = {"file": ("avatar.webp", io.BytesIO(fake_webp), "image/webp")}
+    resp = client.post("/clients/1/photo", files=files)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["photo_url"].endswith(".webp")
+
+    # Verify retrieval
+    filename = data["photo_url"].split("/")[-1]
+    photo_resp = client.get(f"/clients/photo/{filename}")
+    assert photo_resp.status_code == 200
+    assert photo_resp.headers.get("Cache-Control") == "private, max-age=86400"
+
+
+def test_14_malicious_executable_masqueraded_as_image_rejected():
+    global current_test_user
+    db = TestingSessionLocal()
+    current_test_user = db.query(User).filter(User.id == 1).first()
+
+    # Masqueraded PE executable with image/jpeg Content-Type
+    fake_exe = b"MZ\x90\x00\x03\x00\x00\x00\x04\x00\x00\x00\xff\xff\x00\x00"
+    files = {"file": ("exploit.jpg", io.BytesIO(fake_exe), "image/jpeg")}
+    resp = client.post("/clients/1/photo", files=files)
+    assert resp.status_code == 400
+    assert "File must be a valid image" in resp.json()["detail"]
+
+
+def test_15_malicious_filename_sanitized_to_server_uuid():
+    global current_test_user
+    db = TestingSessionLocal()
+    current_test_user = db.query(User).filter(User.id == 1).first()
+
+    fake_png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB\x82"
+    # Malicious path in filename
+    files = {"file": ("../../../../etc/passwd.png", io.BytesIO(fake_png), "image/png")}
+    resp = client.post("/clients/1/photo", files=files)
+    assert resp.status_code == 200
+    photo_url = resp.json()["photo_url"]
+    filename = photo_url.split("/")[-1]
+    
+    # Server MUST use a clean UUID hex filename, ignoring user path
+    assert ".." not in filename
+    assert "/" not in filename
+    assert "\\" not in filename
+    assert len(filename.split(".")[0]) == 32
+
+
+def test_16_atomic_replacement_failure_preserves_old_photo():
+    global current_test_user
+    db = TestingSessionLocal()
+    current_test_user = db.query(User).filter(User.id == 1).first()
+
+    from app.routers.clients import UPLOAD_DIR
+    client_resp = client.get("/clients/1")
+    old_filename = client_resp.json()["photo_url"].split("/")[-1]
+    old_path = os.path.join(UPLOAD_DIR, old_filename)
+    assert os.path.exists(old_path)
+
+    # Attempt replacement with corrupted/invalid file content
+    corrupted_data = b"CorruptedNonImageGarbageData"
+    files = {"file": ("bad.jpg", io.BytesIO(corrupted_data), "image/jpeg")}
+    resp = client.post("/clients/1/photo", files=files)
+    assert resp.status_code == 400
+
+    # Old photo MUST still exist on disk and in DB
+    assert os.path.exists(old_path)
+    client_after = client.get("/clients/1").json()
+    assert client_after["photo_url"].endswith(old_filename)
+

@@ -96,7 +96,7 @@ def test_02_forgot_password_non_existing_email():
 
 def test_03_validate_valid_token():
     db = TestingSessionLocal()
-    user = db.query(User).filter(User.email == "userB@test.com").first()
+    user = db.query(User).filter(User.email == "userB@test.com".lower()).first()
     
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
@@ -111,7 +111,7 @@ def test_03_validate_valid_token():
 
     response = client.get(f"/auth/reset-password/validate?token={raw_token}")
     assert response.status_code == 200
-    assert response.json() == {"valid": True, "email": "userB@test.com"}
+    assert response.json() == {"valid": True, "email": "userb@test.com"}
 
 def test_04_validate_invalid_token():
     response = client.get("/auth/reset-password/validate?token=fake_token_123")
@@ -119,7 +119,7 @@ def test_04_validate_invalid_token():
 
 def test_05_validate_expired_token():
     db = TestingSessionLocal()
-    user = db.query(User).filter(User.email == "userB@test.com").first()
+    user = db.query(User).filter(User.email == "userB@test.com".lower()).first()
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
     
@@ -138,7 +138,7 @@ def test_05_validate_expired_token():
 
 def test_06_validate_used_token():
     db = TestingSessionLocal()
-    user = db.query(User).filter(User.email == "userB@test.com").first()
+    user = db.query(User).filter(User.email == "userB@test.com".lower()).first()
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
     
@@ -158,7 +158,7 @@ def test_06_validate_used_token():
 
 def test_07_reset_password_success():
     db = TestingSessionLocal()
-    user = db.query(User).filter(User.email == "userA@test.com").first()
+    user = db.query(User).filter(User.email == "userA@test.com".lower()).first()
     
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
@@ -181,7 +181,7 @@ def test_07_reset_password_success():
 
 def test_08_password_too_short():
     db = TestingSessionLocal()
-    user = db.query(User).filter(User.email == "userB@test.com").first()
+    user = db.query(User).filter(User.email == "userB@test.com".lower()).first()
     
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
@@ -203,7 +203,7 @@ def test_08_password_too_short():
 
 def test_09_verify_password_hash_changed():
     db = TestingSessionLocal()
-    user = db.query(User).filter(User.email == "userA@test.com").first()
+    user = db.query(User).filter(User.email == "userA@test.com".lower()).first()
     # It shouldn't match the old one
     assert verify_password("OldPassword123", user.password) is False
     # It should match the new one
@@ -211,7 +211,7 @@ def test_09_verify_password_hash_changed():
 
 def test_10_verify_token_used():
     db = TestingSessionLocal()
-    user = db.query(User).filter(User.email == "userA@test.com").first()
+    user = db.query(User).filter(User.email == "userA@test.com".lower()).first()
     # Find tokens for userA, all should be used
     tokens = db.query(PasswordResetToken).filter(PasswordResetToken.user_id == user.id).all()
     for token in tokens:
@@ -239,7 +239,7 @@ def test_13_login_with_old_password():
 def test_14_refresh_tokens_revoked_on_password_reset():
     from app.models.refresh_token import RefreshToken
     db = TestingSessionLocal()
-    user = db.query(User).filter(User.email == "userB@test.com").first()
+    user = db.query(User).filter(User.email == "userB@test.com".lower()).first()
     
     # Create an active refresh token
     raw_rt = secrets.token_urlsafe(64)

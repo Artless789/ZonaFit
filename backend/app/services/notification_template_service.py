@@ -48,6 +48,7 @@ class NotificationTemplateService:
                 "event_type": NotificationTemplate.event_type,
                 "channel": NotificationTemplate.channel,
                 "created_at": NotificationTemplate.created_at,
+                "custom_event_name": NotificationTemplate.custom_event_name,
             },
         )
 
@@ -79,11 +80,19 @@ class NotificationTemplateService:
         current_user: User,
         data: NotificationTemplateCreate,
     ) -> NotificationTemplate:
+        dumped = data.model_dump()
+        event_type = dumped["event_type"]
+        if event_type == "CUSTOM" or (dumped.get("custom_event_name") and not event_type.startswith("CUSTOM_")):
+            clean_name = "".join(c if c.isalnum() else "_" for c in (dumped.get("custom_event_name") or "EVENT").strip().upper())
+            clean_name = clean_name[:30] or "EVENT"
+            event_type = f"CUSTOM_{clean_name}"
+            dumped["event_type"] = event_type
+
         existing = (
             db.query(NotificationTemplate)
             .filter(
                 NotificationTemplate.gym_id == current_user.gym_id,
-                NotificationTemplate.event_type == data.event_type,
+                NotificationTemplate.event_type == event_type,
                 NotificationTemplate.channel == data.channel,
             )
             .first()
@@ -91,13 +100,13 @@ class NotificationTemplateService:
 
         if existing:
             raise ConflictException(
-                f"A template for event '{data.event_type}' on channel "
+                f"A template for event '{event_type}' on channel "
                 f"'{data.channel}' already exists. Update it instead."
             )
 
         template = NotificationTemplate(
             gym_id=current_user.gym_id,
-            **data.model_dump(),
+            **dumped,
         )
 
         with DatabaseTransaction(db):

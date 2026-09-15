@@ -2,8 +2,9 @@ import { Drawer } from '@shared/ui/Drawer';
 import { Badge } from '@shared/ui/Badge';
 import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
 import { Skeleton } from '@shared/ui/Skeleton';
-import { CreditCard, History, AlertCircle } from 'lucide-react';
+import { CreditCard, History, AlertCircle, MessageCircle } from 'lucide-react';
 import { useAccountsReceivablePayments } from '../../hooks/useAccountsReceivables';
+import { useWhatsAppWeb } from '@/hooks/useWhatsAppWeb';
 import type { AccountsReceivable } from '@shared/types/accountsReceivable';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -15,12 +16,14 @@ interface CreditsDrawerProps {
   ar: AccountsReceivable | null;
   onPay: () => void;
   clientName: string;
+  clientPhone?: string;
 }
 
-export function CreditsDrawer({ isOpen, onClose, ar, onPay, clientName }: CreditsDrawerProps) {
+export function CreditsDrawer({ isOpen, onClose, ar, onPay, clientName, clientPhone }: CreditsDrawerProps) {
   // We use enabled: !!ar to only fetch payments when we have an AR selected
   const { data: payments = [], isLoading: isLoadingPayments, error } = 
     useAccountsReceivablePayments(ar?.id || 0);
+  const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb();
 
   const formatPrice = formatCurrency;
   
@@ -91,11 +94,35 @@ export function CreditsDrawer({ isOpen, onClose, ar, onPay, clientName }: Credit
           </div>
           
           {ar.balance_due > 0 && ar.status !== 'CANCELLED' && (
-            <div className="pt-2">
+            <div className="pt-2 flex flex-col gap-2">
               <ActionGlowButton onClick={onPay} className="w-full">
                 <CreditCard className="mr-2" size={18} />
                 Registrar Abono
               </ActionGlowButton>
+              <button
+                type="button"
+                onClick={() => {
+                  openWhatsAppModal({
+                    client: {
+                      id: ar.client_id,
+                      full_name: clientName,
+                      phone: clientPhone || null,
+                    },
+                    eventType: 'CREDIT_OVERDUE',
+                    eventLabel: 'Recordar saldo',
+                    contextData: {
+                      balance_due: formatPrice(ar.balance_due),
+                      amount: formatPrice(ar.balance_due),
+                      sale_id: ar.sale_id.toString(),
+                      due_date: formatShortDate(ar.due_date),
+                    },
+                  });
+                }}
+                className="w-full py-2 px-4 rounded-xl font-medium text-xs bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              >
+                <MessageCircle size={14} />
+                <span>Avisar saldo por WhatsApp</span>
+              </button>
             </div>
           )}
         </div>
@@ -145,6 +172,8 @@ export function CreditsDrawer({ isOpen, onClose, ar, onPay, clientName }: Credit
           )}
         </div>
       </div>
+
+      <WhatsAppModalComponent />
     </Drawer>
   );
 }

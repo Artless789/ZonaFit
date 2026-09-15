@@ -179,6 +179,21 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
             {!isOwnerOrSuper && (
               <p className="text-xs text-text-muted mt-1">Solo los propietarios pueden designar nuevos administradores.</p>
             )}
+
+            <div className="p-3 rounded-lg bg-bg-surface border border-border-light text-xs space-y-1 mt-2">
+              <span className="font-semibold text-text-primary block">
+                {watchRole === 'ADMIN' ? 'Permisos de Administrador (Sede):' : 'Permisos de Personal (Staff):'}
+              </span>
+              {watchRole === 'ADMIN' ? (
+                <p className="text-text-muted leading-relaxed">
+                  Acceso a membresías, ventas POS, inventarios, reportes de caja y comunicaciones.
+                </p>
+              ) : (
+                <p className="text-text-muted leading-relaxed">
+                  Atención en mostrador, registro de clientes, ventas en punto de venta y mensajes a clientes.
+                </p>
+              )}
+            </div>
           </div>
 
           {isEditing && (

@@ -14,13 +14,15 @@ export function AppLayout() {
 
   useEffect(() => {
     if (!isLoading) {
-      setTimedOut(false);
       return;
     }
     const timer = setTimeout(() => {
       setTimedOut(true);
     }, 6000);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      setTimedOut(false);
+    };
   }, [isLoading]);
 
   if (isLoading && !timedOut) {
@@ -92,7 +94,7 @@ export function AppLayout() {
         } as CSSProperties}
       >
         <Navbar onOpenMobileMenu={() => setIsMobileSidebarOpen(true)} />
-        <main className="mx-auto w-full max-w-[var(--content-max-width)] flex-1 p-4 sm:p-6 lg:p-8">
+        <main className="mx-auto w-full max-w-(--content-max-width) flex-1 p-4 sm:p-6 lg:p-8">
           <Suspense
             fallback={
               <div className="flex items-center justify-center min-h-[50vh]">

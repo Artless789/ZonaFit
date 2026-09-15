@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { User, authService, LoginCredentials } from '../services/authService';
 import { sessionManager } from '../shared/session/sessionManager';
@@ -105,9 +106,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setIsLoading(false);
           }
           return;
-        } catch (err: any) {
+        } catch (err: unknown) {
           // Si el token es inválido (401), limpiarlo y continuar con el refresh de cookie abajo
-          if (err.response?.status !== 401) {
+          if (axios.isAxiosError(err)) {
+            if (err.response?.status !== 401) {
+              if (isMounted) setIsLoading(false);
+              return;
+            }
+          } else {
             if (isMounted) setIsLoading(false);
             return;
           }
@@ -150,7 +156,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isMounted = false;
       window.removeEventListener('auth-unauthorized', handleUnauthorized);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient]);
 
   const login = async (credentials: LoginCredentials) => {

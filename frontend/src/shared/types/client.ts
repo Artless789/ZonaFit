@@ -1,3 +1,5 @@
+import type { Membership } from './membership';
+
 export interface ClientInitialMembership {
   membership_plan_id: number;
   trainer_name?: string;
@@ -20,7 +22,10 @@ export interface Client {
   notes?: string | null;
   photo_url?: string | null;
   is_active: boolean;
-  initial_membership?: any;
+  whatsapp_opt_in?: boolean;
+  whatsapp_group_id?: number | null;
+  whatsapp_group_name?: string | null;
+  initial_membership?: Membership | null;
   created_at: string;
   updated_at: string;
 }
@@ -50,7 +55,7 @@ export interface Client360Response {
   current_membership?: ClientMembershipSummary | null;
   financial: ClientFinancialSummary;
 }
-export type ClientCreate = Omit<Client, 'id' | 'gym_id' | 'is_active' | 'created_at' | 'updated_at'> & {
+export type ClientCreate = Omit<Client, 'id' | 'gym_id' | 'is_active' | 'created_at' | 'updated_at' | 'initial_membership'> & {
   initial_membership?: ClientInitialMembership;
 };
 export type ClientUpdate = Partial<ClientCreate> & { is_active?: boolean };

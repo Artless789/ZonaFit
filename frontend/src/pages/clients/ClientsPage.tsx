@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Search, UserPlus, Users, Activity, UserMinus } from 'lucide-react';
+import { Search, UserPlus, Users, Activity, UserMinus, FileSpreadsheet, Download, Upload } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useClients } from '../../hooks/useClients';
 import { ClientsTable } from './ClientsTable';
 import { ClientDrawer } from './ClientDrawer';
 import { ClientProfileDrawer } from './ClientProfileDrawer';
+import { ClientImportModal } from './ClientImportModal';
+import { clientService } from '../../services/clientService';
 import type { Client } from '@shared/types/client';
 import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
 import { Skeleton } from '@shared/ui/Skeleton';
@@ -26,10 +29,39 @@ export function ClientsPage() {
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const isActiveParam = statusFilter === 'all' ? undefined : statusFilter === 'active';
   
+  const queryClient = useQueryClient();
   const { query, deleteMutation, updateMutation } = useClients(page, pageSize, debouncedSearchTerm, isActiveParam);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false); // For Edit/Create
   const [isProfileOpen, setIsProfileOpen] = useState(false); // For 360 View
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      await clientService.exportClients();
+      toast({ type: 'success', title: 'Exportación Exitosa', message: 'Se ha descargado el listado oficial de clientes.' });
+    } catch {
+      toast({ type: 'error', title: 'Error', message: 'No se pudo exportar el listado de clientes.' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      setIsDownloadingTemplate(true);
+      await clientService.downloadTemplate();
+      toast({ type: 'success', title: 'Plantilla Descargada', message: 'Se ha descargado la plantilla oficial.' });
+    } catch {
+      toast({ type: 'error', title: 'Error', message: 'No se pudo descargar la plantilla.' });
+    } finally {
+      setIsDownloadingTemplate(false);
+    }
+  };
 
   // Reset page when search changes
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,15 +134,54 @@ export function ClientsPage() {
           </p>
         </div>
         
-        <ActionGlowButton onClick={handleOpenCreate}>
-          <UserPlus size={18} />
-          <span>Nuevo Cliente</span>
-        </ActionGlowButton>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadTemplate}
+            disabled={isDownloadingTemplate}
+            className="flex items-center gap-1.5"
+            title="Descargar plantilla oficial para importación de clientes"
+          >
+            <Download size={15} />
+            <span className="hidden sm:inline">Descargar plantilla</span>
+            <span className="sm:hidden">Plantilla</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={isExporting}
+            className="flex items-center gap-1.5"
+            title="Exportar todos los clientes del gimnasio a Excel"
+          >
+            <FileSpreadsheet size={15} />
+            <span className="hidden sm:inline">Exportar clientes</span>
+            <span className="sm:hidden">Exportar</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex items-center gap-1.5 border-brand-primary/40 text-brand-primary hover:bg-brand-primary/10"
+            title="Importar y comparar clientes desde Excel"
+          >
+            <Upload size={15} />
+            <span>Importar / actualizar</span>
+          </Button>
+
+          <ActionGlowButton onClick={handleOpenCreate}>
+            <UserPlus size={18} />
+            <span>Nuevo Cliente</span>
+          </ActionGlowButton>
+        </div>
       </div>
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex items-center gap-4">
+        <div className="rounded-xl border border-border-light bg-bg-surface/40 p-6 flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
             <Users size={24} />
           </div>
@@ -120,7 +191,7 @@ export function ClientsPage() {
           </div>
         </div>
         
-        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex items-center gap-4">
+        <div className="rounded-xl border border-border-light bg-bg-surface/40 p-6 flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center text-success">
             <Activity size={24} />
           </div>
@@ -130,7 +201,7 @@ export function ClientsPage() {
           </div>
         </div>
 
-        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-6 flex items-center gap-4">
+        <div className="rounded-xl border border-border-light bg-bg-surface/40 p-6 flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-danger/10 flex items-center justify-center text-danger">
             <UserMinus size={24} />
           </div>
@@ -264,6 +335,15 @@ export function ClientsPage() {
         onClose={() => { setIsProfileOpen(false); setSelectedClient(null); }}
         clientId={selectedClient?.id}
         onEditClick={handleOpenEdit}
+      />
+
+      {/* Excel Import & Comparison Modal */}
+      <ClientImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['clients'] });
+        }}
       />
     </div>
   );
