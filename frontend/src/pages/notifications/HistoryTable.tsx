@@ -46,7 +46,7 @@ export function HistoryTable({ notifications, clients }: HistoryTableProps) {
       return (
         <div className="flex flex-col items-start gap-1">
           <Badge variant="danger" className="flex items-center gap-1"><XCircle size={12}/> Falló</Badge>
-          {error && <span className="text-[10px] text-danger max-w-[150px] truncate" title={error}>{error}</span>}
+          {error && <span className="text-[10px] text-danger max-w-37.5 truncate" title={error}>{error}</span>}
         </div>
       );
     }

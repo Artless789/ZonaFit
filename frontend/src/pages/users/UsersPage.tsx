@@ -45,7 +45,7 @@ export const UsersPage = () => {
         </Button>
       </div>
 
-      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-4 mb-6 flex flex-col sm:flex-row gap-4">
+      <div className="rounded-xl border border-border-light bg-bg-surface/40 p-4 mb-6 flex flex-col sm:flex-row gap-4">
         <div className="w-full sm:max-w-xs">
           <Input
             leftIcon={<Search size={16} className="text-text-muted" />}
@@ -63,7 +63,7 @@ export const UsersPage = () => {
         </div>
       </div>
 
-      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-0 overflow-hidden">
+      <div className="rounded-xl border border-border-light bg-bg-surface/40 p-0 overflow-hidden">
         <div className="overflow-x-auto rounded-xl border border-border-medium">
           <table className="w-full">
             <thead className="bg-bg-surface/80 border-b border-border-medium">

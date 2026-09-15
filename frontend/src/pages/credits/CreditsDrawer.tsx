@@ -65,7 +65,7 @@ export function CreditsDrawer({ isOpen, onClose, ar, onPay, clientName, clientPh
       <div className="space-y-6">
         
         {/* Main Details */}
-        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 space-y-4">
+        <div className="rounded-xl border border-border-light bg-bg-surface/40 space-y-4">
           <div className="flex justify-between items-start border-b border-border-light pb-4">
             <div>
               <h3 className="text-lg font-bold text-text-primary">{clientName}</h3>
@@ -140,19 +140,19 @@ export function CreditsDrawer({ isOpen, onClose, ar, onPay, clientName, clientPh
               <Skeleton className="h-16 w-full rounded-lg" />
             </div>
           ) : error ? (
-            <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 bg-danger/5 border-danger/20 flex flex-col items-center justify-center py-6 text-center">
+            <div className="rounded-xl border border-danger/20 bg-danger/5 flex flex-col items-center justify-center py-6 text-center">
                <AlertCircle className="text-danger opacity-80 mb-2" size={24} />
                <p className="text-danger text-sm">Error al cargar historial.</p>
             </div>
           ) : payments.length === 0 ? (
-            <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 flex flex-col items-center justify-center py-8 text-center text-text-muted border-dashed">
+            <div className="rounded-xl border border-border-light bg-bg-surface/40 flex flex-col items-center justify-center py-8 text-center text-text-muted border-dashed">
               <CreditCard size={32} className="opacity-20 mb-2" />
               <p className="text-sm">No hay pagos registrados aún.</p>
             </div>
           ) : (
             <div className="space-y-2">
               {payments.map(payment => (
-                <div key={payment.id} className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-3 flex justify-between items-center group hover:bg-bg-elevated transition-colors">
+                <div key={payment.id} className="rounded-xl border border-border-light bg-bg-surface/40 p-3 flex justify-between items-center group hover:bg-bg-elevated transition-colors">
                   <div>
                     <div className="font-semibold text-text-primary text-sm">
                       {formatPrice(payment.amount)}

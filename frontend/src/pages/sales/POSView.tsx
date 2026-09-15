@@ -263,7 +263,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* LEFT COLUMN: Catalog */}
-        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 lg:col-span-7 xl:col-span-8 flex flex-col h-[560px] lg:h-[740px] overflow-hidden p-0 shadow-glass">
+        <div className="rounded-xl border border-border-light bg-bg-surface/40 lg:col-span-7 xl:col-span-8 flex flex-col h-140 lg:h-185 overflow-hidden p-0 shadow-glass">
           <div className="p-4 border-b border-border-light bg-bg-surface flex flex-col gap-4 shrink-0">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
@@ -352,7 +352,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
         </div>
 
         {/* RIGHT COLUMN: Single Unified Cart & Checkout Panel */}
-        <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/60 lg:col-span-5 xl:col-span-4 flex flex-col p-4 sm:p-5 gap-4 border-brand-primary/20 shadow-glass-large">
+        <div className="rounded-xl border border-brand-primary/20 bg-bg-surface/60 lg:col-span-5 xl:col-span-4 flex flex-col p-4 sm:p-5 gap-4 shadow-glass-large">
           
           {/* Sale Type Selector */}
           <div className="bg-bg-page border border-border-medium p-1 rounded-xl flex relative">
@@ -427,7 +427,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
                 <span>El carrito está vacío. Agrega productos del catálogo.</span>
               </div>
             ) : (
-              <div className="flex flex-col gap-2 max-h-[180px] overflow-y-auto custom-scrollbar pr-0.5">
+              <div className="flex flex-col gap-2 max-h-45 overflow-y-auto custom-scrollbar pr-0.5">
                 {cart.map(item => (
                   <div key={item.product.id} className="flex items-center justify-between p-2.5 rounded-xl border border-border-medium bg-bg-page shadow-sm">
                     <div className="flex-1 min-w-0 pr-2">
@@ -455,7 +455,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
                         </button>
                       </div>
 
-                      <span className="font-bold text-xs text-text-primary whitespace-nowrap min-w-[55px] text-right">
+                      <span className="font-bold text-xs text-text-primary whitespace-nowrap min-w-13.75 text-right">
                         {formatPrice(item.product.sale_price * item.quantity)}
                       </span>
 

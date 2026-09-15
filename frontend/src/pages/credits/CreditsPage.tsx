@@ -116,7 +116,7 @@ export function CreditsPage() {
         <h1 className="text-2xl font-bold text-text-primary mb-6">Cuentas por Cobrar</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-4 flex flex-col justify-center border-brand-primary/20 bg-brand-primary/5">
+          <div className="rounded-xl border border-brand-primary/20 bg-brand-primary/5 p-4 flex flex-col justify-center">
             <div className="flex items-center gap-2 text-text-secondary mb-1">
               <WalletCards size={18} />
               <span className="text-sm font-medium">Total por Cobrar (Vista)</span>
@@ -126,7 +126,7 @@ export function CreditsPage() {
             </div>
           </div>
           
-          <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-4 flex flex-col justify-center">
+          <div className="rounded-xl border border-border-light bg-bg-surface/40 p-4 flex flex-col justify-center">
             <div className="flex items-center gap-2 text-warning mb-1">
               <Receipt size={18} />
               <span className="text-sm font-medium">Pendientes</span>
@@ -134,7 +134,7 @@ export function CreditsPage() {
             <div className="text-2xl font-bold text-text-primary">{stats.countPending}</div>
           </div>
           
-          <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-4 flex flex-col justify-center">
+          <div className="rounded-xl border border-border-light bg-bg-surface/40 p-4 flex flex-col justify-center">
             <div className="flex items-center gap-2 text-info mb-1">
               <Receipt size={18} />
               <span className="text-sm font-medium">Parciales</span>
@@ -142,7 +142,7 @@ export function CreditsPage() {
             <div className="text-2xl font-bold text-text-primary">{stats.countPartial}</div>
           </div>
           
-          <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-4 flex flex-col justify-center">
+          <div className="rounded-xl border border-border-light bg-bg-surface/40 p-4 flex flex-col justify-center">
             <div className="flex items-center gap-2 text-danger mb-1">
               <AlertTriangle size={18} />
               <span className="text-sm font-medium">Vencidas</span>
@@ -153,7 +153,7 @@ export function CreditsPage() {
       </div>
 
       {/* Filters */}
-      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-4 flex flex-col sm:flex-row gap-4 items-end">
+      <div className="rounded-xl border border-border-light bg-bg-surface/40 p-4 flex flex-col sm:flex-row gap-4 items-end">
         <div className="flex-1 w-full relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
           <input
@@ -181,8 +181,8 @@ export function CreditsPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-0 overflow-hidden">
-        <div className="overflow-x-auto min-h-[300px]">
+      <div className="rounded-xl border border-border-light bg-bg-surface/40 p-0 overflow-hidden">
+        <div className="overflow-x-auto min-h-75">
           {query.isLoading || clientsQuery.isLoading ? (
             <div className="flex items-center justify-center h-48">
               <Spinner className="w-10 h-10 text-brand-primary" />

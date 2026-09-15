@@ -71,7 +71,7 @@ export function InvoicesPage() {
         <p className="text-text-secondary">Historial de comprobantes de venta emitidos.</p>
       </div>
 
-      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 p-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
+      <div className="rounded-xl border border-border-light bg-bg-surface/40 p-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="flex-1 w-full max-w-md relative">
           <Input 
             placeholder="Buscar por número..." 
@@ -95,7 +95,7 @@ export function InvoicesPage() {
         </div>
       </div>
 
-      <div className="rounded-[var(--radius-xl)] border border-border-light bg-bg-surface/40 overflow-hidden">
+      <div className="rounded-xl border border-border-light bg-bg-surface/40 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
