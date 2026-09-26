@@ -36,3 +36,8 @@ Thumbs.db
 uploads/
 backend/uploads/*
 !backend/uploads/.gitkeep
+
+# Snapshots and Backups
+backend/data/snapshots/
+*.bak
+scratch/

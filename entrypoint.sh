@@ -51,6 +51,22 @@ if [ "${IMPORT_PRIMERO_DE_MAYO_MEMBERSHIPS}" = "true" ]; then
     echo "Primero de Mayo active memberships import completed successfully."
 fi
 
+# Optional automated active memberships sync for MerwilFit
+if [ "${SYNC_MERWILFIT_MEMBERSHIPS}" = "true" ]; then
+    echo "================================================="
+    echo " Executing MerwilFit memberships synchronization..."
+    echo "================================================="
+    if [ -f "scripts/sync_merwilfit_memberships.py" ]; then
+        python scripts/sync_merwilfit_memberships.py --production
+    elif [ -f "backend/scripts/sync_merwilfit_memberships.py" ]; then
+        python backend/scripts/sync_merwilfit_memberships.py --production
+    else
+        echo "ERROR: sync_merwilfit_memberships.py not found!"
+        exit 1
+    fi
+    echo "MerwilFit memberships synchronization completed successfully."
+fi
+
 # If custom command arguments are passed, execute them instead
 if [ "$#" -gt 0 ]; then
     exec "$@"
