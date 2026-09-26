@@ -42,14 +42,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             aria-invalid={hasError ? "true" : "false"}
             aria-describedby={helperText ? helperId : undefined}
             className={cn(
-              "flex h-11 w-full rounded-[var(--radius-md)] border border-border-medium bg-bg-surface text-sm text-text-primary shadow-xs transition-all duration-200",
+              "flex h-10 w-full rounded-[var(--radius-sm)] border border-border-medium bg-surface-base text-sm text-text-primary shadow-xs transition-all duration-150",
               "file:border-0 file:bg-transparent file:text-sm file:font-medium",
               "placeholder:text-text-muted",
-              "hover:border-border-strong hover:bg-bg-surface-hover",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/20 focus-visible:border-brand-primary",
-              "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-bg-page",
-              leftIcon ? "pl-10" : "pl-4",
-              rightIcon ? "pr-10" : "pr-4",
+              "hover:border-border-strong hover:bg-surface-panel",
+              "focus-visible:outline-none focus-visible:border-brand-primary focus-visible:ring-2 focus-visible:ring-brand-primary/25",
+              "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-surface-base",
+              leftIcon ? "pl-10" : "pl-3.5",
+              rightIcon ? "pr-10" : "pr-3.5",
               hasError && "border-danger bg-danger/5 hover:border-danger hover:bg-danger/5 focus-visible:border-danger focus-visible:ring-danger/20",
               className
             )}

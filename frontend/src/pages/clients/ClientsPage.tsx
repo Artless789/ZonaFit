@@ -180,81 +180,84 @@ export function ClientsPage() {
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="rounded-xl border border-border-light bg-bg-surface/40 p-6 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
-            <Users size={24} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-surface-panel p-5 flex items-center gap-4 shadow-subtle">
+          <div className="w-10 h-10 rounded-[var(--radius-md)] bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary">
+            <Users size={20} />
           </div>
           <div>
-            <p className="text-text-muted text-sm font-medium">Total Clientes</p>
-            <h3 className="text-2xl font-bold text-text-primary">{total}</h3>
+            <p className="text-text-muted text-xs font-medium">Total Clientes</p>
+            <h3 className="text-2xl font-bold tracking-tight text-text-primary mt-0.5">{total}</h3>
           </div>
         </div>
         
-        <div className="rounded-xl border border-border-light bg-bg-surface/40 p-6 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center text-success">
-            <Activity size={24} />
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-surface-panel p-5 flex items-center gap-4 shadow-subtle">
+          <div className="w-10 h-10 rounded-[var(--radius-md)] bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <Activity size={20} />
           </div>
           <div>
-            <p className="text-text-muted text-sm font-medium">Activos</p>
-            <h3 className="text-2xl font-bold text-text-primary">{activeCount}</h3>
+            <p className="text-text-muted text-xs font-medium">Activos</p>
+            <h3 className="text-2xl font-bold tracking-tight text-text-primary mt-0.5">{activeCount}</h3>
           </div>
         </div>
 
-        <div className="rounded-xl border border-border-light bg-bg-surface/40 p-6 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-danger/10 flex items-center justify-center text-danger">
-            <UserMinus size={24} />
+        <div className="rounded-[var(--radius-xl)] border border-border-light bg-surface-panel p-5 flex items-center gap-4 shadow-subtle">
+          <div className="w-10 h-10 rounded-[var(--radius-md)] bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+            <UserMinus size={20} />
           </div>
           <div>
-            <p className="text-text-muted text-sm font-medium">Inactivos</p>
-            <h3 className="text-2xl font-bold text-text-primary">{inactiveCount}</h3>
+            <p className="text-text-muted text-xs font-medium">Inactivos</p>
+            <h3 className="text-2xl font-bold tracking-tight text-text-primary mt-0.5">{inactiveCount}</h3>
           </div>
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-bg-surface p-4 rounded-xl border border-border-light shadow-glass">
+      <div className="flex flex-col md:flex-row gap-3 items-center justify-between bg-surface-panel p-3.5 rounded-[var(--radius-xl)] border border-border-light shadow-subtle">
         <div className="relative w-full md:max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
           <input 
             type="text" 
             placeholder="Buscar por nombre, documento o correo..." 
             value={searchTerm}
             onChange={handleSearchChange}
-            className="w-full h-10 pl-10 pr-4 rounded-md border border-border-medium bg-bg-page text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary transition-fast"
+            className="w-full h-9 pl-9 pr-3.5 rounded-[var(--radius-sm)] border border-border-medium bg-surface-base text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-all"
           />
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto">
-          <div className="flex bg-bg-page p-1 rounded-lg border border-border-medium w-full md:w-auto justify-center">
+          <div className="flex bg-surface-base p-0.5 rounded-[var(--radius-sm)] border border-border-medium w-full md:w-auto justify-center">
             <button
+              type="button"
               onClick={() => { setStatusFilter('all'); setPage(1); }}
               className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                "px-3 py-1 text-xs font-medium rounded-[calc(var(--radius-sm)-2px)] transition-all cursor-pointer",
                 statusFilter === 'all' 
-                  ? "bg-bg-elevated text-text-primary shadow-sm" 
+                  ? "bg-surface-raised text-text-primary shadow-xs font-semibold" 
                   : "text-text-muted hover:text-text-secondary"
               )}
             >
               Todos
             </button>
             <button
+              type="button"
               onClick={() => { setStatusFilter('active'); setPage(1); }}
               className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                "px-3 py-1 text-xs font-medium rounded-[calc(var(--radius-sm)-2px)] transition-all cursor-pointer",
                 statusFilter === 'active' 
-                  ? "bg-bg-elevated text-success shadow-sm" 
+                  ? "bg-surface-raised text-emerald-400 shadow-xs font-semibold" 
                   : "text-text-muted hover:text-text-secondary"
               )}
             >
               Activos
             </button>
             <button
+              type="button"
               onClick={() => { setStatusFilter('inactive'); setPage(1); }}
               className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                "px-3 py-1 text-xs font-medium rounded-[calc(var(--radius-sm)-2px)] transition-all cursor-pointer",
                 statusFilter === 'inactive' 
-                  ? "bg-bg-elevated text-danger shadow-sm" 
+                  ? "bg-surface-raised text-rose-400 shadow-xs font-semibold" 
                   : "text-text-muted hover:text-text-secondary"
               )}
             >

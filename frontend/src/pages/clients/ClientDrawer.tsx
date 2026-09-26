@@ -117,7 +117,13 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
 
   useEffect(() => {
     if (isOpen) {
-      whatsappGroupService.getAll(true).then(setAvailableGroups).catch(() => {});
+      whatsappGroupService.getAll(true)
+        .then((groups) => {
+          setAvailableGroups(Array.isArray(groups) ? groups : []);
+        })
+        .catch(() => {
+          setAvailableGroups([]);
+        });
     }
   }, [isOpen]);
 
@@ -299,7 +305,7 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
         const newClient = await createMutation.mutateAsync(payload);
         setCreatedClientId(newClient.id);
         const hasGroup = !!newClient.whatsapp_group_id;
-        const selectedGroup = hasGroup ? availableGroups.find(g => g.id === newClient.whatsapp_group_id) : null;
+        const selectedGroup = hasGroup && Array.isArray(availableGroups) ? availableGroups.find(g => g.id === newClient.whatsapp_group_id) : null;
 
         if (photoFile) {
           await clientService.uploadPhoto(newClient.id, photoFile);
@@ -490,7 +496,7 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
                   className="w-full rounded-xl border border-border-medium bg-bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/50 transition-colors"
                 >
                   <option value="">No agregar a ningún grupo</option>
-                  {availableGroups.map((g) => (
+                  {Array.isArray(availableGroups) && availableGroups.map((g) => (
                     <option key={g.id} value={g.id}>
                       {g.name}
                     </option>

@@ -2,84 +2,91 @@
 @import "@fontsource/inter/latin.css";
 
 /* ==================================================
-   ZONAFIT DESIGN TOKENS v1.0
-   Single source of truth: do not place visual values
-   directly inside feature components.
+   ZONAFIT VISUAL SYSTEM V2
+   Core Design Tokens — Single Source of Truth
+   Spatial SaaS Hierarchy: Base -> Panel -> Raised -> Floating -> Glass
    ================================================== */
 
 :root {
-  /* 1. BRAND */
+  /* 1. BRAND (Preserved Identity) */
   --color-brand-primary: #DC2626;
   --color-brand-primary-hover: #B91C1C;
   --color-brand-primary-active: #991B1B;
   --color-brand-secondary: #22C55E;
   --color-brand-gradient: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);
+  --color-brand-gradient-subtle: linear-gradient(135deg, rgba(220, 38, 38, 0.12) 0%, rgba(153, 27, 27, 0.04) 100%);
 
-  /* 2. BACKGROUNDS */
-  --color-bg-page: #111214;
-  --color-bg-surface: #181A1D;
-  --color-bg-surface-hover: #202328;
-  --color-bg-elevated: #24272B;
-  --color-surface-dark: #181A1D;
-  --color-surface-darker: #111214;
-  --color-glass-overlay: rgba(255, 255, 255, 0.035);
-  --color-glass-highlight: rgba(255, 255, 255, 0.12);
-  --color-glass-border: rgba(255, 255, 255, 0.09);
-  --color-ambient-brand: rgba(220, 38, 38, 0.12);
-  --color-ambient-neutral: rgba(255, 255, 255, 0.055);
-  --color-overlay: rgba(3, 5, 8, 0.56);
-
-  /* 3. GLASS */
-  --glass-background: rgba(20, 22, 25, 0.45);
-  --glass-ambient-light: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.08) 0%, rgba(220, 38, 38, 0.015) 50%, transparent 80%);
-  --glass-shadow: 
-    0 16px 40px -8px rgba(0, 0, 0, 0.6),
-    0 6px 16px -4px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
-    inset 1px 0 0 0 rgba(255, 255, 255, 0.04),
-    inset -1px 0 0 0 rgba(0, 0, 0, 0.3),
-    inset 0 -1px 0 0 rgba(0, 0, 0, 0.5),
-    inset 0 10px 20px -10px rgba(255, 255, 255, 0.06);
-  --glass-blur-1: 4px;
-  --glass-blur-2: 12px;
+  /* 2. SPATIAL SURFACES (Graphite-Depth Hierarchy) */
+  --surface-base: #0F1013;
+  --surface-panel: #15171B;
+  --surface-panel-hover: #1A1D22;
+  --surface-raised: #1E2127;
+  --surface-floating: #252830;
+  
+  /* Backwards compatibility aliases */
+  --color-bg-page: var(--surface-base);
+  --color-bg-surface: var(--surface-panel);
+  --color-bg-surface-hover: var(--surface-panel-hover);
+  --color-bg-elevated: var(--surface-raised);
+  --color-surface-dark: var(--surface-panel);
+  --color-surface-darker: var(--surface-base);
+  
+  /* 3. CONTROLLED LIQUID GLASS */
+  --surface-glass-regular: rgba(20, 22, 26, 0.72);
+  --surface-glass-subtle: rgba(20, 22, 26, 0.40);
+  --surface-glass-strong: rgba(15, 17, 20, 0.88);
+  --color-glass-overlay: rgba(255, 255, 255, 0.03);
+  --color-glass-highlight: rgba(255, 255, 255, 0.09);
+  --color-glass-border: rgba(255, 255, 255, 0.07);
+  --glass-background: var(--surface-glass-regular);
+  --glass-ambient-light: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
+  
+  --glass-blur-1: 6px;
+  --glass-blur-2: 14px;
   --glass-blur-3: 24px;
-  --glass-blur: var(--glass-blur-2); /* Legacy support */
+  --glass-blur: var(--glass-blur-2);
+  
+  /* Subtle Atmospheric Glow */
+  --color-ambient-brand: rgba(220, 38, 38, 0.065);
+  --color-ambient-neutral: rgba(255, 255, 255, 0.035);
+  --color-overlay: rgba(5, 6, 8, 0.65);
 
-  /* 4. TEXT */
-  --color-text-primary: #F2F3F5;
-  --color-text-secondary: #B8BDC5;
-  --color-text-muted: #858C96;
-  --color-text-disabled: #626872;
+  /* 4. TEXT HIERARCHY */
+  --color-text-primary: #F3F4F6;
+  --color-text-secondary: #9CA3AF;
+  --color-text-muted: #6B7280;
+  --color-text-disabled: #4B5563;
   --color-text-white: #FFFFFF;
 
-  /* 5. BORDERS */
-  --color-border-light: rgba(255, 255, 255, 0.04);
-  --color-border-medium: rgba(255, 255, 255, 0.08);
-  --color-border-strong: rgba(255, 255, 255, 0.12);
+  /* 5. DELICATE BORDERS */
+  --color-border-subtle: rgba(255, 255, 255, 0.04);
+  --color-border-light: rgba(255, 255, 255, 0.07);
+  --color-border-medium: rgba(255, 255, 255, 0.11);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
 
-  /* 6. STATUS */
+  /* 6. SEMANTIC STATUS (Refined Tones) */
   --color-success: #22C55E;
-  --color-warning: #D97706;
-  --color-danger: #DC2626;
-  --color-info: #2563EB;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-info: #3B82F6;
 
   /* 7. TYPOGRAPHY */
-  --font-family: "Inter", sans-serif;
+  --font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-size-xs: .75rem;
   --font-size-sm: .875rem;
   --font-size-base: 1rem;
   --font-size-lg: 1.125rem;
   --font-size-xl: 1.25rem;
   --font-size-2xl: 1.5rem;
-  --font-size-3xl: 2rem;
-  --font-size-4xl: 3rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
   --line-height-tight: 1.2;
   --line-height-normal: 1.5;
-  --line-height-relaxed: 1.7;
+  --line-height-relaxed: 1.65;
 
   /* 8. SPACING */
   --space-0: 0;
@@ -95,32 +102,43 @@
   --space-16: 64px;
   --space-20: 80px;
 
-  /* 9. RADIUS */
+  /* 9. HARMONIC RADIUS SYSTEM */
   --radius-xs: 6px;
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
-  --radius-2xl: 32px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
   --radius-full: 9999px;
 
-  /* 10. SHADOWS */
-  --shadow-xs: 0 1px 2px rgba(15, 23, 42, .04);
-  --shadow-sm: 0 6px 18px rgba(15, 23, 42, .06);
-  --shadow-md: 0 12px 30px rgba(15, 23, 42, .10);
-  --shadow-lg: 0 20px 45px rgba(15, 23, 42, .12);
-  --shadow-xl: 0 30px 70px rgba(15, 23, 42, .16);
+  /* 10. PRECISE SHADOW SYSTEM */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 2px 6px -1px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 6px 16px -2px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 14px 30px -4px rgba(0, 0, 0, 0.42);
+  --shadow-xl: 0 24px 50px -10px rgba(0, 0, 0, 0.55);
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.12);
+  --shadow-elevated: 0 4px 14px -2px rgba(0, 0, 0, 0.32), 0 2px 6px -1px rgba(0, 0, 0, 0.2);
+  --shadow-floating: 0 12px 30px -4px rgba(0, 0, 0, 0.45), 0 4px 12px -2px rgba(0, 0, 0, 0.28);
+  --shadow-modal: 0 24px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  --shadow-glow-brand: 0 4px 16px -2px rgba(220, 38, 38, 0.35);
+  
+  --glass-shadow: 
+    0 16px 36px -8px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.4);
 
   /* 11. LAYOUT */
-  --sidebar-width: 280px;
-  --navbar-height: 72px;
-  --content-max-width: 1600px;
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 76px;
+  --navbar-height: 68px;
+  --content-max-width: 1560px;
   --container-padding: 32px;
 
-  /* 12. ANIMATIONS */
-  --transition-fast: 150ms cubic-bezier(.4, 0, .2, 1);
-  --transition-base: 250ms cubic-bezier(.4, 0, .2, 1);
-  --transition-slow: 350ms cubic-bezier(.4, 0, .2, 1);
+  /* 12. MOTION */
+  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-base: 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow: 350ms cubic-bezier(0.16, 1, 0.3, 1);
 
   /* 13. Z-INDEX */
   --z-base: 0;
@@ -133,66 +151,104 @@
 }
 
 /* ==================================================
-   LIGHT THEME OVERRIDES
+   LIGHT THEME OVERRIDES (Seamless Continuity)
    ================================================== */
 :root.light {
-  --color-bg-page: #E9EEF5;
-  --color-bg-surface: rgba(255, 255, 255, 0.56);
-  --color-bg-surface-hover: rgba(255, 255, 255, 0.74);
-  --color-bg-elevated: rgba(255, 255, 255, 0.68);
-  --color-surface-dark: rgba(255, 255, 255, 0.42);
-  --color-surface-darker: rgba(226, 232, 240, 0.56);
-  --color-glass-overlay: rgba(255, 255, 255, 0.22);
-  --color-glass-highlight: rgba(255, 255, 255, 0.8);
-  --color-glass-border: rgba(255, 255, 255, 0.7);
-  --color-ambient-brand: rgba(220, 38, 38, 0.055);
-  --color-ambient-neutral: rgba(255, 255, 255, 0.72);
-  --color-overlay: rgba(15, 23, 42, 0.24);
+  --surface-base: #F3F4F7;
+  --surface-panel: #FFFFFF;
+  --surface-panel-hover: #F8FAFC;
+  --surface-raised: #FFFFFF;
+  --surface-floating: #FFFFFF;
 
-  --color-text-primary: #1E293B;
-  --color-text-secondary: #475569;
-  --color-text-muted: #64748B;
-  --color-text-disabled: #94A3B8;
+  --color-bg-page: var(--surface-base);
+  --color-bg-surface: var(--surface-panel);
+  --color-bg-surface-hover: var(--surface-panel-hover);
+  --color-bg-elevated: var(--surface-raised);
+  --color-surface-dark: #F8FAFC;
+  --color-surface-darker: #E5E7EB;
+
+  --surface-glass-regular: rgba(255, 255, 255, 0.78);
+  --surface-glass-subtle: rgba(255, 255, 255, 0.52);
+  --surface-glass-strong: rgba(255, 255, 255, 0.94);
+  --color-glass-overlay: rgba(0, 0, 0, 0.02);
+  --color-glass-highlight: rgba(255, 255, 255, 0.9);
+  --color-glass-border: rgba(0, 0, 0, 0.07);
+  --glass-background: var(--surface-glass-regular);
+  --glass-ambient-light: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.9) 0%, transparent 70%);
+
+  --color-ambient-brand: rgba(220, 38, 38, 0.035);
+  --color-ambient-neutral: rgba(0, 0, 0, 0.02);
+  --color-overlay: rgba(15, 23, 42, 0.35);
+
+  --color-text-primary: #111827;
+  --color-text-secondary: #4B5563;
+  --color-text-muted: #6B7280;
+  --color-text-disabled: #9CA3AF;
   --color-text-white: #FFFFFF;
 
-  --color-border-light: rgba(255, 255, 255, 0.62);
-  --color-border-medium: rgba(100, 116, 139, 0.16);
-  --color-border-strong: rgba(71, 85, 105, 0.22);
+  --color-border-subtle: rgba(0, 0, 0, 0.04);
+  --color-border-light: rgba(0, 0, 0, 0.06);
+  --color-border-medium: rgba(0, 0, 0, 0.10);
+  --color-border-strong: rgba(0, 0, 0, 0.16);
 
-  --glass-background: rgba(255, 255, 255, 0.46);
-  --glass-ambient-light: radial-gradient(ellipse at 12% 0%, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.08) 42%, transparent 72%);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 6px -1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 6px 16px -2px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 14px 28px -4px rgba(0, 0, 0, 0.10);
+  --shadow-xl: 0 20px 40px -8px rgba(0, 0, 0, 0.12);
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-elevated: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  --shadow-floating: 0 12px 28px -4px rgba(0, 0, 0, 0.12);
+  --shadow-modal: 0 24px 48px -12px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+
   --glass-shadow: 
-    0 22px 55px -24px rgba(15, 23, 42, 0.34),
-    0 10px 24px -14px rgba(15, 23, 42, 0.16),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.92),
-    inset 0 -1px 0 0 rgba(148, 163, 184, 0.12);
-  --color-success: #15803D;
+    0 12px 28px -4px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.04);
+  --color-success: #16A34A;
 }
 
-/* Semantic Tailwind bridge. Values continue to come only from :root tokens. */
+/* ==================================================
+   TAILWIND CSS v4 INLINE BRIDGE
+   ================================================== */
 @theme inline {
   --color-brand-primary: var(--color-brand-primary);
   --color-brand-primary-hover: var(--color-brand-primary-hover);
   --color-brand-primary-active: var(--color-brand-primary-active);
   --color-brand-secondary: var(--color-brand-secondary);
+  
+  --color-surface-base: var(--surface-base);
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-panel-hover: var(--surface-panel-hover);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-floating: var(--surface-floating);
+  --color-surface-glass: var(--surface-glass-regular);
+  --color-surface-glass-subtle: var(--surface-glass-subtle);
+  --color-surface-glass-strong: var(--surface-glass-strong);
+  
   --color-bg-page: var(--color-bg-page);
   --color-bg-surface: var(--color-bg-surface);
   --color-bg-surface-hover: var(--color-bg-surface-hover);
   --color-bg-elevated: var(--color-bg-elevated);
   --color-surface-dark: var(--color-surface-dark);
   --color-surface-darker: var(--color-surface-darker);
+  
   --color-text-primary: var(--color-text-primary);
   --color-text-secondary: var(--color-text-secondary);
   --color-text-muted: var(--color-text-muted);
   --color-text-disabled: var(--color-text-disabled);
   --color-text-white: var(--color-text-white);
+  
+  --color-border-subtle: var(--color-border-subtle);
   --color-border-light: var(--color-border-light);
   --color-border-medium: var(--color-border-medium);
   --color-border-strong: var(--color-border-strong);
+  
   --color-success: var(--color-success);
   --color-warning: var(--color-warning);
   --color-danger: var(--color-danger);
   --color-info: var(--color-info);
+  
   --font-sans: var(--font-family);
   --text-xs: var(--font-size-xs);
   --text-sm: var(--font-size-sm);
@@ -202,6 +258,7 @@
   --text-2xl: var(--font-size-2xl);
   --text-3xl: var(--font-size-3xl);
   --text-4xl: var(--font-size-4xl);
+  
   --radius-xs: var(--radius-xs);
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
@@ -209,14 +266,19 @@
   --radius-xl: var(--radius-xl);
   --radius-2xl: var(--radius-2xl);
   --radius-full: var(--radius-full);
+  
   --shadow-xs: var(--shadow-xs);
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
+  --shadow-subtle: var(--shadow-subtle);
+  --shadow-elevated: var(--shadow-elevated);
+  --shadow-floating: var(--shadow-floating);
+  --shadow-modal: var(--shadow-modal);
+  --shadow-glow-brand: var(--shadow-glow-brand);
   --shadow-glass: var(--glass-shadow);
-  --shadow-glass-large: var(--shadow-lg);
-  --shadow-glass-up: var(--shadow-md);
+  
   --blur-glass-1: var(--glass-blur-1);
   --blur-glass-2: var(--glass-blur-2);
   --blur-glass-3: var(--glass-blur-3);
@@ -260,28 +322,28 @@
     z-index: 0; /* Placed in AmbientBackground which is already z-0, but explicit here too */
   }
 
-  /* Light 1: Subtle Brand Red */
+  /* Light 1: Subtle Brand Red Glow */
   .ambient-light-1 {
-    background: radial-gradient(circle at 15% 15%, var(--color-ambient-brand) 0%, transparent 60%);
-    filter: blur(100px);
-    opacity: 0.72;
-    animation: ambientDrift1 25s ease-in-out infinite;
+    background: radial-gradient(circle at 18% 18%, var(--color-ambient-brand) 0%, transparent 60%);
+    filter: blur(120px);
+    opacity: 0.45;
+    animation: ambientDrift1 30s ease-in-out infinite;
   }
 
-  /* Light 2: Neutral Depth */
+  /* Light 2: Neutral Graphite Depth */
   .ambient-light-2 {
-    background: radial-gradient(circle at 85% 85%, var(--color-ambient-neutral) 0%, transparent 58%);
-    filter: blur(120px);
-    opacity: 0.46;
-    animation: ambientDrift2 30s ease-in-out infinite;
+    background: radial-gradient(circle at 82% 82%, var(--color-ambient-neutral) 0%, transparent 55%);
+    filter: blur(140px);
+    opacity: 0.3;
+    animation: ambientDrift2 35s ease-in-out infinite;
   }
 
-  /* Light 3: Deep Crimson (Organic Base) */
+  /* Light 3: Deep Atmospheric Base */
   .ambient-light-3 {
-    background: radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--color-ambient-brand) 58%, transparent) 0%, transparent 65%);
-    filter: blur(120px);
-    opacity: 0.5;
-    animation: ambientDrift3 40s ease-in-out infinite alternate;
+    background: radial-gradient(circle at 65% 25%, color-mix(in srgb, var(--color-ambient-brand) 40%, transparent) 0%, transparent 65%);
+    filter: blur(140px);
+    opacity: 0.25;
+    animation: ambientDrift3 45s ease-in-out infinite alternate;
   }
 
   @keyframes ambientDrift1 {
@@ -348,143 +410,171 @@
 }
 
 .glass-card {
-  background: var(--glass-ambient-light), var(--glass-background);
-  border: 1px solid var(--color-glass-border);
+  background: var(--surface-panel);
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-xl);
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  box-shadow: var(--shadow-subtle);
   background-clip: padding-box;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.glass-card-interactive {
+  background: var(--surface-panel);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-subtle);
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.glass-card-interactive:hover {
+  border-color: var(--color-border-medium);
+  box-shadow: var(--shadow-elevated);
+  transform: translateY(-2px);
 }
 
 .zonafit-floating-surface {
-  background: linear-gradient(135deg, var(--color-glass-overlay), transparent 58%), var(--glass-background);
+  background: var(--surface-glass-regular);
   border: 1px solid var(--color-glass-border);
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(var(--glass-blur)) saturate(155%);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(155%);
+  box-shadow: var(--shadow-floating);
+  backdrop-filter: blur(var(--glass-blur-2)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-2)) saturate(140%);
 }
 
 @utility zonafit-navbar-surface {
-  background-color: #121216;
+  background: var(--surface-glass-regular);
   border: 1px solid var(--color-glass-border);
-  box-shadow: var(--glass-shadow);
+  box-shadow: var(--shadow-subtle);
+  backdrop-filter: blur(var(--glass-blur-2)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-2)) saturate(140%);
 }
 
 .zonafit-navbar-surface {
-  background-color: #121216;
+  background: var(--surface-glass-regular);
   border: 1px solid var(--color-glass-border);
-  box-shadow: var(--glass-shadow);
+  box-shadow: var(--shadow-subtle);
+  backdrop-filter: blur(var(--glass-blur-2)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-2)) saturate(140%);
 }
 
 :root.light .zonafit-navbar-surface {
-  background-color: #FFFFFF;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.05);
 }
 
 /* --------------------------------------------------
-   MATERIAL SYSTEM CLASSES
+   SPATIAL MATERIAL SYSTEM CLASSES (V2)
    -------------------------------------------------- */
 
 .material-background {
-  background-color: var(--color-bg-page);
+  background-color: var(--surface-base);
 }
 
 .material-surface {
-  background-color: var(--color-bg-surface);
-  border: 1px solid var(--color-border-subtle, var(--color-border-light));
+  background-color: var(--surface-panel);
+  border: 1px solid var(--color-border-light);
 }
 
 .material-elevated {
-  background-color: var(--color-bg-elevated);
+  background-color: var(--surface-raised);
   border: 1px solid var(--color-border-medium);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-elevated);
 }
 
 .material-glass {
-  background: var(--glass-ambient-light), var(--glass-background);
+  background: var(--surface-glass-regular);
   border: 1px solid var(--color-glass-border);
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(var(--glass-blur-2)) saturate(160%);
-  -webkit-backdrop-filter: blur(var(--glass-blur-2)) saturate(160%);
+  box-shadow: var(--shadow-floating);
+  backdrop-filter: blur(var(--glass-blur-2)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-2)) saturate(140%);
 }
 
 .material-glass-strong {
-  background: var(--glass-ambient-light), var(--glass-background);
+  background: var(--surface-glass-strong);
   border: 1px solid var(--color-glass-border);
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(var(--glass-blur-3)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--glass-blur-3)) saturate(180%);
+  box-shadow: var(--shadow-modal);
+  backdrop-filter: blur(var(--glass-blur-3)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-3)) saturate(150%);
+}
+
+.material-glass-subtle {
+  background: var(--surface-glass-subtle);
+  border: 1px solid var(--color-border-subtle);
+  backdrop-filter: blur(var(--glass-blur-1));
+  -webkit-backdrop-filter: blur(var(--glass-blur-1));
 }
 
 .material-glass-interactive {
-  background: linear-gradient(135deg, var(--color-glass-overlay), transparent 58%), var(--glass-background);
+  background: var(--surface-glass-subtle);
   border: 1px solid var(--color-glass-border);
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(var(--glass-blur-1)) saturate(155%);
-  -webkit-backdrop-filter: blur(var(--glass-blur-1)) saturate(155%);
-  transition: all var(--transition-base);
+  backdrop-filter: blur(var(--glass-blur-1)) saturate(130%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-1)) saturate(130%);
+  transition: all var(--transition-fast);
 }
 .material-glass-interactive:hover {
-  background: linear-gradient(135deg, rgba(255,255,255,0.06), transparent 58%), var(--glass-background);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--surface-glass-regular);
+  border-color: var(--color-border-strong);
+  transform: translateY(-1px);
 }
 
 .zonafit-table-head {
-  background: var(--color-glass-overlay);
+  background: var(--surface-raised);
   border-color: var(--color-border-light);
 }
 
 .zonafit-table-row {
-  border-color: var(--color-border-light);
+  border-color: var(--color-border-subtle);
+  transition: background-color var(--transition-fast);
 }
 
 .zonafit-table-row:hover {
-  background: var(--color-glass-overlay);
+  background-color: var(--surface-panel-hover);
 }
 
 .glass-card table thead tr {
-  background: var(--color-glass-overlay);
+  background: var(--surface-raised);
   border-color: var(--color-border-light);
 }
 
 .glass-card table tbody tr {
-  border-color: var(--color-border-light);
+  border-color: var(--color-border-subtle);
+  transition: background-color var(--transition-fast);
 }
 
 .glass-card table tbody tr:hover {
-  background: var(--color-glass-overlay);
+  background-color: var(--surface-panel-hover);
 }
 
 .zonafit-action-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
+  min-height: 40px;
   border: 0;
-  border-radius: var(--radius-lg);
-  padding: 0 var(--space-5);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-4);
   color: var(--color-text-white);
-  background: var(--color-brand-gradient);
-  box-shadow: var(--shadow-sm);
+  background: var(--color-brand-primary);
+  box-shadow: var(--shadow-glow-brand);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  transition: transform var(--transition-fast), box-shadow var(--transition-base), opacity var(--transition-fast);
+  letter-spacing: -0.01em;
+  transition: transform var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .zonafit-action-button:hover:not(:disabled) {
-  box-shadow: var(--shadow-md);
+  background-color: var(--color-brand-primary-hover);
+  box-shadow: 0 6px 20px -2px rgba(220, 38, 38, 0.45);
   transform: translateY(-1px);
 }
 
 .zonafit-action-button:active:not(:disabled) {
+  background-color: var(--color-brand-primary-active);
   transform: translateY(0) scale(.98);
 }
 
 .zonafit-action-button:disabled {
   cursor: not-allowed;
-  opacity: .55;
+  opacity: .5;
 }
 
 @media (max-width: 767px) {

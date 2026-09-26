@@ -263,16 +263,16 @@ export function POSView({ products, categories, clients }: POSViewProps) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* LEFT COLUMN: Catalog */}
-        <div className="rounded-xl border border-border-light bg-bg-surface/40 lg:col-span-7 xl:col-span-8 flex flex-col h-140 lg:h-185 overflow-hidden p-0 shadow-glass">
-          <div className="p-4 border-b border-border-light bg-bg-surface flex flex-col gap-4 shrink-0">
+        <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/90 lg:col-span-7 xl:col-span-8 flex flex-col h-140 lg:h-185 overflow-hidden p-0 shadow-subtle backdrop-blur-md">
+          <div className="p-4 border-b border-border-subtle bg-surface-panel/80 flex flex-col gap-3.5 shrink-0">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={17} />
               <input 
                 type="text" 
                 placeholder="Buscar productos por nombre o SKU..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-10 pl-10 pr-4 rounded-md border border-border-medium bg-bg-page text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary transition-fast"
+                className="w-full h-10 pl-10 pr-4 rounded-[var(--radius-sm)] border border-border-medium bg-surface-base text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-all"
               />
             </div>
             
@@ -281,10 +281,10 @@ export function POSView({ products, categories, clients }: POSViewProps) {
               <button
                 onClick={() => setSelectedCategory('all')}
                 className={cn(
-                  "px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
+                  "px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer",
                   selectedCategory === 'all' 
-                    ? "bg-brand-primary text-text-white shadow-sm" 
-                    : "bg-bg-page text-text-secondary hover:bg-border-light hover:text-text-primary border border-border-medium"
+                    ? "bg-brand-primary text-white shadow-xs" 
+                    : "bg-surface-raised text-text-muted hover:text-text-primary hover:bg-surface-panel-hover border border-border-subtle"
                 )}
               >
                 Todas
@@ -294,10 +294,10 @@ export function POSView({ products, categories, clients }: POSViewProps) {
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
                   className={cn(
-                    "px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
+                    "px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer",
                     selectedCategory === cat.id 
-                      ? "bg-brand-primary text-text-white shadow-sm" 
-                      : "bg-bg-page text-text-secondary hover:bg-border-light hover:text-text-primary border border-border-medium"
+                      ? "bg-brand-primary text-white shadow-xs" 
+                      : "bg-surface-raised text-text-muted hover:text-text-primary hover:bg-surface-panel-hover border border-border-subtle"
                   )}
                 >
                   {cat.name}
@@ -307,32 +307,32 @@ export function POSView({ products, categories, clients }: POSViewProps) {
           </div>
 
           {/* Product Grid */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-bg-page/50 custom-scrollbar">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-surface-base/50 custom-scrollbar">
             {filteredProducts.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-text-muted">
                 <ShoppingBag size={48} className="mb-4 opacity-20" />
-                <p>No se encontraron productos.</p>
+                <p className="text-sm">No se encontraron productos.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5">
                 {filteredProducts.map(product => (
                   <button
                     key={product.id}
                     onClick={() => addToCart(product)}
                     disabled={product.stock <= 0}
                     className={cn(
-                      "flex flex-col text-left bg-bg-surface border border-border-light rounded-xl p-4 transition-all hover:shadow-glass hover:-translate-y-1 group relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-brand-primary",
+                      "flex flex-col text-left bg-surface-raised/70 border border-border-subtle rounded-[var(--radius-lg)] p-3.5 transition-all hover:border-brand-primary/40 hover:bg-surface-panel-hover hover:shadow-elevated hover:-translate-y-0.5 group relative overflow-hidden focus:outline-none focus:ring-1 focus:ring-brand-primary cursor-pointer",
                       product.stock <= 0 && "opacity-50 grayscale cursor-not-allowed hover:shadow-none hover:translate-y-0"
                     )}
                   >
-                    <div className="font-semibold text-text-primary mb-1 line-clamp-2 leading-tight">{product.name}</div>
+                    <div className="font-semibold text-text-primary mb-1 line-clamp-2 leading-tight text-sm">{product.name}</div>
                     <div className="text-xs text-text-muted font-mono mb-3">{product.sku}</div>
                     
                     <div className="mt-auto flex items-end justify-between w-full">
-                      <span className="font-bold text-brand-primary">{formatPrice(product.sale_price)}</span>
+                      <span className="font-bold text-brand-primary text-sm">{formatPrice(product.sale_price)}</span>
                       <span className={cn(
-                        "text-xs font-medium px-2 py-0.5 rounded-full",
-                        product.stock > 0 ? "bg-bg-page text-text-secondary" : "bg-danger/10 text-danger"
+                        "text-[11px] font-medium px-2 py-0.5 rounded-full",
+                        product.stock > 0 ? "bg-surface-base text-text-muted border border-border-subtle" : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
                       )}>
                         {product.stock > 0 ? `${product.stock} disp.` : 'Agotado'}
                       </span>
@@ -341,7 +341,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
                     {/* Hover Overlay indicating 'Add' */}
                     {product.stock > 0 && (
                       <div className="absolute inset-0 bg-brand-primary/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                        <Plus className="text-brand-primary drop-shadow-md" size={32} />
+                        <Plus className="text-brand-primary drop-shadow-md" size={30} />
                       </div>
                     )}
                   </button>
@@ -352,12 +352,12 @@ export function POSView({ products, categories, clients }: POSViewProps) {
         </div>
 
         {/* RIGHT COLUMN: Single Unified Cart & Checkout Panel */}
-        <div className="rounded-xl border border-brand-primary/20 bg-bg-surface/60 lg:col-span-5 xl:col-span-4 flex flex-col p-4 sm:p-5 gap-4 shadow-glass-large">
+        <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/95 lg:col-span-5 xl:col-span-4 flex flex-col p-4 sm:p-5 gap-4 shadow-elevated backdrop-blur-md">
           
           {/* Sale Type Selector */}
-          <div className="bg-bg-page border border-border-medium p-1 rounded-xl flex relative">
+          <div className="bg-surface-base border border-border-subtle p-1 rounded-[var(--radius-lg)] flex relative">
             <div 
-              className="absolute inset-y-1 rounded-lg bg-bg-elevated border border-border-medium shadow-sm transition-all duration-300 ease-out z-0"
+              className="absolute inset-y-1 rounded-[var(--radius-md)] bg-surface-raised border border-border-medium shadow-elevated transition-all duration-200 ease-out z-0"
               style={{
                 width: 'calc(50% - 4px)',
                 left: saleType === 'CASH' ? '4px' : 'calc(50%)',
@@ -367,21 +367,21 @@ export function POSView({ products, categories, clients }: POSViewProps) {
             <button
               onClick={() => setSaleType('CASH')}
               className={cn(
-                "relative z-10 flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors",
+                "relative z-10 flex-1 flex items-center justify-center gap-2 py-2 text-xs sm:text-sm font-semibold transition-colors cursor-pointer",
                 saleType === 'CASH' ? "text-text-primary" : "text-text-muted hover:text-text-secondary"
               )}
             >
-              <Banknote size={16} />
+              <Banknote size={15} />
               <span>Contado</span>
             </button>
             <button
               onClick={() => setSaleType('CREDIT')}
               className={cn(
-                "relative z-10 flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors",
+                "relative z-10 flex-1 flex items-center justify-center gap-2 py-2 text-xs sm:text-sm font-semibold transition-colors cursor-pointer",
                 saleType === 'CREDIT' ? "text-text-primary" : "text-text-muted hover:text-text-secondary"
               )}
             >
-              <CalendarClock size={16} />
+              <CalendarClock size={15} />
               <span>Crédito</span>
             </button>
           </div>
@@ -390,10 +390,10 @@ export function POSView({ products, categories, clients }: POSViewProps) {
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
               <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                Cliente {saleType === 'CREDIT' && <span className="text-danger">*</span>}
+                Cliente {saleType === 'CREDIT' && <span className="text-rose-400">*</span>}
               </label>
               {saleType === 'CREDIT' && !selectedClientId && (
-                <span className="text-[11px] text-danger font-medium">Requerido en crédito</span>
+                <span className="text-[11px] text-rose-400 font-medium">Requerido en crédito</span>
               )}
             </div>
             <ClientSearchCombobox
@@ -414,7 +414,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
               {cart.length > 0 && (
                 <button 
                   onClick={clearCart} 
-                  className="text-[11px] text-text-muted hover:text-danger transition-colors font-medium"
+                  className="text-[11px] text-text-muted hover:text-rose-400 transition-colors font-medium cursor-pointer"
                 >
                   Vaciar carrito
                 </button>
@@ -422,14 +422,14 @@ export function POSView({ products, categories, clients }: POSViewProps) {
             </div>
 
             {cart.length === 0 ? (
-              <div className="py-3.5 px-4 rounded-xl border border-dashed border-border-medium bg-bg-page/40 flex items-center justify-center gap-2 text-xs text-text-muted">
+              <div className="py-3.5 px-4 rounded-[var(--radius-lg)] border border-dashed border-border-subtle bg-surface-base/40 flex items-center justify-center gap-2 text-xs text-text-muted">
                 <ShoppingCart size={15} className="opacity-40" />
                 <span>El carrito está vacío. Agrega productos del catálogo.</span>
               </div>
             ) : (
               <div className="flex flex-col gap-2 max-h-45 overflow-y-auto custom-scrollbar pr-0.5">
                 {cart.map(item => (
-                  <div key={item.product.id} className="flex items-center justify-between p-2.5 rounded-xl border border-border-medium bg-bg-page shadow-sm">
+                  <div key={item.product.id} className="flex items-center justify-between p-2.5 rounded-[var(--radius-md)] border border-border-subtle bg-surface-base shadow-xs">
                     <div className="flex-1 min-w-0 pr-2">
                       <div className="font-medium text-text-primary text-xs leading-tight truncate">{item.product.name}</div>
                       <div className="text-[11px] text-text-muted mt-0.5">{formatPrice(item.product.sale_price)} c/u</div>
@@ -437,11 +437,11 @@ export function POSView({ products, categories, clients }: POSViewProps) {
                     
                     <div className="flex items-center gap-2.5 shrink-0">
                       {/* Quantity Controls */}
-                      <div className="flex items-center gap-1.5 bg-bg-surface border border-border-medium rounded-lg px-2 py-0.5">
+                      <div className="flex items-center gap-1.5 bg-surface-raised border border-border-subtle rounded-[var(--radius-sm)] px-2 py-0.5">
                         <button 
                           onClick={() => updateQuantity(item.product.id, -1)}
                           disabled={item.quantity <= 1 || isCheckingOut}
-                          className="text-text-muted hover:text-text-primary disabled:opacity-30 p-0.5"
+                          className="text-text-muted hover:text-text-primary disabled:opacity-30 p-0.5 cursor-pointer"
                         >
                           <Minus size={12} />
                         </button>
@@ -449,7 +449,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
                         <button 
                           onClick={() => updateQuantity(item.product.id, 1)}
                           disabled={item.quantity >= item.product.stock || isCheckingOut}
-                          className="text-text-muted hover:text-text-primary disabled:opacity-30 p-0.5"
+                          className="text-text-muted hover:text-text-primary disabled:opacity-30 p-0.5 cursor-pointer"
                         >
                           <Plus size={12} />
                         </button>
@@ -462,7 +462,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
                       <button 
                         onClick={() => removeFromCart(item.product.id)}
                         disabled={isCheckingOut}
-                        className="text-text-muted hover:text-danger p-1 rounded-md hover:bg-danger/10 transition-colors"
+                        className="text-text-muted hover:text-rose-400 p-1 rounded-[var(--radius-xs)] hover:bg-rose-500/10 transition-colors cursor-pointer"
                         title="Eliminar del carrito"
                       >
                         <X size={14} />
@@ -574,7 +574,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
             Al confirmar, se registrará una cuenta por cobrar a nombre del cliente.
           </p>
           
-          <div className="bg-bg-page border border-border-medium rounded-lg p-4 space-y-3">
+          <div className="bg-surface-base border border-border-subtle rounded-[var(--radius-lg)] p-4 space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-text-muted">Cliente:</span>
               <span className="font-medium text-text-primary">
@@ -585,7 +585,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
               <span className="text-text-muted">Vencimiento:</span>
               <span className="font-medium text-text-primary">{dueDate || 'Sin definir'}</span>
             </div>
-            <div className="border-t border-border-light my-2"></div>
+            <div className="border-t border-border-subtle my-2"></div>
             <div className="flex justify-between text-sm">
               <span className="text-text-muted">Total Venta:</span>
               <span className="font-medium text-text-primary">{formatPrice(cartTotal)}</span>
@@ -596,15 +596,15 @@ export function POSView({ products, categories, clients }: POSViewProps) {
             </div>
             <div className="flex justify-between text-lg font-bold">
               <span className="text-text-primary">Saldo Pendiente:</span>
-              <span className="text-danger">{formatPrice(balanceDue)}</span>
+              <span className="text-rose-400">{formatPrice(balanceDue)}</span>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border-light">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border-subtle">
             <button
               onClick={() => setIsConfirmModalOpen(false)}
               disabled={isCheckingOut}
-              className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50 cursor-pointer"
             >
               Cancelar
             </button>
@@ -628,8 +628,8 @@ export function POSView({ products, categories, clients }: POSViewProps) {
         title="Venta Registrada Exitosamente"
       >
         <div className="flex flex-col items-center justify-center space-y-6 py-4">
-          <div className="h-20 w-20 bg-success/10 rounded-full flex items-center justify-center">
-            <CheckCircle2 size={40} className="text-success" />
+          <div className="h-20 w-20 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/20">
+            <CheckCircle2 size={40} className="text-emerald-400" />
           </div>
           
           <div className="text-center">
@@ -666,9 +666,9 @@ export function POSView({ products, categories, clients }: POSViewProps) {
                     },
                   });
                 }}
-                className="w-full py-2.5 px-4 rounded-xl font-semibold text-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-md flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                className="w-full py-2.5 px-4 rounded-[var(--radius-md)] font-semibold text-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
               >
-                <MessageCircle size={18} />
+                <MessageCircle size={17} />
                 <span>Enviar comprobante por WhatsApp</span>
               </button>
             )}
@@ -678,7 +678,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
                 setCompletedInvoice(null);
                 resetForm();
               }}
-              className="w-full py-3 text-sm font-medium text-text-secondary hover:text-text-primary bg-bg-surface hover:bg-bg-elevated border border-border-medium rounded-lg transition-colors"
+              className="w-full py-2.5 text-sm font-medium text-text-secondary hover:text-text-primary bg-surface-raised hover:bg-surface-panel-hover border border-border-medium rounded-[var(--radius-md)] transition-colors cursor-pointer"
             >
               Continuar
             </button>

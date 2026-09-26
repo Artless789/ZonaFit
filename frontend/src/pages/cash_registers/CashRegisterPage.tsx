@@ -243,7 +243,7 @@ export const CashRegisterPage = () => {
           {/* RESUMEN DEL TURNO (KPI CARDS) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Estado */}
-            <div className="rounded-2xl border border-border-light bg-bg-surface/50 backdrop-blur-md p-4 shadow-glass border-t-4 border-t-brand-primary flex flex-col justify-between">
+            <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/90 p-4 shadow-subtle flex flex-col justify-between border-t-2 border-t-brand-primary">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase text-text-muted">Estado</span>
                 <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -258,7 +258,7 @@ export const CashRegisterPage = () => {
             </div>
 
             {/* Base Inicial */}
-            <div className="rounded-2xl border border-border-light bg-bg-surface/50 backdrop-blur-md p-4 shadow-glass border-t-4 border-t-emerald-500 flex flex-col justify-between">
+            <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/90 p-4 shadow-subtle flex flex-col justify-between border-t-2 border-t-emerald-500">
               <span className="text-xs font-semibold uppercase text-text-muted">Base Inicial</span>
               <div className="mt-2">
                 <span className="text-xl font-bold text-text-primary">
@@ -269,7 +269,7 @@ export const CashRegisterPage = () => {
             </div>
 
             {/* Entradas Efectivo */}
-            <div className="rounded-2xl border border-border-light bg-bg-surface/50 backdrop-blur-md p-4 shadow-glass border-t-4 border-t-indigo-500 flex flex-col justify-between">
+            <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/90 p-4 shadow-subtle flex flex-col justify-between border-t-2 border-t-indigo-500">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase text-text-muted">Entradas Efectivo</span>
                 <ArrowUpRight size={16} className="text-emerald-400" />
@@ -278,12 +278,12 @@ export const CashRegisterPage = () => {
                 <span className="text-xl font-bold text-emerald-400">
                   +{formatCurrency(cashIncomes)}
                 </span>
-                <p className="text-[11px] text-text-muted mt-1">Ventas & abonos en efectivo</p>
+                <p className="text-[11px] text-text-muted mt-1">Ventas & abonos</p>
               </div>
             </div>
 
             {/* Salidas Efectivo */}
-            <div className="rounded-2xl border border-border-light bg-bg-surface/50 backdrop-blur-md p-4 shadow-glass border-t-4 border-t-rose-500 flex flex-col justify-between">
+            <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/90 p-4 shadow-subtle flex flex-col justify-between border-t-2 border-t-rose-500">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase text-text-muted">Salidas Efectivo</span>
                 <ArrowDownRight size={16} className="text-rose-400" />
@@ -292,18 +292,18 @@ export const CashRegisterPage = () => {
                 <span className="text-xl font-bold text-rose-400">
                   -{formatCurrency(cashOutcomes)}
                 </span>
-                <p className="text-[11px] text-text-muted mt-1">Gastos & retiros manuales</p>
+                <p className="text-[11px] text-text-muted mt-1">Gastos & retiros</p>
               </div>
             </div>
 
             {/* Efectivo Esperado */}
-            <div className="rounded-2xl border border-brand-primary/30 bg-bg-surface/60 backdrop-blur-md p-4 shadow-glow flex flex-col justify-between">
+            <div className="rounded-[var(--radius-xl)] border border-brand-primary/30 bg-surface-panel/95 p-4 shadow-subtle flex flex-col justify-between border-t-2 border-t-brand-primary">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase text-brand-primary">Efectivo Esperado</span>
                 <Coins size={16} className="text-brand-primary" />
               </div>
               <div className="mt-2">
-                <span className="text-2xl font-black text-text-primary">
+                <span className="text-2xl font-black text-text-primary tracking-tight">
                   {formatCurrency(expectedCash)}
                 </span>
                 <p className="text-[11px] text-text-muted mt-1">Base + Entradas - Salidas</p>
@@ -316,7 +316,7 @@ export const CashRegisterPage = () => {
             
             {/* LEFT COLUMN: CASH MOVEMENTS (7 Cols) */}
             <div className="lg:col-span-7 space-y-6">
-              <div className="rounded-2xl border border-border-light bg-bg-surface/40 backdrop-blur-md p-6 shadow-glass">
+              <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/90 backdrop-blur-md p-6 shadow-subtle">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h2 className="text-lg font-bold text-text-primary">Movimientos de Efectivo</h2>
@@ -326,7 +326,7 @@ export const CashRegisterPage = () => {
                     size="sm"
                     variant={showMovementForm ? 'secondary' : 'primary'}
                     onClick={() => setShowMovementForm(!showMovementForm)}
-                    className="flex items-center gap-1.5"
+                    className="flex items-center gap-1.5 cursor-pointer"
                   >
                     <Plus size={16} />
                     <span>{showMovementForm ? 'Cerrar' : 'Nuevo Movimiento'}</span>
@@ -335,7 +335,7 @@ export const CashRegisterPage = () => {
 
                 {/* Formulario de movimiento manual */}
                 {showMovementForm && (
-                  <div className="bg-bg-elevated/60 p-4 rounded-xl border border-border-medium mb-4 space-y-4 animate-in fade-in duration-200">
+                  <div className="bg-surface-base p-4 rounded-[var(--radius-lg)] border border-border-subtle mb-4 space-y-4 animate-in fade-in duration-200">
                     <h3 className="text-sm font-semibold text-text-primary">Registrar Movimiento Manual</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
@@ -366,7 +366,7 @@ export const CashRegisterPage = () => {
                         <label className="block text-xs font-medium text-text-secondary mb-1">Descripción</label>
                         <input
                           type="text"
-                          className="flex h-10 w-full rounded-xl border border-border-medium bg-bg-surface/60 px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/50"
+                          className="flex h-10 w-full rounded-[var(--radius-sm)] border border-border-medium bg-surface-panel px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:border-brand-primary focus-visible:ring-1 focus-visible:ring-brand-primary/30"
                           placeholder="Ej. Pago a proveedor, Compra de insumos, Sencillo..."
                           value={movementDesc}
                           onChange={(e) => setMovementDesc(e.target.value)}
@@ -385,9 +385,9 @@ export const CashRegisterPage = () => {
                 )}
 
                 {/* Tabla de movimientos */}
-                <div className="overflow-x-auto rounded-xl border border-border-medium bg-bg-surface/20">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-bg-surface/80 text-text-muted text-xs uppercase border-b border-border-light">
+                <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-border-subtle bg-surface-base/50">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-surface-raised/70 text-text-muted text-xs uppercase border-b border-border-subtle font-semibold tracking-wider">
                       <tr>
                         <th className="px-4 py-3 font-semibold">Hora</th>
                         <th className="px-4 py-3 font-semibold">Tipo</th>
@@ -396,9 +396,9 @@ export const CashRegisterPage = () => {
                         <th className="px-4 py-3 font-semibold text-right">Monto</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border-light/60">
+                    <tbody className="divide-y divide-border-subtle">
                       {activeMovements.data?.map((mov) => (
-                        <tr key={mov.id} className="hover:bg-bg-surface/40 transition-colors">
+                        <tr key={mov.id} className="hover:bg-surface-panel-hover transition-colors">
                           <td className="px-4 py-3 text-xs text-text-secondary whitespace-nowrap">
                             {formatDate(mov.created_at)}
                           </td>
@@ -435,10 +435,10 @@ export const CashRegisterPage = () => {
 
             {/* RIGHT COLUMN: CIERRE, ARQUEO & CONCILIACIÓN (5 Cols) */}
             <div className="lg:col-span-5 space-y-6">
-              <div className="rounded-2xl border border-border-light bg-bg-surface/50 backdrop-blur-md p-6 shadow-glass space-y-6">
+              <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/95 backdrop-blur-md p-6 shadow-elevated space-y-6">
                 
                 {/* Header Cierre */}
-                <div className="border-b border-border-light pb-4">
+                <div className="border-b border-border-subtle pb-4">
                   <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
                     <Coins size={20} className="text-brand-primary" />
                     <span>Cierre y Conciliación</span>
@@ -449,7 +449,7 @@ export const CashRegisterPage = () => {
                 </div>
 
                 {/* 1. ARQUEO DE EFECTIVO */}
-                <div className="space-y-3 bg-bg-elevated/40 p-4 rounded-xl border border-border-light">
+                <div className="space-y-3 bg-surface-base/70 p-4 rounded-[var(--radius-lg)] border border-border-subtle">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
                       <Banknote size={14} />
@@ -489,7 +489,7 @@ export const CashRegisterPage = () => {
                 </div>
 
                 {/* 2. CONCILIACIÓN POR MEDIO DE PAGO */}
-                <div className="space-y-3 bg-bg-elevated/40 p-4 rounded-xl border border-border-light">
+                <div className="space-y-3 bg-surface-base/70 p-4 rounded-[var(--radius-lg)] border border-border-subtle">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
                       <CreditCard size={14} />
@@ -506,7 +506,7 @@ export const CashRegisterPage = () => {
                       return (
                         <div
                           key={item.method}
-                          className="p-3 bg-bg-surface/70 rounded-xl border border-border-medium space-y-2"
+                          className="p-3 bg-surface-panel/80 rounded-[var(--radius-md)] border border-border-subtle space-y-2"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -556,7 +556,7 @@ export const CashRegisterPage = () => {
                 </div>
 
                 {/* 3. RESUMEN FINAL & ESTADO GENERAL */}
-                <div className="p-4 rounded-xl border border-border-medium bg-bg-surface/80 space-y-3">
+                <div className="p-4 rounded-[var(--radius-lg)] border border-border-subtle bg-surface-base/80 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-text-secondary">Total Registrado:</span>
                     <span className="text-sm font-bold text-text-primary">{formatCurrency(totalRegistered)}</span>
@@ -565,7 +565,7 @@ export const CashRegisterPage = () => {
                     <span className="text-xs font-semibold text-text-secondary">Total Verificado:</span>
                     <span className="text-sm font-bold text-text-primary">{formatCurrency(totalVerified)}</span>
                   </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-border-light">
+                  <div className="flex items-center justify-between pt-2 border-t border-border-subtle">
                     <span className="text-xs font-bold text-text-primary">Diferencia General:</span>
                     <span className={`text-base font-extrabold ${totalDifference === 0 ? 'text-emerald-400' : (totalDifference > 0 ? 'text-amber-400' : 'text-rose-400')}`}>
                       {totalDifference > 0 ? `+${formatCurrency(totalDifference)}` : formatCurrency(totalDifference)}
@@ -573,7 +573,7 @@ export const CashRegisterPage = () => {
                   </div>
 
                   {/* Alerta de Estado */}
-                  <div className={`p-3 rounded-lg border text-xs flex items-start gap-2 ${
+                  <div className={`p-3 rounded-[var(--radius-md)] border text-xs flex items-start gap-2 ${
                     !hasDifferences 
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                       : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
@@ -610,7 +610,7 @@ export const CashRegisterPage = () => {
                   </label>
                   <textarea
                     rows={2}
-                    className="w-full rounded-xl border border-border-medium bg-bg-surface/60 px-3 py-2 text-xs text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/50"
+                    className="w-full rounded-[var(--radius-sm)] border border-border-medium bg-surface-base px-3 py-2 text-xs text-text-primary focus-visible:outline-none focus-visible:border-brand-primary focus-visible:ring-1 focus-visible:ring-brand-primary/30"
                     placeholder="Justificación de novedades, faltantes o sobrantes..."
                     value={closingNotes}
                     onChange={(e) => setClosingNotes(e.target.value)}

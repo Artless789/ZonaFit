@@ -77,9 +77,9 @@ export function Drawer({
             variants={slideVariants}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className={cn(
-              "material-glass-strong relative flex h-full w-full flex-col shadow-xl",
+              "material-glass-strong relative flex h-full w-full flex-col shadow-modal",
+              position === 'right' ? "ml-auto border-l border-border-medium" : "mr-auto border-r border-border-medium",
               sizeClass,
-              position === 'right' ? "ml-auto" : "mr-auto",
               className
             )}
             role="dialog"
@@ -87,18 +87,18 @@ export function Drawer({
             aria-labelledby={title ? "drawer-title" : undefined}
           >
             {!hideHeader && (
-              <div className="flex items-center justify-between p-6 border-b border-border-light">
+              <div className="flex items-center justify-between px-6 py-5 border-b border-border-light shrink-0">
                 {title && (
-                  <h2 id="drawer-title" className="text-xl font-semibold text-text-primary">
+                  <h2 id="drawer-title" className="text-lg font-semibold tracking-tight text-text-primary">
                     {title}
                   </h2>
                 )}
                 <button
                   onClick={onClose}
-                  className="rounded-full p-1 text-text-muted hover:bg-border-light hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  className="rounded-full p-1.5 text-text-muted hover:bg-white/[0.06] hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary"
                   aria-label="Cerrar cajón"
                 >
-                  <X size={20} />
+                  <X size={18} />
                 </button>
               </div>
             )}

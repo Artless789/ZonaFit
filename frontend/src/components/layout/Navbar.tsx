@@ -4,7 +4,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Avatar } from '@shared/ui/Avatar';
 import { Button } from '@shared/ui/Button';
-
 import { useGymSettings } from '../../hooks/useGymSettings';
 
 const pageTitles: Record<string, string> = {
@@ -12,6 +11,9 @@ const pageTitles: Record<string, string> = {
   '/clients': 'Clientes',
   '/memberships': 'Membresías',
   '/sales': 'Ventas e inventario',
+  '/cash-registers': 'Caja',
+  '/credits': 'Cuentas por cobrar',
+  '/invoices': 'Comprobantes',
   '/notifications': 'Notificaciones',
   '/audit': 'Auditoría',
   '/settings': 'Configuración',
@@ -35,81 +37,58 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
   const title = pageTitles[location.pathname] ?? 'Centro de operaciones';
   const isSuperadmin = user?.role?.toUpperCase() === 'SUPERADMIN';
   const gymName = isSuperadmin ? 'PLATAFORMA' : (query.data?.trade_name || 'MERWIL ZONAFIT');
-  const isLight = theme === 'light';
 
   return (
-    <div className="sticky top-0 z-[var(--z-navbar)] w-full px-4 pt-4 sm:px-6 pointer-events-none">
-      <header
-        className={`zonafit-navbar-surface pointer-events-auto flex h-[var(--navbar-height)] w-full items-center justify-between rounded-[var(--radius-xl)] px-4 sm:px-6 transition-all shadow-md ${
-          isLight
-            ? 'bg-white border border-black/[0.08]'
-            : 'bg-[#121216] border border-white/[0.08]'
-        }`}
-        style={{
-          backgroundColor: isLight ? '#FFFFFF' : '#121216',
-          borderColor: isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)',
-          boxShadow: isLight
-            ? '0 10px 30px -5px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.04)'
-            : '0 10px 30px -5px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.12)',
-          opacity: 1,
-        }}
-      >
-        
-        <div className="flex min-w-0 items-center gap-4">
+    <div className="sticky top-0 z-[var(--z-navbar)] w-full px-3 pt-3 sm:px-6 pointer-events-none">
+      <header className="zonafit-navbar-surface pointer-events-auto flex h-[var(--navbar-height)] w-full items-center justify-between rounded-[var(--radius-xl)] px-4 sm:px-6 transition-all">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 mr-2 sm:mr-4">
           <button
             type="button"
             onClick={onOpenMobileMenu}
-            className="rounded-[var(--radius-sm)] p-2 text-text-secondary transition-colors hover:bg-glass-overlay hover:text-text-primary md:hidden"
+            className="shrink-0 rounded-[var(--radius-sm)] p-2 text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary md:hidden"
             aria-label="Abrir menú de navegación"
           >
             <Menu size={20} />
           </button>
           
-          <div className="flex items-center gap-3">
-            <div className="hidden min-w-0 sm:block">
-              <h1 className="truncate text-base font-bold tracking-tight text-text-primary drop-shadow-sm">{title}</h1>
-              <p className="text-[0.65rem] font-medium tracking-wider uppercase text-brand-primary/80 mt-0.5">{`${gymName} SYSTEM`}</p>
-            </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-sm sm:text-base font-semibold tracking-tight text-text-primary">{title}</h1>
+            <p className="truncate text-[0.625rem] font-semibold tracking-wider uppercase text-brand-primary mt-0.5">{`${gymName} SYSTEM`}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className={`group flex items-center gap-3 rounded-full border py-1.5 pl-4 pr-1.5 shadow-xs transition-all duration-300 cursor-pointer ${
-            isLight
-              ? 'border-black/[0.08] bg-slate-100/80 hover:bg-slate-200/70 hover:border-black/[0.12]'
-              : 'border-border-light bg-bg-surface/60 backdrop-blur-md hover:bg-glass-overlay hover:border-border-medium hover:shadow-glass'
-          }`}>
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <div className="group flex shrink-0 items-center gap-2 sm:gap-3 rounded-full border border-border-light bg-surface-raised/70 py-1 pl-1 sm:pl-3.5 pr-1 shadow-xs transition-all duration-150 hover:border-border-medium hover:bg-surface-panel-hover">
             <div className="hidden text-right sm:block">
-              <p className="text-sm font-semibold leading-none text-text-primary mb-0.5 transition-colors">{user?.full_name || 'Administrador'}</p>
-              <p className="text-xs text-text-muted leading-none">{user?.role || 'Admin'}</p>
+              <p className="text-xs font-semibold leading-none text-text-primary mb-0.5">{user?.full_name || 'Administrador'}</p>
+              <p className="text-[0.625rem] text-text-muted leading-none font-medium">{user?.role || 'Admin'}</p>
             </div>
-            <Avatar fallback={user?.full_name?.substring(0,2).toUpperCase() || 'AD'} className="h-8 w-8 border border-border-medium shadow-sm transition-transform duration-300 group-hover:scale-105" />
+            <Avatar fallback={user?.full_name?.substring(0, 2).toUpperCase() || 'AD'} className="h-7.5 w-7.5 border border-border-medium shadow-xs" />
           </div>
 
-          <div className={`hidden h-6 w-px sm:block ${isLight ? 'bg-black/[0.08]' : 'bg-border-light'}`} />
+          <div className="hidden h-5 w-px bg-border-light sm:block" />
 
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
-            className="text-text-muted hover:text-text-primary transition-colors"
+            className="shrink-0 text-text-muted hover:text-text-primary"
             title="Alternar tema"
           >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
           </Button>
 
           <Button
             variant="ghost"
             size="icon"
             onClick={logout}
-            className="text-text-muted transition-all duration-300 hover:text-danger hover:bg-danger/10 hover:scale-105 active:scale-95"
+            className="shrink-0 text-text-muted hover:text-danger hover:bg-danger/10"
             title="Cerrar sesión"
             aria-label="Cerrar sesión"
           >
-            <LogOut size={18} className="transition-transform duration-300" />
+            <LogOut size={17} />
           </Button>
         </div>
-        
       </header>
     </div>
   );

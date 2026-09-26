@@ -47,8 +47,8 @@ export function DemoLayout() {
 
   return (
     <AuthContext.Provider value={mockAuthContext}>
-      {/* ── Demo Banner ────────────────────────────────────────────────────── */}
-      <div className="fixed top-0 left-0 right-0 z-[9999] h-10 bg-brand-primary flex flex-wrap items-center justify-center text-white text-xs sm:text-sm px-4 shadow-md">
+      {/* ── Demo Banner (z-index 150: above base content, below drawers/modals) ── */}
+      <div className="fixed top-0 left-0 right-0 z-[150] h-10 bg-brand-primary flex flex-wrap items-center justify-center text-white text-xs sm:text-sm px-4 shadow-md">
         <span className="truncate">
           Estás explorando Merwil ZonaFit Demo. Los cambios realizados aquí no se
           guardarán.

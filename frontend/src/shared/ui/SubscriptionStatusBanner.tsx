@@ -65,7 +65,7 @@ export function SubscriptionStatusBanner() {
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-bold text-white">Plan vitalicio</h3>
+                <h3 className="font-bold text-text-primary">Plan vitalicio</h3>
                 <Badge variant="success">LIFETIME</Badge>
               </div>
               <p className="text-sm text-text-secondary">Sin vencimiento. Disfruta de acceso permanente.</p>
@@ -86,7 +86,7 @@ export function SubscriptionStatusBanner() {
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-bold text-white">Tu periodo de prueba está activo</h3>
+                <h3 className="font-bold text-text-primary">Tu periodo de prueba está activo</h3>
                 <Badge variant="info">TRIAL</Badge>
               </div>
               <p className="text-sm text-text-secondary">
@@ -152,7 +152,7 @@ export function SubscriptionStatusBanner() {
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-bold text-white">Plan {subscription.plan?.name || 'activo'}</h3>
+                <h3 className="font-bold text-text-primary">Plan {subscription.plan?.name || 'activo'}</h3>
                 <Badge variant="success">ACTIVE</Badge>
               </div>
               <p className="text-sm text-text-secondary">
@@ -187,7 +187,7 @@ export function SubscriptionStatusBanner() {
           </div>
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-bold text-white">
+              <h3 className="font-bold text-text-primary">
                 {subscription.status === 'PAST_DUE' ? 'Tu suscripción requiere atención' : 'Tu suscripción ha vencido'}
               </h3>
               <Badge variant="danger">{subscription.status}</Badge>

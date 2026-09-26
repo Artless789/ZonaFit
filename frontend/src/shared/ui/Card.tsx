@@ -3,32 +3,35 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@shared/utils/cn';
 
 const cardVariants = cva(
-  'relative overflow-hidden transition-all duration-300',
+  'relative overflow-hidden transition-all duration-200',
   {
     variants: {
       variant: {
-        surface: 'material-surface rounded-[var(--radius-xl)]',
-        elevated: 'material-elevated rounded-[var(--radius-xl)]',
-        glass: 'material-glass rounded-[var(--radius-xl)]',
-        metric: 'bg-bg-page border border-border-light rounded-[var(--radius-xl)]',
-        section: 'bg-bg-surface border border-border-medium rounded-[var(--radius-xl)]',
-        default: 'material-surface rounded-[var(--radius-xl)]',
+        panel: 'bg-surface-panel border border-border-light shadow-subtle rounded-[var(--radius-xl)]',
+        surface: 'bg-surface-panel border border-border-light shadow-subtle rounded-[var(--radius-xl)]',
+        elevated: 'bg-surface-raised border border-border-medium shadow-elevated rounded-[var(--radius-xl)]',
+        glass: 'zonafit-floating-surface rounded-[var(--radius-xl)]',
+        metric: 'bg-surface-panel border border-border-light rounded-[var(--radius-lg)] shadow-xs hover:border-border-medium transition-all',
+        section: 'bg-surface-panel border border-border-light rounded-[var(--radius-xl)]',
+        interactive: 'bg-surface-panel border border-border-light rounded-[var(--radius-xl)] shadow-subtle hover:border-border-medium hover:shadow-elevated hover:-translate-y-0.5 transition-all cursor-pointer',
+        default: 'bg-surface-panel border border-border-light shadow-subtle rounded-[var(--radius-xl)]',
       },
       padding: {
         none: 'p-0',
+        xs: 'p-3',
         sm: 'p-4',
-        md: 'p-6',
-        lg: 'p-8',
-        xl: 'p-10',
+        md: 'p-5 sm:p-6',
+        lg: 'p-6 sm:p-8',
+        xl: 'p-8 sm:p-10',
       },
       hover: {
-        true: 'hover:shadow-md hover:-translate-y-1',
+        true: 'hover:shadow-elevated hover:border-border-medium hover:-translate-y-0.5',
         false: '',
       },
     },
     defaultVariants: {
-      variant: 'surface',
-      padding: 'lg',
+      variant: 'panel',
+      padding: 'md',
       hover: false,
     },
   }

@@ -15,7 +15,7 @@ interface InventoryTableProps {
 export function InventoryTable({ products, categories, onEdit, onToggleStatus }: InventoryTableProps) {
   if (products.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-bg-surface rounded-xl border border-border-medium border-dashed">
+      <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-surface-panel/80 rounded-[var(--radius-xl)] border border-border-subtle border-dashed">
         <div className="w-16 h-16 bg-brand-primary/10 rounded-full flex items-center justify-center mb-4">
           <PackageOpen className="w-8 h-8 text-brand-primary" />
         </div>
@@ -35,72 +35,72 @@ export function InventoryTable({ products, categories, onEdit, onToggleStatus }:
   };
 
   return (
-    <div className="w-full overflow-x-auto rounded-xl border border-border-light bg-bg-surface shadow-glass">
+    <div className="w-full overflow-x-auto rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/90 shadow-subtle backdrop-blur-md">
       <table className="w-full text-left text-sm text-text-secondary whitespace-nowrap">
-        <thead className="text-xs uppercase bg-bg-elevated/50 text-text-muted border-b border-border-light">
+        <thead className="text-xs uppercase bg-surface-raised/70 text-text-muted border-b border-border-subtle tracking-wider font-semibold">
           <tr>
-            <th scope="col" className="px-6 py-4 font-semibold">Producto / SKU</th>
-            <th scope="col" className="px-6 py-4 font-semibold">Categoría</th>
-            <th scope="col" className="px-6 py-4 font-semibold">Precio Venta</th>
-            <th scope="col" className="px-6 py-4 font-semibold">Stock</th>
-            <th scope="col" className="px-6 py-4 font-semibold">Estado</th>
-            <th scope="col" className="px-6 py-4 font-semibold text-right">Acciones</th>
+            <th scope="col" className="px-6 py-3.5">Producto / SKU</th>
+            <th scope="col" className="px-6 py-3.5">Categoría</th>
+            <th scope="col" className="px-6 py-3.5">Precio Venta</th>
+            <th scope="col" className="px-6 py-3.5">Stock</th>
+            <th scope="col" className="px-6 py-3.5">Estado</th>
+            <th scope="col" className="px-6 py-3.5 text-right">Acciones</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border-light">
+        <tbody className="divide-y divide-border-subtle">
           {products.map((product) => {
             const isLowStock = product.stock <= product.minimum_stock;
             
             return (
               <tr 
                 key={product.id} 
-                className={cn("hover:bg-bg-elevated/30 transition-colors group", !product.is_active && "opacity-50")}
+                className={cn("hover:bg-surface-panel-hover transition-colors group", !product.is_active && "opacity-50")}
               >
-                <td className="px-6 py-4">
+                <td className="px-6 py-3.5">
                   <div className="font-semibold text-text-primary">{product.name}</div>
                   <div className="text-xs text-text-muted font-mono">{product.sku}</div>
                 </td>
-                <td className="px-6 py-4">
-                  <Badge variant="default" className="bg-bg-page border-border-medium">{getCategoryName(product.category_id)}</Badge>
+                <td className="px-6 py-3.5">
+                  <Badge variant="default" className="bg-surface-base text-text-muted border-border-subtle">{getCategoryName(product.category_id)}</Badge>
                 </td>
-                <td className="px-6 py-4 font-medium text-text-primary">
+                <td className="px-6 py-3.5 font-medium text-text-primary">
                   {formatPrice(product.sale_price)}
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-3.5">
                   <div className="flex items-center gap-2">
-                    <span className={cn("font-medium", isLowStock ? "text-danger" : "text-text-primary")}>
+                    <span className={cn("font-medium", isLowStock ? "text-rose-400" : "text-text-primary")}>
                       {product.stock}
                     </span>
                     {isLowStock && <Badge variant="danger" className="text-[10px] px-1.5 py-0">Bajo</Badge>}
                   </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-3.5">
                   {product.is_active ? (
                     <Badge variant="success">Activo</Badge>
                   ) : (
                     <Badge variant="danger">Inactivo</Badge>
                   )}
                 </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <td className="px-6 py-3.5 text-right">
+                  <div className="flex items-center justify-end gap-1.5 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => onEdit(product)}
-                      className="p-2 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-md transition-colors"
+                      className="p-1.5 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-[var(--radius-sm)] transition-colors cursor-pointer"
                       title="Editar Producto"
                     >
-                      <Edit2 size={16} />
+                      <Edit2 size={15} />
                     </button>
                     <button
                       onClick={() => onToggleStatus(product)}
                       className={cn(
-                        "p-2 rounded-md transition-colors",
+                        "p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer",
                         product.is_active 
-                          ? "text-text-muted hover:text-danger hover:bg-danger/10" 
-                          : "text-text-muted hover:text-success hover:bg-success/10"
+                          ? "text-text-muted hover:text-rose-400 hover:bg-rose-500/10" 
+                          : "text-text-muted hover:text-emerald-400 hover:bg-emerald-500/10"
                       )}
                       title={product.is_active ? "Desactivar" : "Reactivar"}
                     >
-                      <Ban size={16} />
+                      <Ban size={15} />
                     </button>
                   </div>
                 </td>

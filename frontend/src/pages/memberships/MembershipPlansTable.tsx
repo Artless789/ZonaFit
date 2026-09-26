@@ -13,7 +13,7 @@ interface MembershipPlansTableProps {
 export function MembershipPlansTable({ plans, onEdit, onToggleStatus }: MembershipPlansTableProps) {
   if (plans.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-bg-surface rounded-xl border border-border-medium border-dashed">
+      <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-surface-panel/80 rounded-[var(--radius-xl)] border border-border-subtle border-dashed">
         <div className="w-16 h-16 bg-brand-primary/10 rounded-full flex items-center justify-center mb-4">
           <Tag className="w-8 h-8 text-brand-primary" />
         </div>
@@ -28,60 +28,60 @@ export function MembershipPlansTable({ plans, onEdit, onToggleStatus }: Membersh
   const formatPrice = formatCurrency;
 
   return (
-    <div className="w-full overflow-x-auto rounded-xl border border-border-light bg-bg-surface shadow-glass">
+    <div className="w-full overflow-x-auto rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/90 shadow-subtle backdrop-blur-md">
       <table className="w-full text-left text-sm text-text-secondary whitespace-nowrap">
-        <thead className="text-xs uppercase bg-bg-elevated/50 text-text-muted border-b border-border-light">
+        <thead className="text-xs uppercase bg-surface-raised/70 text-text-muted border-b border-border-subtle tracking-wider font-semibold">
           <tr>
-            <th scope="col" className="px-6 py-4 font-semibold">Plan</th>
-            <th scope="col" className="px-6 py-4 font-semibold">Precio</th>
-            <th scope="col" className="px-6 py-4 font-semibold">Duración</th>
-            <th scope="col" className="px-6 py-4 font-semibold">Estado</th>
-            <th scope="col" className="px-6 py-4 font-semibold text-right">Acciones</th>
+            <th scope="col" className="px-6 py-3.5">Plan</th>
+            <th scope="col" className="px-6 py-3.5">Precio</th>
+            <th scope="col" className="px-6 py-3.5">Duración</th>
+            <th scope="col" className="px-6 py-3.5">Estado</th>
+            <th scope="col" className="px-6 py-3.5 text-right">Acciones</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border-light">
+        <tbody className="divide-y divide-border-subtle">
           {plans.map((plan) => (
             <tr 
               key={plan.id} 
-              className={cn("hover:bg-bg-elevated/30 transition-colors group", !plan.is_active && "opacity-50")}
+              className={cn("hover:bg-surface-panel-hover transition-colors group", !plan.is_active && "opacity-50")}
             >
-              <td className="px-6 py-4">
+              <td className="px-6 py-3.5">
                 <div className="font-semibold text-text-primary">{plan.name}</div>
                 {plan.description && <div className="text-xs text-text-muted truncate max-w-[200px]">{plan.description}</div>}
               </td>
-              <td className="px-6 py-4 font-medium text-text-primary">
+              <td className="px-6 py-3.5 font-medium text-text-primary">
                 {formatPrice(plan.price)}
               </td>
-              <td className="px-6 py-4">
+              <td className="px-6 py-3.5">
                 {plan.duration_days} días
               </td>
-              <td className="px-6 py-4">
+              <td className="px-6 py-3.5">
                 {plan.is_active ? (
                   <Badge variant="success">Activo</Badge>
                 ) : (
                   <Badge variant="danger">Inactivo</Badge>
                 )}
               </td>
-              <td className="px-6 py-4 text-right">
-                <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <td className="px-6 py-3.5 text-right">
+                <div className="flex items-center justify-end gap-1.5 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => onEdit(plan)}
-                    className="p-2 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-md transition-colors"
+                    className="p-1.5 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-[var(--radius-sm)] transition-colors cursor-pointer"
                     title="Editar Plan"
                   >
-                    <Edit2 size={16} />
+                    <Edit2 size={15} />
                   </button>
                   <button
                     onClick={() => onToggleStatus(plan)}
                     className={cn(
-                      "p-2 rounded-md transition-colors",
+                      "p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer",
                       plan.is_active 
-                        ? "text-text-muted hover:text-danger hover:bg-danger/10" 
-                        : "text-text-muted hover:text-success hover:bg-success/10"
+                        ? "text-text-muted hover:text-rose-400 hover:bg-rose-500/10" 
+                        : "text-text-muted hover:text-emerald-400 hover:bg-emerald-500/10"
                     )}
                     title={plan.is_active ? "Desactivar Plan" : "Reactivar Plan"}
                   >
-                    <Ban size={16} />
+                    <Ban size={15} />
                   </button>
                 </div>
               </td>

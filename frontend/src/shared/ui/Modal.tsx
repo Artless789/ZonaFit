@@ -73,13 +73,13 @@ export function Modal({
             aria-labelledby={title ? "modal-title" : undefined}
             aria-describedby={description ? "modal-description" : undefined}
           >
-            <div className={cn("w-full flex flex-col max-h-[90vh] shadow-xl overflow-hidden material-glass-strong rounded-xl", className)}>
+            <div className={cn("w-full flex flex-col max-h-[90vh] shadow-modal overflow-hidden material-glass-strong rounded-[var(--radius-2xl)] border border-border-medium", className)}>
               {/* Header */}
               {(title || !hideCloseButton) && (
-                <div className="shrink-0 flex items-start justify-between px-6 py-5 border-b border-border-medium/40">
+                <div className="shrink-0 flex items-start justify-between px-6 py-5 border-b border-border-light">
                   <div className="flex flex-col gap-1 pr-4">
                     {title && (
-                      <h2 id="modal-title" className="text-lg font-semibold text-text-primary">
+                      <h2 id="modal-title" className="text-lg font-semibold tracking-tight text-text-primary">
                         {title}
                       </h2>
                     )}
@@ -92,23 +92,23 @@ export function Modal({
                   {!hideCloseButton && (
                     <button
                       onClick={onClose}
-                      className="shrink-0 rounded-full p-1.5 text-text-muted hover:bg-border-light hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-1 focus:ring-offset-bg-surface"
+                      className="shrink-0 rounded-full p-1.5 text-text-muted hover:bg-white/[0.06] hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary"
                       aria-label="Cerrar modal"
                     >
-                      <X size={20} />
+                      <X size={18} />
                     </button>
                   )}
                 </div>
               )}
               
               {/* Body */}
-              <div className="flex-1 overflow-y-auto px-6 py-6 text-text-secondary">
+              <div className="flex-1 overflow-y-auto px-6 py-5 text-text-secondary">
                 {children}
               </div>
 
               {/* Footer */}
               {footer && (
-                <div className="shrink-0 px-6 py-4 border-t border-border-medium/40 bg-border-light/20 flex items-center justify-end gap-3">
+                <div className="shrink-0 px-6 py-4 border-t border-border-light bg-surface-base/40 flex items-center justify-end gap-3">
                   {footer}
                 </div>
               )}

@@ -12,7 +12,7 @@ export const ActionGlowButton = forwardRef<HTMLButtonElement, ActionGlowButtonPr
       <button
         ref={ref}
         className={cn(
-          "group relative inline-flex items-center justify-center overflow-hidden rounded-[var(--radius-md)] border border-[#B91C1C] bg-gradient-to-b from-[#EF4444] to-[#DC2626] px-5 py-2.5 text-sm font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.15),inset_0_-2px_4px_rgba(185,28,28,0.4),0_4px_12px_-4px_rgba(220,38,38,0.3)] transition-all duration-300 ease-out hover:brightness-110 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.25),inset_0_-2px_4px_rgba(185,28,28,0.4),0_6px_16px_-4px_rgba(220,38,38,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 active:scale-[0.98] active:brightness-95 active:shadow-[inset_0_2px_8px_rgba(153,27,27,0.5)] disabled:pointer-events-none disabled:opacity-50",
+          "group relative inline-flex items-center justify-center overflow-hidden rounded-[var(--radius-md)] border border-brand-primary/40 bg-gradient-to-b from-[#EF4444] to-[#DC2626] px-4.5 py-2 text-sm font-semibold text-white shadow-glow-brand transition-all duration-150 ease-out hover:brightness-105 hover:border-brand-primary/60 hover:shadow-[0_6px_20px_-2px_rgba(220,38,38,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-base active:scale-[0.98] active:brightness-95 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer",
           className
         )}
         disabled={disabled || isLoading}

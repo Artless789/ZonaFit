@@ -264,23 +264,23 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
   return (
     <div className="space-y-4">
       {/* Barra de Controles: Pestañas de Estado + Buscador */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-bg-surface p-3 sm:p-4 rounded-xl border border-border-light shadow-glass">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-surface-panel p-3.5 rounded-[var(--radius-xl)] border border-border-light shadow-subtle">
         {/* Pestañas (Tabs) */}
-        <div className="flex items-center gap-1 bg-bg-page p-1 rounded-xl border border-border-medium overflow-x-auto custom-scrollbar">
+        <div className="flex items-center gap-1 bg-surface-base p-0.5 rounded-[var(--radius-sm)] border border-border-medium overflow-x-auto custom-scrollbar">
           <button
             type="button"
             onClick={() => handleTabChange('ALL')}
             className={cn(
-              "px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 shrink-0",
+              "px-3 py-1 text-xs font-medium rounded-[calc(var(--radius-sm)-2px)] transition-all flex items-center gap-1.5 shrink-0 cursor-pointer",
               activeTab === 'ALL'
-                ? "bg-bg-elevated text-text-primary shadow-xs border border-border-medium font-semibold"
+                ? "bg-surface-raised text-text-primary shadow-xs font-semibold"
                 : "text-text-muted hover:text-text-secondary"
             )}
           >
             <span>Todos</span>
             <span className={cn(
               "text-[10px] px-1.5 py-0.2 rounded-full",
-              activeTab === 'ALL' ? "bg-bg-surface text-text-primary" : "bg-bg-surface/50 text-text-muted"
+              activeTab === 'ALL' ? "bg-white/[0.08] text-text-secondary font-semibold" : "bg-white/[0.03] text-text-muted"
             )}>
               {counts.all}
             </span>
@@ -290,16 +290,16 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
             type="button"
             onClick={() => handleTabChange('ACTIVE')}
             className={cn(
-              "px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 shrink-0",
+              "px-3 py-1 text-xs font-medium rounded-[calc(var(--radius-sm)-2px)] transition-all flex items-center gap-1.5 shrink-0 cursor-pointer",
               activeTab === 'ACTIVE'
-                ? "bg-bg-elevated text-success shadow-xs border border-border-medium font-semibold"
+                ? "bg-surface-raised text-emerald-400 shadow-xs font-semibold"
                 : "text-text-muted hover:text-text-secondary"
             )}
           >
             <span>Activos</span>
             <span className={cn(
               "text-[10px] px-1.5 py-0.2 rounded-full",
-              activeTab === 'ACTIVE' ? "bg-success/20 text-success font-bold" : "bg-bg-surface/50 text-text-muted"
+              activeTab === 'ACTIVE' ? "bg-emerald-500/15 text-emerald-400 font-bold" : "bg-white/[0.03] text-text-muted"
             )}>
               {counts.active}
             </span>
@@ -309,9 +309,9 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
             type="button"
             onClick={() => handleTabChange('EXPIRING')}
             className={cn(
-              "px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 shrink-0",
+              "px-3 py-1 text-xs font-medium rounded-[calc(var(--radius-sm)-2px)] transition-all flex items-center gap-1.5 shrink-0 cursor-pointer",
               activeTab === 'EXPIRING'
-                ? "bg-bg-elevated text-warning shadow-xs border border-border-medium font-semibold"
+                ? "bg-surface-raised text-amber-400 shadow-xs font-semibold"
                 : "text-text-muted hover:text-text-secondary"
             )}
           >
@@ -319,7 +319,7 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
             <span>Por Vencer</span>
             <span className={cn(
               "text-[10px] px-1.5 py-0.2 rounded-full",
-              counts.expiring > 0 ? "bg-warning/20 text-warning font-bold" : "bg-bg-surface/50 text-text-muted"
+              counts.expiring > 0 ? "bg-amber-500/15 text-amber-400 font-bold" : "bg-white/[0.03] text-text-muted"
             )}>
               {counts.expiring}
             </span>
@@ -329,16 +329,16 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
             type="button"
             onClick={() => handleTabChange('EXPIRED')}
             className={cn(
-              "px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 shrink-0",
+              "px-3 py-1 text-xs font-medium rounded-[calc(var(--radius-sm)-2px)] transition-all flex items-center gap-1.5 shrink-0 cursor-pointer",
               activeTab === 'EXPIRED'
-                ? "bg-bg-elevated text-danger shadow-xs border border-border-medium font-semibold"
+                ? "bg-surface-raised text-rose-400 shadow-xs font-semibold"
                 : "text-text-muted hover:text-text-secondary"
             )}
           >
             <span>Vencidos</span>
             <span className={cn(
               "text-[10px] px-1.5 py-0.2 rounded-full",
-              counts.expired > 0 ? "bg-danger/20 text-danger font-bold" : "bg-bg-surface/50 text-text-muted"
+              counts.expired > 0 ? "bg-rose-500/15 text-rose-400 font-bold" : "bg-white/[0.03] text-text-muted"
             )}>
               {counts.expired}
             </span>
@@ -353,7 +353,7 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
             placeholder="Buscar cliente o plan..."
             value={searchQuery}
             onChange={handleSearchChange}
-            className="w-full h-9 pl-9 pr-8 rounded-lg border border-border-medium bg-bg-page text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-brand-primary transition-fast"
+            className="w-full h-9 pl-9 pr-8 rounded-[var(--radius-sm)] border border-border-medium bg-surface-base text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-all"
           />
           {searchQuery && (
             <button
@@ -368,7 +368,7 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
       </div>
 
       {/* Contenedor de la Tabla */}
-      <div className="w-full overflow-hidden rounded-xl border border-border-light bg-bg-surface shadow-glass">
+      <div className="w-full overflow-hidden rounded-[var(--radius-xl)] border border-border-light bg-surface-panel shadow-subtle">
         {filteredMemberships.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
             <div className="w-12 h-12 rounded-full bg-border-light/40 flex items-center justify-center mb-3 text-text-muted">
@@ -411,22 +411,22 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
         ) : (
           <div className="w-full overflow-x-auto">
             <table className="w-full text-left text-sm text-text-secondary whitespace-nowrap">
-              <thead className="text-xs uppercase bg-bg-elevated/50 text-text-muted border-b border-border-light">
+              <thead className="text-xs uppercase bg-surface-raised/70 text-text-muted border-b border-border-subtle tracking-wider font-semibold">
                 <tr>
-                  <th scope="col" className="px-6 py-3.5 font-semibold">Cliente</th>
-                  <th scope="col" className="px-6 py-3.5 font-semibold">Plan Asignado</th>
-                  <th scope="col" className="px-6 py-3.5 font-semibold">Vigencia</th>
-                  <th scope="col" className="px-6 py-3.5 font-semibold">Precio Cobrado</th>
-                  <th scope="col" className="px-6 py-3.5 font-semibold">Estado</th>
-                  <th scope="col" className="px-6 py-3.5 font-semibold text-right">Acciones</th>
+                  <th scope="col" className="px-6 py-3.5">Cliente</th>
+                  <th scope="col" className="px-6 py-3.5">Plan Asignado</th>
+                  <th scope="col" className="px-6 py-3.5">Vigencia</th>
+                  <th scope="col" className="px-6 py-3.5">Precio Cobrado</th>
+                  <th scope="col" className="px-6 py-3.5">Estado</th>
+                  <th scope="col" className="px-6 py-3.5 text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border-light">
+              <tbody className="divide-y divide-border-subtle">
                 {paginatedMemberships.map((membership) => (
                   <tr 
                     key={membership.id} 
                     className={cn(
-                      "hover:bg-bg-elevated/30 transition-colors group",
+                      "hover:bg-surface-panel-hover transition-colors group",
                       !membership.is_active && "opacity-50"
                     )}
                   >
@@ -467,11 +467,11 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
                     </td>
                     <td className="px-6 py-3.5">
                       <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5 text-xs text-success">
+                        <div className="flex items-center gap-1.5 text-xs text-emerald-400">
                           <CheckCircle2 size={12} />
                           <span>{formatDate(membership.start_date)}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs text-danger">
+                        <div className="flex items-center gap-1.5 text-xs text-rose-400">
                           <Clock size={12} />
                           <span>{formatDate(membership.end_date)}</span>
                         </div>
@@ -487,7 +487,7 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
                       {(() => {
                         const ctx = getMembershipWhatsAppContext(membership);
                         return (
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center justify-end gap-1.5 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               type="button"
                               onClick={() => {
@@ -505,10 +505,10 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
                                       contextData: ctx.contextData,
                                     });
                                   }}
-                                  className="p-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-md transition-colors inline-flex items-center justify-center cursor-pointer"
+                                  className="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-[var(--radius-sm)] transition-colors inline-flex items-center justify-center cursor-pointer"
                                   title={ctx.tooltip}
                                 >
-                                  <MessageCircle size={16} />
+                                  <MessageCircle size={15} />
                                 </button>
                             {membership.historyCount > 1 && (
                               <button
@@ -519,32 +519,32 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
                                   : membership.client?.full_name || membership.client_name || `Cliente #${membership.client_id}`,
                                   memberships: membership.history,
                                 })}
-                                className="p-2 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-md transition-colors"
+                                className="p-1.5 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-[var(--radius-sm)] transition-colors"
                                 title={`Ver Historial (${membership.historyCount} registros)`}
                               >
-                                <History size={16} />
+                                <History size={15} />
                               </button>
                             )}
                             {onViewDetails && (
                               <button
                                 onClick={() => onViewDetails(membership)}
-                                className="p-2 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-md transition-colors"
+                                className="p-1.5 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-[var(--radius-sm)] transition-colors"
                                 title="Ver Detalle"
                               >
-                                <Eye size={16} />
+                                <Eye size={15} />
                               </button>
                             )}
                             <button
                               onClick={() => onToggleStatus(membership)}
                               className={cn(
-                                "p-2 rounded-md transition-colors",
+                                "p-1.5 rounded-[var(--radius-sm)] transition-colors",
                                 membership.is_active 
-                                  ? "text-text-muted hover:text-danger hover:bg-danger/10" 
-                                  : "text-text-muted hover:text-success hover:bg-success/10"
+                                  ? "text-text-muted hover:text-rose-400 hover:bg-rose-500/10" 
+                                  : "text-text-muted hover:text-emerald-400 hover:bg-emerald-500/10"
                               )}
                               title={membership.is_active ? "Cancelar Suscripción" : "Reactivar Suscripción"}
                             >
-                              <Ban size={16} />
+                              <Ban size={15} />
                             </button>
                           </div>
                         );
@@ -559,7 +559,7 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
 
         {/* Footer con Paginación e Información */}
         {filteredMemberships.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-3 bg-bg-elevated/30 border-t border-border-light">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-3.5 bg-surface-panel/40 border-t border-border-subtle">
             <p className="text-xs text-text-muted text-center sm:text-left">
               Mostrando <span className="font-semibold text-text-primary">{(currentPage - 1) * pageSize + 1}</span> a{' '}
               <span className="font-semibold text-text-primary">
@@ -589,20 +589,20 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
             Mostrando todos los planes y suscripciones registradas para este cliente ({historyModalData?.memberships.length || 0} registros).
           </p>
 
-          <div className="overflow-x-auto rounded-xl border border-border-light">
+          <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-border-subtle bg-surface-panel/40">
             <table className="w-full text-left text-xs text-text-secondary whitespace-nowrap">
-              <thead className="bg-bg-elevated/50 text-text-muted border-b border-border-light uppercase text-[10px] tracking-wider">
+              <thead className="bg-surface-raised/70 text-text-muted border-b border-border-subtle uppercase text-[10px] tracking-wider font-semibold">
                 <tr>
-                  <th className="px-4 py-2.5 font-semibold">Plan</th>
-                  <th className="px-4 py-2.5 font-semibold">Vigencia</th>
-                  <th className="px-4 py-2.5 font-semibold">Precio Cobrado</th>
-                  <th className="px-4 py-2.5 font-semibold">Estado</th>
-                  <th className="px-4 py-2.5 font-semibold text-right">Acción</th>
+                  <th className="px-4 py-2.5">Plan</th>
+                  <th className="px-4 py-2.5">Vigencia</th>
+                  <th className="px-4 py-2.5">Precio Cobrado</th>
+                  <th className="px-4 py-2.5">Estado</th>
+                  <th className="px-4 py-2.5 text-right">Acción</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border-light">
+              <tbody className="divide-y divide-border-subtle">
                 {historyModalData?.memberships.map((m) => (
-                  <tr key={m.id} className="hover:bg-bg-elevated/30 transition-colors">
+                  <tr key={m.id} className="hover:bg-surface-panel-hover transition-colors">
                     <td className="px-4 py-2.5">
                       <div className="font-semibold text-text-primary">{m.planName}</div>
                       <div className="text-[10px] text-text-muted">ID: #{m.id}</div>
@@ -637,7 +637,7 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
                                   contextData: mCtx.contextData,
                                 });
                               }}
-                              className="px-2 py-1 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-md transition-colors inline-flex items-center gap-1 font-medium cursor-pointer"
+                              className="px-2 py-1 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-[var(--radius-sm)] transition-colors inline-flex items-center gap-1 font-medium cursor-pointer"
                               title={mCtx.tooltip}
                             >
                               <MessageCircle size={13} />
@@ -650,7 +650,7 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
                                   setHistoryModalData(null);
                                   onViewDetails(m);
                                 }}
-                                className="px-2.5 py-1 text-xs text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-md transition-colors inline-flex items-center gap-1 font-medium"
+                                className="px-2.5 py-1 text-xs text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-[var(--radius-sm)] transition-colors inline-flex items-center gap-1 font-medium"
                                 title="Ver Detalle Completo"
                               >
                                 <Eye size={13} />
@@ -671,7 +671,7 @@ export function MembershipsTable({ memberships, onToggleStatus, onViewDetails }:
             <button
               type="button"
               onClick={() => setHistoryModalData(null)}
-              className="px-4 py-2 text-xs font-medium text-text-secondary hover:text-text-primary bg-bg-surface hover:bg-bg-elevated border border-border-medium rounded-lg transition-colors"
+              className="px-4 py-2 text-xs font-medium text-text-secondary hover:text-text-primary bg-surface-raised hover:bg-surface-panel-hover border border-border-medium rounded-[var(--radius-sm)] transition-colors"
             >
               Cerrar
             </button>

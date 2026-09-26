@@ -9,7 +9,13 @@ export const whatsappGroupService = {
   getAll: async (isActive?: boolean): Promise<WhatsAppGroup[]> => {
     const params = typeof isActive === 'boolean' ? { is_active: isActive } : {};
     const { data } = await api.get<WhatsAppGroup[]>('/whatsapp-groups/', { params });
-    return data;
+    if (Array.isArray(data)) {
+      return data;
+    }
+    if (data && typeof data === 'object' && Array.isArray((data as any).items)) {
+      return (data as any).items;
+    }
+    return [];
   },
 
   getById: async (id: number): Promise<WhatsAppGroup> => {

@@ -116,56 +116,56 @@ export function CreditsPage() {
         <h1 className="text-2xl font-bold text-text-primary mb-6">Cuentas por Cobrar</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="rounded-xl border border-brand-primary/20 bg-brand-primary/5 p-4 flex flex-col justify-center">
+          <div className="rounded-[var(--radius-xl)] border border-brand-primary/25 bg-brand-primary/5 p-4 flex flex-col justify-center shadow-subtle">
             <div className="flex items-center gap-2 text-text-secondary mb-1">
-              <WalletCards size={18} />
-              <span className="text-sm font-medium">Total por Cobrar (Vista)</span>
+              <WalletCards size={18} className="text-brand-primary" />
+              <span className="text-xs font-semibold uppercase tracking-wider">Total por Cobrar</span>
             </div>
-            <div className="text-2xl font-bold text-text-primary">
+            <div className="text-2xl font-bold text-text-primary tracking-tight">
               {formatPrice(stats.totalDue)}
             </div>
           </div>
           
-          <div className="rounded-xl border border-border-light bg-bg-surface/40 p-4 flex flex-col justify-center">
-            <div className="flex items-center gap-2 text-warning mb-1">
+          <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/80 p-4 flex flex-col justify-center shadow-subtle">
+            <div className="flex items-center gap-2 text-amber-400 mb-1">
               <Receipt size={18} />
-              <span className="text-sm font-medium">Pendientes</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Pendientes</span>
             </div>
-            <div className="text-2xl font-bold text-text-primary">{stats.countPending}</div>
+            <div className="text-2xl font-bold text-text-primary tracking-tight">{stats.countPending}</div>
           </div>
           
-          <div className="rounded-xl border border-border-light bg-bg-surface/40 p-4 flex flex-col justify-center">
-            <div className="flex items-center gap-2 text-info mb-1">
+          <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/80 p-4 flex flex-col justify-center shadow-subtle">
+            <div className="flex items-center gap-2 text-blue-400 mb-1">
               <Receipt size={18} />
-              <span className="text-sm font-medium">Parciales</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Parciales</span>
             </div>
-            <div className="text-2xl font-bold text-text-primary">{stats.countPartial}</div>
+            <div className="text-2xl font-bold text-text-primary tracking-tight">{stats.countPartial}</div>
           </div>
           
-          <div className="rounded-xl border border-border-light bg-bg-surface/40 p-4 flex flex-col justify-center">
-            <div className="flex items-center gap-2 text-danger mb-1">
+          <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/80 p-4 flex flex-col justify-center shadow-subtle">
+            <div className="flex items-center gap-2 text-rose-400 mb-1">
               <AlertTriangle size={18} />
-              <span className="text-sm font-medium">Vencidas</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Vencidas</span>
             </div>
-            <div className="text-2xl font-bold text-text-primary">{stats.countOverdue}</div>
+            <div className="text-2xl font-bold text-text-primary tracking-tight">{stats.countOverdue}</div>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="rounded-xl border border-border-light bg-bg-surface/40 p-4 flex flex-col sm:flex-row gap-4 items-end">
+      <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/80 p-4 flex flex-col sm:flex-row gap-4 items-end shadow-subtle">
         <div className="flex-1 w-full relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={17} />
           <input
             type="text"
             placeholder="Buscar por cliente o documento..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-10 pl-10 pr-4 rounded-md border border-border-medium bg-bg-surface text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary transition-fast"
+            className="w-full h-10 pl-10 pr-4 rounded-[var(--radius-sm)] border border-border-medium bg-surface-base text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-all"
           />
         </div>
         <div className="w-full sm:w-48 flex items-center gap-2">
-          <Filter size={18} className="text-text-muted" />
+          <Filter size={17} className="text-text-muted shrink-0" />
           <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -181,46 +181,46 @@ export function CreditsPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-border-light bg-bg-surface/40 p-0 overflow-hidden">
+      <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/90 p-0 overflow-hidden shadow-subtle backdrop-blur-md">
         <div className="overflow-x-auto min-h-75">
           {query.isLoading || clientsQuery.isLoading ? (
             <div className="flex items-center justify-center h-48">
-              <Spinner className="w-10 h-10 text-brand-primary" />
+              <Spinner className="w-8 h-8 text-brand-primary" />
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-text-muted">
               <WalletCards size={48} className="opacity-20 mb-3" />
-              <p>No se encontraron resultados con estos filtros.</p>
+              <p className="text-sm">No se encontraron resultados con estos filtros.</p>
             </div>
           ) : (
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-text-secondary uppercase bg-bg-surface border-b border-border-light">
+            <table className="w-full text-sm text-left whitespace-nowrap">
+              <thead className="text-xs text-text-muted uppercase bg-surface-raised/70 border-b border-border-subtle font-semibold tracking-wider">
                 <tr>
-                  <th className="px-6 py-4 font-medium">Cliente</th>
-                  <th className="px-6 py-4 font-medium">Venta</th>
-                  <th className="px-6 py-4 font-medium text-right">Original</th>
-                  <th className="px-6 py-4 font-medium text-right">Pagado</th>
-                  <th className="px-6 py-4 font-medium text-right">Saldo</th>
-                  <th className="px-6 py-4 font-medium">Vencimiento</th>
-                  <th className="px-6 py-4 font-medium text-center">Estado</th>
-                  <th className="px-6 py-4 font-medium text-right">Acciones</th>
+                  <th className="px-6 py-3.5">Cliente</th>
+                  <th className="px-6 py-3.5">Venta</th>
+                  <th className="px-6 py-3.5 text-right">Original</th>
+                  <th className="px-6 py-3.5 text-right">Pagado</th>
+                  <th className="px-6 py-3.5 text-right">Saldo</th>
+                  <th className="px-6 py-3.5">Vencimiento</th>
+                  <th className="px-6 py-3.5 text-center">Estado</th>
+                  <th className="px-6 py-3.5 text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border-light">
+              <tbody className="divide-y divide-border-subtle">
                 {filteredItems.map((ar) => (
-                  <tr key={ar.id} className="hover:bg-bg-surface/50 transition-colors">
-                    <td className="px-6 py-4">
+                  <tr key={ar.id} className="hover:bg-surface-panel-hover transition-colors group">
+                    <td className="px-6 py-3.5">
                       <div className="font-semibold text-text-primary">{getClientName(ar.client_id)}</div>
-                      <div className="text-xs text-text-muted">{getClientDocument(ar.client_id)}</div>
+                      <div className="text-xs text-text-muted font-mono">{getClientDocument(ar.client_id)}</div>
                     </td>
-                    <td className="px-6 py-4 text-text-secondary">#{ar.sale_id}</td>
-                    <td className="px-6 py-4 text-right text-text-secondary">{formatPrice(ar.original_amount)}</td>
-                    <td className="px-6 py-4 text-right text-brand-primary">{formatPrice(ar.paid_amount)}</td>
-                    <td className="px-6 py-4 text-right font-bold text-text-primary">{formatPrice(ar.balance_due)}</td>
-                    <td className="px-6 py-4 text-text-secondary">{formatShortDate(ar.due_date)}</td>
-                    <td className="px-6 py-4 text-center">{getStatusBadge(ar.status)}</td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2 items-center">
+                    <td className="px-6 py-3.5 text-text-secondary font-mono">#{ar.sale_id}</td>
+                    <td className="px-6 py-3.5 text-right text-text-secondary">{formatPrice(ar.original_amount)}</td>
+                    <td className="px-6 py-3.5 text-right text-brand-primary font-medium">{formatPrice(ar.paid_amount)}</td>
+                    <td className="px-6 py-3.5 text-right font-bold text-text-primary">{formatPrice(ar.balance_due)}</td>
+                    <td className="px-6 py-3.5 text-text-secondary">{formatShortDate(ar.due_date)}</td>
+                    <td className="px-6 py-3.5 text-center">{getStatusBadge(ar.status)}</td>
+                    <td className="px-6 py-3.5 text-right">
+                      <div className="flex justify-end gap-1.5 items-center">
                         {ar.balance_due > 0 && ar.status !== 'CANCELLED' && (
                           <button
                             type="button"
@@ -242,22 +242,22 @@ export function CreditsPage() {
                                 },
                               });
                             }}
-                            className="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-emerald-500/20 rounded transition-colors inline-flex items-center justify-center cursor-pointer"
+                            className="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-emerald-500/20 rounded-[var(--radius-sm)] transition-colors inline-flex items-center justify-center cursor-pointer"
                             title="Avisar por WhatsApp"
                           >
-                            <MessageCircle size={14} />
+                            <MessageCircle size={15} />
                           </button>
                         )}
                         <button
                           onClick={() => handleOpenDrawer(ar)}
-                          className="px-3 py-1.5 text-xs font-medium bg-bg-elevated border border-border-medium rounded hover:bg-border-light transition-colors text-text-secondary"
+                          className="px-3 py-1.5 text-xs font-semibold bg-surface-raised border border-border-medium rounded-[var(--radius-sm)] hover:bg-surface-panel-hover transition-colors text-text-secondary cursor-pointer"
                         >
                           Detalles
                         </button>
                         {ar.balance_due > 0 && ar.status !== 'CANCELLED' && (
                           <button
                             onClick={() => handleOpenPayment(ar)}
-                            className="px-3 py-1.5 text-xs font-medium bg-brand-primary/10 text-brand-primary border border-brand-primary/20 rounded hover:bg-brand-primary hover:text-white transition-colors"
+                            className="px-3 py-1.5 text-xs font-semibold bg-brand-primary/10 text-brand-primary border border-brand-primary/20 rounded-[var(--radius-sm)] hover:bg-brand-primary hover:text-white transition-colors cursor-pointer"
                           >
                             Abonar
                           </button>
@@ -272,7 +272,7 @@ export function CreditsPage() {
         </div>
         
         {query.data && query.data.total_pages > 1 && (
-          <div className="p-4 border-t border-border-light bg-bg-surface flex justify-center">
+          <div className="p-4 border-t border-border-subtle bg-surface-panel/40 flex justify-center">
             <Pagination
               page={page}
               totalPages={query.data.total_pages}

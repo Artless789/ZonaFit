@@ -132,10 +132,10 @@ export function MembershipsPage() {
       </div>
 
       {/* Segmented Control / Tabs */}
-      <div className="bg-bg-surface border border-border-light p-1 rounded-xl shadow-glass w-full max-w-sm flex relative">
+      <div className="bg-surface-panel/80 border border-border-subtle p-1 rounded-[var(--radius-lg)] shadow-subtle backdrop-blur-md w-full max-w-sm flex relative">
         {/* Animated Background Pill */}
         <div 
-          className="absolute inset-y-1 rounded-lg bg-bg-elevated border border-border-medium shadow-sm transition-all duration-300 ease-out z-0"
+          className="absolute inset-y-1 rounded-[var(--radius-md)] bg-surface-raised border border-border-medium shadow-elevated transition-all duration-200 ease-out z-0"
           style={{
             width: 'calc(50% - 4px)',
             left: activeTab === 'subscriptions' ? '4px' : 'calc(50%)',
@@ -145,7 +145,7 @@ export function MembershipsPage() {
         <button
           onClick={() => setActiveTab('subscriptions')}
           className={cn(
-            "relative z-10 flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors",
+            "relative z-10 flex-1 flex items-center justify-center gap-2 py-2 text-xs sm:text-sm font-semibold transition-colors cursor-pointer",
             activeTab === 'subscriptions' ? "text-text-primary" : "text-text-muted hover:text-text-secondary"
           )}
         >
@@ -155,7 +155,7 @@ export function MembershipsPage() {
         <button
           onClick={() => setActiveTab('plans')}
           className={cn(
-            "relative z-10 flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors",
+            "relative z-10 flex-1 flex items-center justify-center gap-2 py-2 text-xs sm:text-sm font-semibold transition-colors cursor-pointer",
             activeTab === 'plans' ? "text-text-primary" : "text-text-muted hover:text-text-secondary"
           )}
         >
