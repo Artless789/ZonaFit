@@ -102,3 +102,7 @@ class AccountsReceivable(Base):
         back_populates="accounts_receivable",
         cascade="all, delete-orphan",
     )
+
+    @property
+    def client_name(self) -> str | None:
+        return self.client.full_name if self.client else None

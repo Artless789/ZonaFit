@@ -31,7 +31,7 @@ export function CreditsPage() {
     status: statusFilter || undefined 
   });
   
-  const { query: clientsQuery } = useClients();
+  const { query: clientsQuery } = useClients(1, 500);
   const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb();
 
   const handleOpenDrawer = (ar: AccountsReceivable) => {
@@ -42,8 +42,6 @@ export function CreditsPage() {
   const handleOpenPayment = (ar: AccountsReceivable) => {
     setSelectedAR(ar);
     setIsPaymentModalOpen(true);
-    // If opening from list, drawer might be closed. If opening from drawer, we keep drawer open underneath or close it.
-    // In our logic, PaymentModal is separated.
   };
 
   const formatPrice = formatCurrency;
@@ -56,15 +54,24 @@ export function CreditsPage() {
     }
   };
 
-  const getClientName = (clientId: number) => {
-    const client = clientsQuery.data?.items.find(c => c.id === clientId);
-    if (!client) return `Cliente #${clientId}`;
-    return client.full_name;
+  const getClientName = (ar: AccountsReceivable) => {
+    if (ar.client?.full_name) return ar.client.full_name;
+    if (ar.client_name) return ar.client_name;
+    const client = clientsQuery.data?.items?.find((c) => c.id === ar.client_id);
+    if (client?.full_name) return client.full_name;
+    return `Cliente #${ar.client_id}`;
   };
 
-  const getClientDocument = (clientId: number) => {
-    const client = clientsQuery.data?.items.find(c => c.id === clientId);
+  const getClientDocument = (ar: AccountsReceivable) => {
+    if (ar.client?.document) return ar.client.document;
+    const client = clientsQuery.data?.items?.find((c) => c.id === ar.client_id);
     return client?.document || 'N/A';
+  };
+
+  const getClientPhone = (ar: AccountsReceivable) => {
+    if (ar.client?.phone) return ar.client.phone;
+    const client = clientsQuery.data?.items?.find((c) => c.id === ar.client_id);
+    return client?.phone || undefined;
   };
 
   const getStatusBadge = (status: string) => {
@@ -85,8 +92,8 @@ export function CreditsPage() {
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
       items = items.filter(ar => {
-        const cName = getClientName(ar.client_id).toLowerCase();
-        const cDoc = getClientDocument(ar.client_id).toLowerCase();
+        const cName = getClientName(ar).toLowerCase();
+        const cDoc = getClientDocument(ar).toLowerCase();
         return cName.includes(lowerSearch) || cDoc.includes(lowerSearch);
       });
     }
@@ -111,11 +118,8 @@ export function CreditsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header & Stats */}
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary mb-6">Cuentas por Cobrar</h1>
-        
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="rounded-[var(--radius-xl)] border border-brand-primary/25 bg-brand-primary/5 p-4 flex flex-col justify-center shadow-subtle">
             <div className="flex items-center gap-2 text-text-secondary mb-1">
               <WalletCards size={18} className="text-brand-primary" />
@@ -150,7 +154,6 @@ export function CreditsPage() {
             <div className="text-2xl font-bold text-text-primary tracking-tight">{stats.countOverdue}</div>
           </div>
         </div>
-      </div>
 
       {/* Filters */}
       <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/80 p-4 flex flex-col sm:flex-row gap-4 items-end shadow-subtle">
@@ -210,8 +213,8 @@ export function CreditsPage() {
                 {filteredItems.map((ar) => (
                   <tr key={ar.id} className="hover:bg-surface-panel-hover transition-colors group">
                     <td className="px-6 py-3.5">
-                      <div className="font-semibold text-text-primary">{getClientName(ar.client_id)}</div>
-                      <div className="text-xs text-text-muted font-mono">{getClientDocument(ar.client_id)}</div>
+                      <div className="font-semibold text-text-primary">{getClientName(ar)}</div>
+                      <div className="text-xs text-text-muted font-mono">{getClientDocument(ar)}</div>
                     </td>
                     <td className="px-6 py-3.5 text-text-secondary font-mono">#{ar.sale_id}</td>
                     <td className="px-6 py-3.5 text-right text-text-secondary">{formatPrice(ar.original_amount)}</td>
@@ -225,12 +228,11 @@ export function CreditsPage() {
                           <button
                             type="button"
                             onClick={() => {
-                              const client = clientsQuery.data?.items.find((c) => c.id === ar.client_id);
                               openWhatsAppModal({
                                 client: {
                                   id: ar.client_id,
-                                  full_name: client ? client.full_name : `Cliente #${ar.client_id}`,
-                                  phone: client?.phone || null,
+                                  full_name: getClientName(ar),
+                                  phone: getClientPhone(ar) || null,
                                 },
                                 eventType: 'CREDIT_OVERDUE',
                                 eventLabel: 'Recordar saldo',
@@ -287,8 +289,8 @@ export function CreditsPage() {
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         ar={selectedAR}
-        clientName={selectedAR ? getClientName(selectedAR.client_id) : ''}
-        clientPhone={selectedAR ? clientsQuery.data?.items.find(c => c.id === selectedAR.client_id)?.phone : undefined}
+        clientName={selectedAR ? getClientName(selectedAR) : ''}
+        clientPhone={selectedAR ? getClientPhone(selectedAR) : undefined}
         onPay={() => {
           setIsDrawerOpen(false);
           setIsPaymentModalOpen(true);

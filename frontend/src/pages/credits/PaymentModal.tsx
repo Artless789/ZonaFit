@@ -76,6 +76,12 @@ export function PaymentModal({ isOpen, onClose, ar }: PaymentModalProps) {
     >
       <div className="space-y-4">
         <div className="bg-bg-page border border-border-medium rounded-lg p-4 space-y-3">
+          {(ar.client?.full_name || ar.client_name) && (
+            <div className="flex justify-between text-sm pb-2 border-b border-border-light">
+              <span className="text-text-muted">Cliente:</span>
+              <span className="font-semibold text-text-primary">{ar.client?.full_name || ar.client_name}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm">
             <span className="text-text-muted">Saldo actual:</span>
             <span className="font-bold text-text-primary">{formatPrice(ar.balance_due)}</span>

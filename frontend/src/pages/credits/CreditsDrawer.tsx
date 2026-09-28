@@ -27,6 +27,9 @@ export function CreditsDrawer({ isOpen, onClose, ar, onPay, clientName, clientPh
 
   const formatPrice = formatCurrency;
   
+  const resolvedClientName = clientName || ar?.client?.full_name || ar?.client_name || (ar ? `Cliente #${ar.client_id}` : '');
+  const resolvedClientPhone = clientPhone || ar?.client?.phone;
+
   const formatDate = (dateString: string) => {
     try {
       return format(new Date(dateString), "dd MMM yyyy, hh:mm a", { locale: es });
@@ -68,7 +71,7 @@ export function CreditsDrawer({ isOpen, onClose, ar, onPay, clientName, clientPh
         <div className="rounded-xl border border-border-light bg-bg-surface/40 space-y-4">
           <div className="flex justify-between items-start border-b border-border-light pb-4">
             <div>
-              <h3 className="text-lg font-bold text-text-primary">{clientName}</h3>
+              <h3 className="text-lg font-bold text-text-primary">{resolvedClientName}</h3>
               <p className="text-sm text-text-muted">Venta #{ar.sale_id}</p>
             </div>
             {getStatusBadge(ar.status)}
@@ -105,8 +108,8 @@ export function CreditsDrawer({ isOpen, onClose, ar, onPay, clientName, clientPh
                   openWhatsAppModal({
                     client: {
                       id: ar.client_id,
-                      full_name: clientName,
-                      phone: clientPhone || null,
+                      full_name: resolvedClientName,
+                      phone: resolvedClientPhone || null,
                     },
                     eventType: 'CREDIT_OVERDUE',
                     eventLabel: 'Recordar saldo',

@@ -1,5 +1,6 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.models.accounts_receivable import AccountsReceivable
+from app.models.client import Client
 from app.models.payment import Payment
 from app.models.user import User
 from app.models.audit_log import AuditLog
@@ -24,6 +25,8 @@ class AccountsReceivableService:
     ):
         query = (
             db.query(AccountsReceivable)
+            .outerjoin(Client, AccountsReceivable.client_id == Client.id)
+            .options(joinedload(AccountsReceivable.client))
             .filter(
                 AccountsReceivable.gym_id == current_user.gym_id,
                 AccountsReceivable.is_active == True,
@@ -35,6 +38,8 @@ class AccountsReceivableService:
             filters=filters,
             search_fields=[
                 AccountsReceivable.status,
+                Client.full_name,
+                Client.document,
             ],
         )
 
@@ -57,6 +62,7 @@ class AccountsReceivableService:
     def get_by_id(db: Session, current_user: User, ar_id: int):
         return (
             db.query(AccountsReceivable)
+            .options(joinedload(AccountsReceivable.client))
             .filter(
                 AccountsReceivable.id == ar_id,
                 AccountsReceivable.gym_id == current_user.gym_id,

@@ -1,7 +1,18 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 from decimal import Decimal
+
+class ClientAccountsReceivableSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    full_name: str
+    document_type: str
+    document: str
+    phone: str
+    email: Optional[str] = None
+    photo_url: Optional[str] = None
 
 class AccountsReceivableBase(BaseModel):
     original_amount: Decimal
@@ -30,8 +41,8 @@ class AccountsReceivableInDBBase(AccountsReceivableBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class AccountsReceivableResponse(AccountsReceivableInDBBase):
-    pass
+    client: Optional[ClientAccountsReceivableSummary] = None
+    client_name: Optional[str] = None
