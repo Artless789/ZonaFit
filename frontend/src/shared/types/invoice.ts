@@ -14,6 +14,9 @@ export interface Invoice {
   gym_id: number;
   sale_id: number;
   client_id?: number | null;
+  client_name?: string | null;
+  client_document?: string | null;
+  client_phone?: string | null;
   payment_method?: string;
   invoice_number: string;
   subtotal: number;

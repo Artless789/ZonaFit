@@ -21,6 +21,9 @@ export const useMemberships = () => {
       queryClient.invalidateQueries({ queryKey: ['memberships'] });
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-registers'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts-receivables'] });
     },
   });
 

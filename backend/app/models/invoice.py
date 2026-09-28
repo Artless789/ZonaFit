@@ -103,6 +103,18 @@ class Invoice(Base):
         return self.sale.client_id if self.sale else None
 
     @property
+    def client_name(self) -> str | None:
+        return self.sale.client.full_name if (self.sale and self.sale.client) else None
+
+    @property
+    def client_document(self) -> str | None:
+        return self.sale.client.document if (self.sale and self.sale.client) else None
+
+    @property
+    def client_phone(self) -> str | None:
+        return self.sale.client.phone if (self.sale and self.sale.client) else None
+
+    @property
     def payment_method(self):
         if self.sale and self.sale.payments:
             for p in self.sale.payments:

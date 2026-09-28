@@ -316,9 +316,8 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
         queryClient.invalidateQueries({ queryKey: ['memberships'] });
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
         queryClient.invalidateQueries({ queryKey: ['cash-registers'] });
-        queryClient.invalidateQueries({ queryKey: ['cash_registers'] });
         queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
-        queryClient.invalidateQueries({ queryKey: ['accounts_receivables'] });
+        queryClient.invalidateQueries({ queryKey: ['accounts-receivables'] });
 
         if (data.assign_membership && data.register_payment && paidAmount > 0 && newClient?.initial_membership) {
           const receiptData: GenerateMembershipReceiptProps = {

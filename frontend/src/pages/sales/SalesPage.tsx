@@ -20,7 +20,7 @@ export function SalesPage() {
   // Queries
   const productsQuery = useProducts();
   const categoriesQuery = useCategories();
-  const clientsQuery = useClients();
+  const clientsQuery = useClients(1, 500);
 
   const products = productsQuery.query.data?.items || [];
   const categories = categoriesQuery.query.data?.items || [];

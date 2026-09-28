@@ -22,7 +22,7 @@ export function MembershipsPage() {
   // Queries
   const plansQuery = useMembershipPlans();
   const membershipsQuery = useMemberships();
-  const clientsQuery = useClients();
+  const clientsQuery = useClients(1, 500);
 
   const plans = (Array.isArray(plansQuery.query.data) ? plansQuery.query.data : plansQuery.query.data?.items) || [];
   const memberships = (Array.isArray(membershipsQuery.query.data) ? membershipsQuery.query.data : membershipsQuery.query.data?.items) || [];

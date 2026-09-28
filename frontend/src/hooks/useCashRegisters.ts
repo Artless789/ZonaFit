@@ -25,9 +25,7 @@ export const useCashRegisters = () => {
     mutationFn: cashRegisterService.open,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cash-registers'] });
-      queryClient.invalidateQueries({ queryKey: ['cash_registers'] });
       queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['cash_movements'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
@@ -43,9 +41,7 @@ export const useCashRegisters = () => {
     }) => cashRegisterService.close(params.registerId, params.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cash-registers'] });
-      queryClient.invalidateQueries({ queryKey: ['cash_registers'] });
       queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['cash_movements'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
@@ -54,9 +50,7 @@ export const useCashRegisters = () => {
     mutationFn: cashRegisterService.createMovement,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cash-registers'] });
-      queryClient.invalidateQueries({ queryKey: ['cash_registers'] });
       queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['cash_movements'] });
     },
   });
 

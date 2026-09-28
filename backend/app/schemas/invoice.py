@@ -26,6 +26,9 @@ class InvoiceResponse(BaseModel):
     sale_id: int
 
     client_id: int | None = None
+    client_name: str | None = None
+    client_document: str | None = None
+    client_phone: str | None = None
     payment_method: str | None = None
 
     invoice_number: str

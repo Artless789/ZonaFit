@@ -3,7 +3,7 @@ import { accountsReceivableService } from '../services/accountsReceivableService
 import type { PaymentRequest } from '@shared/types/accountsReceivable';
 
 export const ACCOUNTS_RECEIVABLES_KEYS = {
-  all: ['accounts_receivables'] as const,
+  all: ['accounts-receivables'] as const,
   list: (params: any) => [...ACCOUNTS_RECEIVABLES_KEYS.all, 'list', params] as const,
   detail: (id: number) => [...ACCOUNTS_RECEIVABLES_KEYS.all, 'detail', id] as const,
   payments: (id: number) => [...ACCOUNTS_RECEIVABLES_KEYS.all, 'payments', id] as const,

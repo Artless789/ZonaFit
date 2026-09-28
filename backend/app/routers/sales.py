@@ -5,11 +5,14 @@ from sqlalchemy.orm import Session
 from app.core.auth import get_current_user
 from app.database.database import get_db
 from app.models.user import User
+from app.exceptions.business_exception import BusinessException
+from app.exceptions.not_found_exception import NotFoundException
 from app.schemas.sale import (
     SaleCreate,
     SaleUpdate,
     SaleResponse,
     SaleCompleteRequest,
+    SaleCheckoutRequest,
 )
 from app.schemas.filter import FilterParams
 from app.schemas.sort import SortParams
@@ -44,6 +47,34 @@ def create_sale(
     except ValueError as e:
         raise HTTPException(
             status_code=400,
+            detail=str(e),
+        )
+
+
+@router.post(
+    "/checkout",
+    response_model=SaleResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def checkout_sale(
+    data: SaleCheckoutRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        return SaleService.checkout(
+            db,
+            current_user,
+            data,
+        )
+    except (ValueError, BusinessException) as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
+    except NotFoundException as e:
+        raise HTTPException(
+            status_code=404,
             detail=str(e),
         )
 

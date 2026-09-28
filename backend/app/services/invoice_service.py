@@ -1,6 +1,5 @@
 from decimal import Decimal
-
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.constants.invoice_status import InvoiceStatus
 from app.constants.sale_status import SaleStatus
@@ -122,7 +121,7 @@ class InvoiceService:
             db.flush()
             db.refresh(invoice)
 
-        return invoice
+        return InvoiceService.get_by_id(db, current_user, invoice.id) or invoice
 
     @staticmethod
     def get_all(
@@ -135,6 +134,10 @@ class InvoiceService:
 
         query = (
             db.query(Invoice)
+            .options(
+                joinedload(Invoice.sale).joinedload(Sale.client),
+                joinedload(Invoice.sale).selectinload(Sale.payments),
+            )
             .filter(
                 Invoice.gym_id == current_user.gym_id,
                 Invoice.is_active == True,
@@ -175,6 +178,10 @@ class InvoiceService:
     ):
         return (
             db.query(Invoice)
+            .options(
+                joinedload(Invoice.sale).joinedload(Sale.client),
+                joinedload(Invoice.sale).selectinload(Sale.payments),
+            )
             .filter(
                 Invoice.id == invoice_id,
                 Invoice.gym_id == current_user.gym_id,

@@ -216,12 +216,9 @@ export function MembershipDrawer({ isOpen, onClose, clients, plans }: Membership
 
     try {
       queryClient.invalidateQueries({ queryKey: ['memberships'] });
-      queryClient.invalidateQueries({ queryKey: ['accounts_receivables'] });
-      queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts-receivables'] });
       queryClient.invalidateQueries({ queryKey: ['cash-registers'] });
-      queryClient.invalidateQueries({ queryKey: ['cash_registers'] });
       queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['cash_movements'] });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['clients'] });

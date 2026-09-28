@@ -11,12 +11,14 @@ import { NumericInput } from '@shared/ui/NumericInput';
 import { Select } from '@shared/ui/Select';
 import { useToast } from '@shared/ui/Toast';
 import { useSales } from '../../hooks/useSales';
+import { useCashRegisters } from '../../hooks/useCashRegisters';
 import { useGymSettings } from '../../hooks/useGymSettings';
 import { useWhatsAppWeb } from '@/hooks/useWhatsAppWeb';
 import { Modal } from '@shared/ui/Modal';
 import { cn } from '@shared/utils/cn';
 import { generateReceiptPDF } from '@shared/utils/pdfGenerator';
 import type { Invoice } from '@shared/types/invoice';
+import type { Sale } from '@shared/types/sale';
 import { formatCurrency } from '@shared/utils/formatters';
 
 interface POSViewProps {
@@ -40,6 +42,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { createMutation, createDetailMutation } = useSales();
+  const { activeRegister } = useCashRegisters();
   const { query: gymSettingsQuery } = useGymSettings();
   const gymSettings = gymSettingsQuery.data;
   const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb();
@@ -131,6 +134,17 @@ export function POSView({ products, categories, clients }: POSViewProps) {
   const handleCheckoutIntent = () => {
     if (cart.length === 0) return;
 
+    const requiresCash = (saleType === 'CASH' && paymentMethod === 'CASH') ||
+                         (saleType === 'CREDIT' && initialPaymentNum > 0 && paymentMethod === 'CASH');
+    if (requiresCash && !activeRegister.data) {
+      toast({
+        type: 'error',
+        title: 'Caja Cerrada',
+        message: 'Debes abrir una caja antes de registrar ventas o abonos en efectivo.',
+      });
+      return;
+    }
+
     if (saleType === 'CREDIT') {
       if (!selectedClientId) {
         toast({ type: 'error', title: 'Cliente Requerido', message: 'Selecciona un cliente para realizar una venta a crédito.' });
@@ -157,38 +171,25 @@ export function POSView({ products, categories, clients }: POSViewProps) {
 
   const processSale = async () => {
     try {
-      // 1. Create Sale Header
-      const sale = await createMutation.mutateAsync({
+      const { api } = await import('../../services/api');
+
+      // 1. Atomic Checkout: creates sale, details, decrements inventory, creates payment & cash movement atomically
+      const checkoutResponse = await api.post<Sale>('/sales/checkout', {
         client_id: selectedClientId ? Number(selectedClientId) : null,
         notes: notes || null,
-      });
-
-      // 2. Create Sale Details
-      for (const item of cart) {
-        await createDetailMutation.mutateAsync({
-          sale_id: sale.id,
+        items: cart.map(item => ({
           product_id: item.product.id,
           quantity: item.quantity,
-        });
-      }
-
-      // 3. Complete Sale with Transaction info
-      // Actually, complete endpoint logic goes here
-      // We need to call a complete mutation, wait, the `useSales` hook might not have `completeMutation`?
-      // Ah, the plan states we use `POST /sales/{id}/complete`. I should add it to the `api` call directly if not in hook.
-      // Wait, let's assume `useSales` has `completeMutation` or I will add it to the hook later or use `api.post`.
-      // Let's use `api.post` for now or check if it's there. 
-      // I will just use `fetch` or `axios` directly via the api client since I don't want to modify useSales if I don't have to.
-      
-      const { api } = await import('../../services/api');
-      await api.post(`/sales/${sale.id}/complete`, {
+        })),
         sale_type: saleType,
         payment_method: paymentMethod || null,
         due_date: saleType === 'CREDIT' && dueDate ? dueDate : null,
         initial_payment: saleType === 'CREDIT' ? initialPaymentNum : 0,
       });
 
-      // 4. Create Invoice
+      const sale = checkoutResponse.data;
+
+      // 2. Create Invoice
       let createdInvoice = null;
       try {
         const { data } = await api.post<Invoice>('/invoices/', { sale_id: sale.id });
@@ -197,14 +198,14 @@ export function POSView({ products, categories, clients }: POSViewProps) {
         toast({ type: 'warning', title: 'Venta Procesada', message: 'La venta se registró, pero no se pudo generar el comprobante automático.' });
       }
 
-      // 5. Invalidate relevant queries so all views update reactively
+      // 3. Invalidate relevant queries so all views update reactively (canonical keys only)
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['accounts_receivables'] });
-      queryClient.invalidateQueries({ queryKey: ['cash_registers'] });
-      queryClient.invalidateQueries({ queryKey: ['cash_movements'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts-receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-registers'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
 
       if (createdInvoice) {
         setCompletedInvoice(createdInvoice);
@@ -241,8 +242,8 @@ export function POSView({ products, categories, clients }: POSViewProps) {
       await generateReceiptPDF({
         invoice: completedInvoice,
         details,
-        clientName: client?.full_name,
-        clientDocument: client?.document,
+        clientName: completedInvoice.client_name || client?.full_name || 'Consumidor Final',
+        clientDocument: completedInvoice.client_document || client?.document || 'N/A',
         gymName: gymSettings?.trade_name || gymSettings?.legal_name || 'Merwil ZonaFit',
         gymNit: gymSettings?.tax_id,
         gymPhone: gymSettings?.official_phone,

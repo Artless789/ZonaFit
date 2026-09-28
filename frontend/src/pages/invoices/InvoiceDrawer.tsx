@@ -49,8 +49,8 @@ export function InvoiceDrawer({ isOpen, onClose, invoice, clientName, clientDocu
       await generateReceiptPDF({
         invoice,
         details,
-        clientName,
-        clientDocument,
+        clientName: invoice.client_name || clientName || 'Consumidor Final',
+        clientDocument: invoice.client_document || clientDocument || 'N/A',
         gymName: gymSettings?.trade_name || gymSettings?.legal_name || 'Merwil ZonaFit',
         gymNit: gymSettings?.tax_id,
         gymPhone: gymSettings?.official_phone,
@@ -87,11 +87,11 @@ export function InvoiceDrawer({ isOpen, onClose, invoice, clientName, clientDocu
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="block text-text-muted mb-1">Cliente</span>
-              <span className="font-semibold text-text-primary">{clientName || 'Consumidor Final'}</span>
+              <span className="font-semibold text-text-primary">{invoice.client_name || clientName || 'Consumidor Final'}</span>
             </div>
             <div>
               <span className="block text-text-muted mb-1">Documento</span>
-              <span className="font-semibold text-text-primary">{clientDocument || 'N/A'}</span>
+              <span className="font-semibold text-text-primary">{invoice.client_document || clientDocument || 'N/A'}</span>
             </div>
             <div>
               <span className="block text-text-muted mb-1">Venta Asociada</span>

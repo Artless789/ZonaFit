@@ -31,15 +31,19 @@ export function InvoicesPage() {
     setIsDrawerOpen(true);
   };
 
-  const getClientName = (clientId?: number | null) => {
-    if (!clientId) return 'Consumidor Final';
-    const client = clientsQuery.data?.items?.find((c: any) => c.id === clientId);
-    return client ? client.full_name : 'Cargando...';
+  const getClientName = (invoice?: Invoice | null) => {
+    if (!invoice) return 'Consumidor Final';
+    if (invoice.client_name) return invoice.client_name;
+    if (!invoice.client_id) return 'Consumidor Final';
+    const client = clientsQuery.data?.items?.find((c: any) => c.id === invoice.client_id);
+    return client ? client.full_name : 'Consumidor Final';
   };
 
-  const getClientDocument = (clientId?: number | null) => {
-    if (!clientId) return 'N/A';
-    const client = clientsQuery.data?.items?.find((c: any) => c.id === clientId);
+  const getClientDocument = (invoice?: Invoice | null) => {
+    if (!invoice) return 'N/A';
+    if (invoice.client_document) return invoice.client_document;
+    if (!invoice.client_id) return 'N/A';
+    const client = clientsQuery.data?.items?.find((c: any) => c.id === invoice.client_id);
     return client ? client.document : 'N/A';
   };
 
@@ -138,7 +142,7 @@ export function InvoicesPage() {
                       <div className="text-xs text-text-muted">Ref. Venta #{invoice.sale_id}</div>
                     </td>
                     <td className="p-4 text-text-primary font-medium">
-                      {getClientName(invoice.client_id)}
+                      {getClientName(invoice)}
                     </td>
                     <td className="p-4 text-text-secondary text-sm">
                       {formatDate(invoice.created_at)}
@@ -159,8 +163,8 @@ export function InvoicesPage() {
                               openWhatsAppModal({
                                 client: {
                                   id: invoice.client_id!,
-                                  full_name: client ? client.full_name : getClientName(invoice.client_id),
-                                  phone: client?.phone || null,
+                                  full_name: invoice.client_name || client?.full_name || getClientName(invoice),
+                                  phone: invoice.client_phone || client?.phone || null,
                                 },
                                 eventType: 'PAYMENT_RECEIVED',
                                 eventLabel: 'Enviar comprobante',
@@ -223,8 +227,8 @@ export function InvoicesPage() {
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)} 
         invoice={selectedInvoice}
-        clientName={selectedInvoice ? getClientName(selectedInvoice.client_id) : undefined}
-        clientDocument={selectedInvoice ? getClientDocument(selectedInvoice.client_id) : undefined}
+        clientName={selectedInvoice ? getClientName(selectedInvoice) : undefined}
+        clientDocument={selectedInvoice ? getClientDocument(selectedInvoice) : undefined}
       />
 
       <WhatsAppModalComponent />

@@ -17,6 +17,7 @@ export const useClients = (page: number = 1, pageSize: number = 20, search: stri
     mutationFn: clientService.createClient,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 
@@ -24,6 +25,8 @@ export const useClients = (page: number = 1, pageSize: number = 20, search: stri
     mutationFn: ({ id, data }) => clientService.updateClient(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['memberships'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 
@@ -31,6 +34,8 @@ export const useClients = (page: number = 1, pageSize: number = 20, search: stri
     mutationFn: clientService.deleteClient,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['memberships'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 
