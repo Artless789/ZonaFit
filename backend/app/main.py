@@ -99,6 +99,26 @@ app.add_middleware(
 register_exception_handlers(app)
 
 
+# ── Startup Events ────────────────────────────────────────────────────────────
+@app.on_event("startup")
+def startup_backfill_photos():
+    """
+    Non-destructive auto-sync: scans if any client has a photo on local disk
+    that has not yet been persisted to the client_photos table.
+    """
+    try:
+        from app.database.database import SessionLocal
+        from app.services.client_photo_service import sync_orphan_disk_photos_to_db
+        db = SessionLocal()
+        try:
+            sync_orphan_disk_photos_to_db(db)
+        finally:
+            db.close()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Startup photo backfill skipped: %s", e)
+
+
 from pathlib import Path
 _frontend_dist_env = os.getenv("FRONTEND_DIST", "/app/frontend/dist")
 _frontend_dist_path = Path(_frontend_dist_env)

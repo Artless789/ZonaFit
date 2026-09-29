@@ -1,7 +1,7 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, Response
 from app.services.client_excel_service import ClientExcelService
 from app.schemas.client_excel import (
     ClientImportPreviewResponse,
@@ -17,6 +17,7 @@ from app.core.auth import get_current_user
 from app.database.database import get_db
 from app.core.database_transaction import DatabaseTransaction
 from app.models.client import Client
+from app.models.client_photo import ClientPhoto
 from app.models.user import User
 from app.schemas.client import (
     ClientCreate,
@@ -249,7 +250,7 @@ def get_clients(
 
     total = query.count()
     total_pages = calculate_total_pages(total, page_size)
-    
+
     offset = (page - 1) * page_size
     items = query.offset(offset).limit(page_size).all()
 
@@ -446,7 +447,7 @@ def get_client_360(
     if membership:
         days_left = (membership.end_date.replace(tzinfo=timezone.utc) - now).days
         if days_left < 0: days_left = 0
-        
+
         # dynamic status update just for display if it's expired
         display_status = membership.status
         if membership.end_date.replace(tzinfo=timezone.utc) < now and display_status == MembershipStatus.ACTIVE:
@@ -490,15 +491,15 @@ def get_client_360(
     total_paid_memberships = db.query(func.sum(Payment.amount)).join(Membership).filter(
         Membership.client_id == client.id, Payment.status == "PAID", Payment.is_active == True
     ).scalar() or Decimal("0.00")
-    
+
     total_paid_sales = db.query(func.sum(Payment.amount)).join(Sale).filter(
         Sale.client_id == client.id, Payment.status == "PAID", Payment.is_active == True
     ).scalar() or Decimal("0.00")
-    
+
     total_paid_ar = db.query(func.sum(Payment.amount)).join(AccountsReceivable).filter(
         AccountsReceivable.client_id == client.id, Payment.status == "PAID", Payment.is_active == True
     ).scalar() or Decimal("0.00")
-    
+
     total_paid = total_paid_memberships + total_paid_sales + total_paid_ar
 
     # Pending balance and overdue
@@ -508,12 +509,12 @@ def get_client_360(
         AccountsReceivable.status == "PENDING",
         AccountsReceivable.is_active == True
     ).all()
-    
+
     pending_balance = sum([ar.balance_due for ar in ar_records])
-    
+
     # ensure tz comparison
     overdue_balance = sum([
-        ar.balance_due for ar in ar_records 
+        ar.balance_due for ar in ar_records
         if ar.due_date and ar.due_date.replace(tzinfo=timezone.utc) < now
     ])
     active_credits_count = len(ar_records)
@@ -739,22 +740,20 @@ def upload_client_photo(
     filename = f"{uuid.uuid4().hex}.{ext}"
     file_path = os.path.join(UPLOAD_DIR, filename)
 
-    # Write file safely with stream size verification
-    total_written = 0
     try:
+        file.file.seek(0)
+        file_bytes = file.file.read()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Unable to read uploaded file.")
+
+    if len(file_bytes) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File too large. Maximum 5MB.")
+
+    # Write file safely to disk cache
+    try:
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
         with open(file_path, "wb") as buffer:
-            while chunk := file.file.read(64 * 1024):
-                total_written += len(chunk)
-                if total_written > MAX_FILE_SIZE:
-                    raise HTTPException(status_code=400, detail="File too large. Maximum 5MB.")
-                buffer.write(chunk)
-    except HTTPException:
-        if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except OSError:
-                pass
-        raise
+            buffer.write(file_bytes)
     except Exception:
         if os.path.exists(file_path):
             try:
@@ -762,6 +761,32 @@ def upload_client_photo(
             except OSError:
                 pass
         raise HTTPException(status_code=500, detail="Failed to save uploaded photo.")
+
+    # Save / update in persistent client_photos table (DB-backed persistence)
+    photo_record = (
+        db.query(ClientPhoto)
+        .filter(
+            ClientPhoto.client_id == client.id,
+            ClientPhoto.gym_id == current_user.gym_id,
+        )
+        .first()
+    )
+    content_type = file.content_type or f"image/{ext}"
+    if photo_record:
+        photo_record.filename = filename
+        photo_record.content_type = content_type
+        photo_record.file_size = len(file_bytes)
+        photo_record.data = file_bytes
+    else:
+        photo_record = ClientPhoto(
+            gym_id=current_user.gym_id,
+            client_id=client.id,
+            filename=filename,
+            content_type=content_type,
+            file_size=len(file_bytes),
+            data=file_bytes,
+        )
+        db.add(photo_record)
 
     # Preserve old photo filename for atomic cleanup ONLY after DB commit succeeds
     old_photo_url = client.photo_url
@@ -816,6 +841,19 @@ def delete_client_photo(
 
     old_photo_url = client.photo_url
     client.photo_url = None
+
+    # Delete persistent ClientPhoto record if present
+    photo_record = (
+        db.query(ClientPhoto)
+        .filter(
+            ClientPhoto.client_id == client.id,
+            ClientPhoto.gym_id == current_user.gym_id,
+        )
+        .first()
+    )
+    if photo_record:
+        db.delete(photo_record)
+
     db.commit()
     db.refresh(client)
 
@@ -867,7 +905,33 @@ def get_client_photo(
                     file_path = candidate
                 break
 
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="File not found on disk.")
+    # 1. Fast Path: Cached on local disk -> return FileResponse
+    if os.path.exists(file_path):
+        return FileResponse(file_path, headers={"Cache-Control": "private, max-age=86400"})
 
-    return FileResponse(file_path, headers={"Cache-Control": "private, max-age=86400"})
+    # 2. Self-Healing Path: File missing from disk (e.g., after redeploy or container replacement)
+    photo_record = (
+        db.query(ClientPhoto)
+        .filter(
+            ClientPhoto.gym_id == current_user.gym_id,
+            ClientPhoto.filename == filename,
+        )
+        .first()
+    )
+
+    if photo_record and photo_record.data:
+        # Re-populate disk cache so next requests are served via Fast Path
+        try:
+            os.makedirs(UPLOAD_DIR, exist_ok=True)
+            with open(file_path, "wb") as f:
+                f.write(photo_record.data)
+        except Exception:
+            pass
+
+        return Response(
+            content=photo_record.data,
+            media_type=photo_record.content_type,
+            headers={"Cache-Control": "private, max-age=86400"},
+        )
+
+    raise HTTPException(status_code=404, detail="File not found on disk or database.")
