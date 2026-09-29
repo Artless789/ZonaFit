@@ -18,14 +18,20 @@ import {
   Wallet,
   Clock,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  History,
+  FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import type { PaymentMethodReconciliation } from '@shared/types/cash_register';
+import { Modal } from '@shared/ui/Modal';
+import type { CashRegister, PaymentMethodReconciliation } from '@shared/types/cash_register';
 
 export const CashRegisterPage = () => {
-  const { activeRegister, activeSummary, openRegister, closeRegister, createMovement } = useCashRegisters();
+  const { activeRegister, activeSummary, allRegisters, openRegister, closeRegister, createMovement } = useCashRegisters();
   
+  const [currentTab, setCurrentTab] = useState<'shift' | 'history'>('shift');
+  const [selectedHistoricalRegister, setSelectedHistoricalRegister] = useState<CashRegister | null>(null);
+
   const [openingBalance, setOpeningBalance] = useState<number>(0);
   const [countedCash, setCountedCash] = useState<number>(0);
   const [closingNotes, setClosingNotes] = useState('');
@@ -195,16 +201,121 @@ export const CashRegisterPage = () => {
   return (
     <div className="space-y-6 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Caja y Conciliación</h1>
           <p className="text-sm text-text-secondary">
             Control de turno, arqueo de efectivo y conciliación de medios de pago.
           </p>
         </div>
+        <div className="flex bg-surface-raised rounded-[var(--radius-lg)] p-1 border border-border-subtle shrink-0">
+          <button
+            type="button"
+            onClick={() => setCurrentTab('shift')}
+            className={`px-3.5 py-1.5 text-xs font-semibold rounded-[var(--radius-md)] transition-colors cursor-pointer ${
+              currentTab === 'shift'
+                ? 'bg-brand-primary text-white shadow-xs'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+          >
+            Turno Actual
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentTab('history')}
+            className={`px-3.5 py-1.5 text-xs font-semibold rounded-[var(--radius-md)] transition-colors cursor-pointer flex items-center gap-1.5 ${
+              currentTab === 'history'
+                ? 'bg-brand-primary text-white shadow-xs'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+          >
+            <History size={14} />
+            <span>Historial de Cierres</span>
+          </button>
+        </div>
       </div>
 
-      {!activeRegister.data ? (
+      {currentTab === 'history' ? (
+        /* HISTORIAL DE TURNOS */
+        <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/90 p-0 overflow-hidden shadow-subtle backdrop-blur-md">
+          <div className="p-4 border-b border-border-subtle flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-text-primary">Historial de Turnos de Caja</h2>
+              <p className="text-xs text-text-muted">Consulta turnos anteriores, diferencias de arqueo y notas de cierre.</p>
+            </div>
+          </div>
+          <div className="overflow-x-auto min-h-75">
+            {allRegisters.isLoading ? (
+              <div className="flex items-center justify-center h-48 text-text-muted text-sm">
+                Cargando historial de cajas...
+              </div>
+            ) : !allRegisters.data || allRegisters.data.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-48 text-text-muted">
+                <History size={48} className="opacity-20 mb-3" />
+                <p className="text-sm">No hay turnos de caja registrados en el historial.</p>
+              </div>
+            ) : (
+              <table className="w-full text-sm text-left whitespace-nowrap">
+                <thead className="text-xs text-text-muted uppercase bg-surface-raised/70 border-b border-border-subtle font-semibold tracking-wider">
+                  <tr>
+                    <th className="px-6 py-3.5">Turno</th>
+                    <th className="px-6 py-3.5">Apertura</th>
+                    <th className="px-6 py-3.5">Cierre</th>
+                    <th className="px-6 py-3.5 text-right">Base</th>
+                    <th className="px-6 py-3.5 text-right">Contado</th>
+                    <th className="px-6 py-3.5 text-right">Diferencia</th>
+                    <th className="px-6 py-3.5 text-center">Estado</th>
+                    <th className="px-6 py-3.5">Notas de Cierre</th>
+                    <th className="px-6 py-3.5 text-right">Detalle</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border-subtle">
+                  {allRegisters.data.map((reg) => (
+                    <tr key={reg.id} className="hover:bg-surface-panel-hover transition-colors">
+                      <td className="px-6 py-3.5 font-mono text-text-secondary">#{reg.id}</td>
+                      <td className="px-6 py-3.5 text-xs text-text-secondary">{formatDate(reg.opened_at)}</td>
+                      <td className="px-6 py-3.5 text-xs text-text-secondary">{reg.closed_at ? formatDate(reg.closed_at) : 'En curso'}</td>
+                      <td className="px-6 py-3.5 text-right text-text-primary font-medium">{formatCurrency(reg.opening_balance)}</td>
+                      <td className="px-6 py-3.5 text-right text-text-primary font-medium">{reg.counted_balance !== null ? formatCurrency(reg.counted_balance) : '-'}</td>
+                      <td className="px-6 py-3.5 text-right font-bold">
+                        {reg.difference !== null ? (
+                          <span className={reg.difference === 0 ? 'text-emerald-400' : (reg.difference > 0 ? 'text-amber-400' : 'text-rose-400')}>
+                            {reg.difference > 0 ? `+${formatCurrency(reg.difference)}` : formatCurrency(reg.difference)}
+                          </span>
+                        ) : '-'}
+                      </td>
+                      <td className="px-6 py-3.5 text-center">
+                        <Badge variant={reg.status === 'OPEN' ? 'success' : 'neutral'}>
+                          {reg.status === 'OPEN' ? 'ABIERTA' : 'CERRADA'}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-3.5 text-xs text-text-secondary max-w-xs truncate" title={reg.closing_notes || ''}>
+                        {reg.closing_notes ? (
+                          <span className="flex items-center gap-1.5">
+                            <FileText size={13} className="text-brand-primary shrink-0" />
+                            <span className="truncate">{reg.closing_notes}</span>
+                          </span>
+                        ) : (
+                          <span className="text-text-muted italic">Sin notas</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-3.5 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedHistoricalRegister(reg)}
+                          className="px-3 py-1.5 text-xs font-semibold bg-surface-raised border border-border-medium rounded-[var(--radius-sm)] hover:bg-surface-panel-hover transition-colors text-text-secondary cursor-pointer"
+                        >
+                          Ver Detalle
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      ) : !activeRegister.data ? (
         /* APERTURA DE CAJA */
         <div className="rounded-2xl border border-border-light bg-bg-surface/50 backdrop-blur-md max-w-md mx-auto mt-10 p-8 shadow-glass">
           <div className="text-center space-y-4">
@@ -630,6 +741,56 @@ export const CashRegisterPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Historical Register Detail Modal */}
+      {selectedHistoricalRegister && (
+        <Modal
+          isOpen={!!selectedHistoricalRegister}
+          onClose={() => setSelectedHistoricalRegister(null)}
+          title={`Detalle de Turno de Caja #${selectedHistoricalRegister.id}`}
+        >
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-3 bg-surface-base p-3.5 rounded-[var(--radius-lg)] border border-border-subtle">
+              <div>
+                <span className="text-[11px] text-text-muted block">Apertura</span>
+                <span className="text-xs font-semibold text-text-primary">{formatDate(selectedHistoricalRegister.opened_at)}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-text-muted block">Cierre</span>
+                <span className="text-xs font-semibold text-text-primary">{selectedHistoricalRegister.closed_at ? formatDate(selectedHistoricalRegister.closed_at) : 'En curso'}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-text-muted block">Base Inicial</span>
+                <span className="text-sm font-bold text-text-primary">{formatCurrency(selectedHistoricalRegister.opening_balance)}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-text-muted block">Efectivo Contado</span>
+                <span className="text-sm font-bold text-text-primary">{selectedHistoricalRegister.counted_balance !== null ? formatCurrency(selectedHistoricalRegister.counted_balance) : '-'}</span>
+              </div>
+            </div>
+
+            {selectedHistoricalRegister.difference !== null && (
+              <div className="flex items-center justify-between p-3 rounded-[var(--radius-md)] border border-border-subtle bg-surface-base">
+                <span className="text-xs font-semibold text-text-secondary">Diferencia Final:</span>
+                <span className={`text-base font-extrabold ${selectedHistoricalRegister.difference === 0 ? 'text-emerald-400' : (selectedHistoricalRegister.difference > 0 ? 'text-amber-400' : 'text-rose-400')}`}>
+                  {selectedHistoricalRegister.difference > 0 ? `+${formatCurrency(selectedHistoricalRegister.difference)}` : formatCurrency(selectedHistoricalRegister.difference)}
+                </span>
+              </div>
+            )}
+
+            {/* Notas y Observaciones de Cierre */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-text-muted flex items-center gap-1.5">
+                <FileText size={14} className="text-brand-primary" />
+                <span>Notas y Observaciones de Cierre</span>
+              </span>
+              <div className="p-3 bg-surface-base rounded-[var(--radius-md)] border border-border-subtle text-xs text-text-primary min-h-16 whitespace-pre-wrap">
+                {selectedHistoricalRegister.closing_notes || 'No se registraron notas en este turno.'}
+              </div>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

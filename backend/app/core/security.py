@@ -16,9 +16,7 @@ ALGORITHM = os.getenv("ALGORITHM")
 if not ALGORITHM:
     raise RuntimeError("ALGORITHM environment variable is not set")
 
-ACCESS_TOKEN_EXPIRE_MINUTES = int(
-    os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
-)
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 def create_access_token(data: dict) -> str:
     """
     Crea un JWT firmado.
@@ -88,4 +86,4 @@ def normalize_email(email: str | None) -> str | None:
     """
     if email is None:
         return None
-    return email.strip().lower()
+    return email.strip().lower()

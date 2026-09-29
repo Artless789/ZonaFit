@@ -14,30 +14,41 @@ export const api = axios.create({
   },
 });
 
-// Single-flight refresh token promise mutex to guarantee AT MOST ONE /auth/refresh HTTP request in flight at any time
-let refreshPromise: Promise<string> | null = null;
+export interface RefreshResponse {
+  access_token: string;
+  token_type: string;
+  user?: any;
+}
 
-export const performTokenRefresh = async (): Promise<string> => {
+// Single-flight refresh token promise mutex to guarantee AT MOST ONE /auth/refresh HTTP request in flight at any time
+let refreshPromise: Promise<RefreshResponse> | null = null;
+
+export const performTokenRefresh = async (): Promise<RefreshResponse> => {
   if (refreshPromise) {
     return refreshPromise;
   }
 
   refreshPromise = (async () => {
     try {
-      const res = await axios.post<{ access_token: string }>(
+      const res = await axios.post<RefreshResponse>(
         `${API_URL}/auth/refresh`,
         {},
         { withCredentials: true }
       );
-      const newToken = res.data?.access_token;
+      const data = res.data;
+      const newToken = data?.access_token;
       if (!newToken) {
         throw new Error('No access token returned from refresh endpoint');
       }
       sessionManager.setToken(newToken);
-      return newToken;
-    } catch (err) {
-      sessionManager.clearToken();
-      window.dispatchEvent(new Event('auth-unauthorized'));
+      return data;
+    } catch (err: any) {
+      const status = err?.response?.status;
+      // Discard session only on explicit auth failure (401/403), not on network offline or 500
+      if (status === 401 || status === 403) {
+        sessionManager.clearToken();
+        window.dispatchEvent(new Event('auth-unauthorized'));
+      }
       throw err;
     } finally {
       refreshPromise = null;
@@ -106,7 +117,8 @@ api.interceptors.response.use(
             }
 
             try {
-              const newToken = await performTokenRefresh();
+              const refreshData = await performTokenRefresh();
+              const newToken = refreshData.access_token;
               if (!originalRequest.headers) {
                 originalRequest.headers = {} as Record<string, string>;
               }

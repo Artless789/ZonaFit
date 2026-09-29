@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // 2. Intentar recuperar la sesión mediante httpOnly cookie
         const response = await authService.refresh();
         if (response.access_token && isMounted) {
-          const profile = await authService.getProfile();
+          const profile = response.user ? response.user : await authService.getProfile();
           if (isMounted) {
             setUser(profile);
             setCachedUser(profile);
@@ -165,8 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const response = await authService.login(credentials);
     if (response.access_token) {
       sessionManager.setToken(response.access_token);
-      // Immediately fetch profile
-      const profile = await authService.getProfile();
+      const profile = response.user ? response.user : await authService.getProfile();
       setUser(profile);
       setCachedUser(profile);
       return profile;

@@ -6,7 +6,6 @@ import { ErrorState } from '@shared/ui/ErrorState';
 import { Select } from '@shared/ui/Select';
 import { Pagination } from '@shared/ui/Pagination';
 import { useAccountsReceivables } from '../../hooks/useAccountsReceivables';
-import { useClients } from '../../hooks/useClients';
 import { useWhatsAppWeb } from '@/hooks/useWhatsAppWeb';
 import { CreditsDrawer } from './CreditsDrawer';
 import { PaymentModal } from './PaymentModal';
@@ -31,7 +30,6 @@ export function CreditsPage() {
     status: statusFilter || undefined 
   });
   
-  const { query: clientsQuery } = useClients(1, 500);
   const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb();
 
   const handleOpenDrawer = (ar: AccountsReceivable) => {
@@ -55,23 +53,15 @@ export function CreditsPage() {
   };
 
   const getClientName = (ar: AccountsReceivable) => {
-    if (ar.client?.full_name) return ar.client.full_name;
-    if (ar.client_name) return ar.client_name;
-    const client = clientsQuery.data?.items?.find((c) => c.id === ar.client_id);
-    if (client?.full_name) return client.full_name;
-    return `Cliente #${ar.client_id}`;
+    return ar.client?.full_name || ar.client_name || `Cliente #${ar.client_id}`;
   };
 
   const getClientDocument = (ar: AccountsReceivable) => {
-    if (ar.client?.document) return ar.client.document;
-    const client = clientsQuery.data?.items?.find((c) => c.id === ar.client_id);
-    return client?.document || 'N/A';
+    return ar.client?.document || 'N/A';
   };
 
   const getClientPhone = (ar: AccountsReceivable) => {
-    if (ar.client?.phone) return ar.client.phone;
-    const client = clientsQuery.data?.items?.find((c) => c.id === ar.client_id);
-    return client?.phone || undefined;
+    return ar.client?.phone || undefined;
   };
 
   const getStatusBadge = (status: string) => {
@@ -98,7 +88,7 @@ export function CreditsPage() {
       });
     }
     return items;
-  }, [query.data?.items, searchTerm, clientsQuery.data?.items]);
+  }, [query.data?.items, searchTerm]);
 
   // Derived Stats based only on received data
   const stats = useMemo(() => {
@@ -112,8 +102,20 @@ export function CreditsPage() {
     }, { totalDue: 0, countPending: 0, countPartial: 0, countOverdue: 0 });
   }, [query.data?.items]);
 
-  if (query.isError || clientsQuery.isError) {
-    return <ErrorState description="Error al cargar las cuentas por cobrar." onRetry={() => { query.refetch(); clientsQuery.refetch(); }} />;
+  if (query.isError) {
+    const errorDetail = (query.error as any)?.response?.data?.detail;
+    const isSubRestricted = errorDetail === 'SUBSCRIPTION_REQUIRED';
+    return (
+      <ErrorState
+        title={isSubRestricted ? "Acceso Restringido" : "Error al cargar las cuentas por cobrar"}
+        description={
+          isSubRestricted
+            ? "El acceso a las cuentas por cobrar está restringido debido al estado comercial de tu gimnasio."
+            : (query.error as any)?.userMessage || "No pudimos cargar la información de las cuentas por cobrar."
+        }
+        onRetry={() => query.refetch()}
+      />
+    );
   }
 
   return (
@@ -186,14 +188,18 @@ export function CreditsPage() {
       {/* Table */}
       <div className="rounded-[var(--radius-xl)] border border-border-subtle bg-surface-panel/90 p-0 overflow-hidden shadow-subtle backdrop-blur-md">
         <div className="overflow-x-auto min-h-75">
-          {query.isLoading || clientsQuery.isLoading ? (
+          {query.isLoading ? (
             <div className="flex items-center justify-center h-48">
               <Spinner className="w-8 h-8 text-brand-primary" />
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-text-muted">
               <WalletCards size={48} className="opacity-20 mb-3" />
-              <p className="text-sm">No se encontraron resultados con estos filtros.</p>
+              <p className="text-sm font-medium">
+                {searchTerm || statusFilter
+                  ? "No se encontraron resultados con estos filtros."
+                  : "No hay cuentas por cobrar registradas actualmente."}
+              </p>
             </div>
           ) : (
             <table className="w-full text-sm text-left whitespace-nowrap">

@@ -11,11 +11,12 @@ import type {
 
 export const clientService = {
   async getClients(page: number = 1, pageSize: number = 20, search: string = '', isActive?: boolean, filterType?: string): Promise<PaginationResponse<Client>> {
+    const validPageSize = Math.min(Math.max(1, pageSize), 100);
     const { data } = await api.get<PaginationResponse<Client>>('/clients/', {
-      params: { 
-        page, 
-        page_size: pageSize, 
-        search: search || undefined, 
+      params: {
+        page,
+        page_size: validPageSize,
+        search: search || undefined,
         is_active: isActive,
         filter_type: filterType || undefined,
       }

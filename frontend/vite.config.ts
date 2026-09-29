@@ -59,7 +59,7 @@ export default defineConfig({
       }
     },
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       injectRegister: null,
       scope: '/app/',
       manifest: {
@@ -88,6 +88,9 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/app/index.html',
         navigateFallbackAllowlist: [/^\/app\//],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
         globPatterns: ['**/*.{js,css,html,woff2,png,svg,json}'],
         globIgnores: ['**/vendor-pdf*.js'],
       }

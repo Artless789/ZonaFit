@@ -9,13 +9,19 @@ import { OfflineBanner } from '../shared/network/OfflineBanner';
 import { SyncIndicator } from '../shared/offline/SyncIndicator';
 import { queryClient, persister, dehydrateQueryFilter } from '@shared/queryClient'
 
+// Auto-reload on vite dynamic import preload error (ChunkLoadError after new deployment)
+window.addEventListener('vite:preloadError', (event) => {
+  console.warn('Vite preload error detected, reloading to fetch latest assets...', event);
+  window.location.reload();
+});
+
 // Registramos el SW exclusivo para la App de forma diferida tras window.load / idle
 if ('serviceWorker' in navigator) {
   const scheduleSW = () => {
     if ('requestIdleCallback' in window) {
-      window.requestIdleCallback(() => registerSW());
+      window.requestIdleCallback(() => registerSW({ immediate: true }));
     } else {
-      setTimeout(() => registerSW(), 1000);
+      setTimeout(() => registerSW({ immediate: true }), 1000);
     }
   };
 

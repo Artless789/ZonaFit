@@ -115,6 +115,33 @@ def register(
         db.info.pop('bypass_rls', None)
         db.execute(text("SELECT set_config('app.bypass_rls', 'off', true)"))
 
+
+def _build_user_profile(db: Session, user: User) -> dict:
+    from app.services.subscription_service import SubscriptionService
+
+    subscription_info = None
+    if user.gym_id:
+        sub = SubscriptionService.get_current_subscription(db, user.gym_id)
+        if sub:
+            subscription_info = {
+                "status": sub.status.value,
+                "ends_at": sub.ends_at.isoformat() + "Z" if sub.ends_at else None,
+                "starts_at": sub.starts_at.isoformat() + "Z" if sub.starts_at else None,
+                "is_lifetime": sub.is_lifetime,
+            }
+
+    return {
+        "id": user.id,
+        "name": user.full_name,
+        "full_name": user.full_name,
+        "email": normalize_email(user.email) or "",
+        "role": user.role,
+        "gym_id": user.gym_id,
+        "onboarding_completed": user.gym.onboarding_completed if user.gym else True,
+        "subscription": subscription_info
+    }
+
+
 @router.post("/login")
 @limiter.limit(RateLimitConfig.LOGIN)
 def login(
@@ -178,7 +205,8 @@ def login(
 
         return {
             "access_token": token,
-            "token_type": "bearer"
+            "token_type": "bearer",
+            "user": _build_user_profile(db, user)
         }
     finally:
         db.info.pop('bypass_rls', None)
@@ -302,7 +330,8 @@ def refresh_token(
 
             return {
                 "access_token": new_access_token,
-                "token_type": "bearer"
+                "token_type": "bearer",
+                "user": _build_user_profile(db, user)
             }
 
         # Phase 3: No active token found. Check if any seen token was recently rotated (Grace Period)
@@ -323,17 +352,19 @@ def refresh_token(
                                     "role": user.role
                                 }
                             )
-                            # Idempotent recovery within grace period: return valid token without revoking or clearing active root cookie
-                            response.delete_cookie(
-                                key="refresh_token",
-                                path="/auth",
-                                secure=secure_policy,
-                                samesite=samesite_policy,
-                                httponly=True
-                            )
+                            # Generate a fresh replacement token for this client so they are never stranded with an old revoked cookie
+                            raw_grace_refresh = secrets.token_urlsafe(64)
+                            grace_token_hash = hashlib.sha256(raw_grace_refresh.encode()).hexdigest()
+                            grace_expires_at = now + timedelta(days=7)
+                            grace_rt = RefreshToken(user_id=user.id, token_hash=grace_token_hash, expires_at=grace_expires_at)
+                            db.add(grace_rt)
+                            db.commit()
+
+                            _set_refresh_cookie(response, raw_grace_refresh, secure_policy, samesite_policy)
                             return {
                                 "access_token": new_access_token,
-                                "token_type": "bearer"
+                                "token_type": "bearer",
+                                "user": _build_user_profile(db, user)
                             }
 
         # Phase 4: If any seen token was replaced/revoked outside grace period -> REPLAY DETECTED
@@ -394,28 +425,7 @@ def get_me(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    from app.services.subscription_service import SubscriptionService
-    
-    subscription_info = None
-    if current_user.gym_id:
-        sub = SubscriptionService.get_current_subscription(db, current_user.gym_id)
-        if sub:
-            subscription_info = {
-                "status": sub.status.value,
-                "ends_at": sub.ends_at.isoformat() + "Z" if sub.ends_at else None,
-                "starts_at": sub.starts_at.isoformat() + "Z" if sub.starts_at else None,
-                "is_lifetime": sub.is_lifetime,
-            }
-
-    return {
-        "id": current_user.id,
-        "name": current_user.full_name,
-        "email": normalize_email(current_user.email) or "",
-        "role": current_user.role,
-        "gym_id": current_user.gym_id,
-        "onboarding_completed": current_user.gym.onboarding_completed if current_user.gym else True,
-        "subscription": subscription_info
-    }
+    return _build_user_profile(db, current_user)
 
 def _ensure_utc(dt: datetime | None) -> datetime | None:
     if dt is None:

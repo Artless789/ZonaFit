@@ -59,9 +59,9 @@ export const authService = {
     }
   },
 
-  refresh: async () => {
-    const token = await performTokenRefresh();
-    return { access_token: token, token_type: 'bearer' };
+  refresh: async (): Promise<{ access_token: string; token_type: string; user?: User }> => {
+    const data = await performTokenRefresh();
+    return data;
   },
   
   getProfile: async (): Promise<User> => {
