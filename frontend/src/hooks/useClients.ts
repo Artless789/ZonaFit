@@ -3,13 +3,19 @@ import { clientService } from '../services/clientService';
 import { ClientCreate, ClientUpdate, Client, Client360Response } from '@shared/types/client';
 import { PaginationResponse } from '@shared/types/pagination';
 
-export const useClients = (page: number = 1, pageSize: number = 20, search: string = '', isActive?: boolean) => {
+export const useClients = (
+  page: number = 1,
+  pageSize: number = 20,
+  search: string = '',
+  isActive?: boolean,
+  filterType?: string
+) => {
   const queryClient = useQueryClient();
-  const queryKey = ['clients', { page, pageSize, search, isActive }];
+  const queryKey = ['clients', { page, pageSize, search, isActive, filterType }];
 
   const query = useQuery<PaginationResponse<Client>, Error>({
     queryKey,
-    queryFn: () => clientService.getClients(page, pageSize, search, isActive),
+    queryFn: () => clientService.getClients(page, pageSize, search, isActive, filterType),
     placeholderData: keepPreviousData, // Replaces keepPreviousData property in v5
   });
 

@@ -3,12 +3,12 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@shared/utils/cn';
 
 const buttonVariants = cva(
-  'group inline-flex items-center justify-center font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-base disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer',
+  'group inline-flex items-center justify-center font-semibold transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-base disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer',
   {
     variants: {
       variant: {
         primary:
-          'bg-brand-primary text-white shadow-glow-brand hover:bg-brand-primary-hover active:bg-brand-primary-active active:scale-[0.98]',
+          'bg-brand-primary text-white shadow-[0_0_20px_-3px_rgba(220,38,38,0.4)] hover:bg-brand-primary-hover active:bg-brand-primary-active active:scale-[0.98]',
         secondary:
           'bg-surface-raised text-text-primary border border-border-medium shadow-xs hover:border-border-strong hover:bg-surface-panel-hover active:scale-[0.98]',
         outline:
@@ -17,6 +17,8 @@ const buttonVariants = cva(
           'bg-transparent text-text-secondary hover:text-text-primary hover:bg-white/[0.05] active:scale-[0.98]',
         danger:
           'bg-danger text-white shadow-sm hover:bg-danger/90 active:scale-[0.98]',
+        glass:
+          'liquid-glass-soft text-text-primary hover:bg-white/10 active:scale-[0.98]',
         link:
           'text-text-secondary hover:text-brand-primary p-0 h-auto bg-transparent active:scale-[0.98]',
       },
@@ -28,10 +30,15 @@ const buttonVariants = cva(
         'icon-sm': 'h-7.5 w-7.5 p-0 rounded-[var(--radius-sm)]',
         'icon-lg': 'h-11 w-11 p-0 rounded-[var(--radius-md)]',
       },
+      pill: {
+        true: '!rounded-full',
+        false: '',
+      },
     },
     defaultVariants: {
       variant: 'primary',
       size: 'default',
+      pill: false,
     },
   }
 );

@@ -12,16 +12,14 @@ function isTokenExpired(token: string): boolean {
     const parts = token.split('.');
     if (parts.length !== 3) return true;
     const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64);
     const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
+      Array.prototype.map.call(raw, (c: string) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
     );
     const payload = JSON.parse(jsonPayload);
     if (!payload.exp) return false;
-    // Expira si el tiempo actual es mayor al tiempo de expiración
-    return Date.now() >= payload.exp * 1000;
+    // Buffer de 15 segundos para evitar usar tokens a punto de expirar
+    return Date.now() >= (payload.exp * 1000) - 15000;
   } catch {
     return false;
   }
@@ -33,20 +31,25 @@ export const sessionManager = {
       return memoryToken;
     }
 
-    if (typeof window !== 'undefined' && window.sessionStorage) {
+    if (typeof window !== 'undefined') {
       try {
-        const storedToken = window.sessionStorage.getItem(TOKEN_STORAGE_KEY);
+        // 1. Intentar sessionStorage primero
+        let storedToken = window.sessionStorage?.getItem(TOKEN_STORAGE_KEY);
+        // 2. Si no está en sessionStorage, buscar en localStorage
+        if (!storedToken) {
+          storedToken = window.localStorage?.getItem(TOKEN_STORAGE_KEY);
+        }
+
         if (storedToken) {
           if (isTokenExpired(storedToken)) {
-            window.sessionStorage.removeItem(TOKEN_STORAGE_KEY);
-            memoryToken = null;
+            sessionManager.clearToken();
             return null;
           }
           memoryToken = storedToken;
           return storedToken;
         }
       } catch {
-        // Ignorar errores de acceso a sessionStorage
+        // Ignorar errores de acceso a storage
       }
     }
 
@@ -55,9 +58,10 @@ export const sessionManager = {
 
   setToken: (token: string): void => {
     memoryToken = token;
-    if (typeof window !== 'undefined' && window.sessionStorage) {
+    if (typeof window !== 'undefined') {
       try {
-        window.sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
+        window.sessionStorage?.setItem(TOKEN_STORAGE_KEY, token);
+        window.localStorage?.setItem(TOKEN_STORAGE_KEY, token);
       } catch {
         // Ignorar fallos de almacenamiento
       }
@@ -66,10 +70,14 @@ export const sessionManager = {
 
   clearToken: (): void => {
     memoryToken = null;
-    if (typeof window !== 'undefined' && window.sessionStorage) {
+    if (typeof window !== 'undefined') {
       try {
-        window.sessionStorage.removeItem(TOKEN_STORAGE_KEY);
-        window.sessionStorage.removeItem('zf_user_cache');
+        window.sessionStorage?.removeItem(TOKEN_STORAGE_KEY);
+        window.sessionStorage?.removeItem('zf_user_cache');
+        window.sessionStorage?.removeItem('zf_user_cache_ts');
+        window.localStorage?.removeItem(TOKEN_STORAGE_KEY);
+        window.localStorage?.removeItem('zf_user_cache');
+        window.localStorage?.removeItem('zf_user_cache_ts');
       } catch {
         // Ignorar fallos de almacenamiento
       }

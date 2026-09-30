@@ -315,3 +315,34 @@ def test_06_security_prevents_path_traversal_and_invalid_filenames(persistence_f
     # Non-uuid / script filenames
     assert client.get("/clients/photo/exploit.php").status_code == 400
     assert client.get("/clients/photo/test.sh").status_code == 400
+
+
+def test_07_corrupted_zero_byte_disk_file_self_heals_from_db(persistence_fixture):
+    """
+    Case E: If a 0-byte or corrupted file exists in the disk cache, the system
+    must not serve empty content; it must fall through to PostgreSQL client_photos,
+    overwrite the empty cache file with the real image bytes, and return HTTP 200.
+    """
+    user1 = persistence_fixture["user1"]
+    app.dependency_overrides[get_current_user] = lambda: user1
+    client = TestClient(app)
+
+    # 1. Upload photo
+    files = {"file": ("avatar.png", io.BytesIO(TINY_PNG), "image/png")}
+    resp = client.post("/clients/1/photo", files=files)
+    assert resp.status_code == 200
+    filename = resp.json()["photo_url"].split("/")[-1]
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    persistence_fixture["uploaded_files"].append(file_path)
+
+    # 2. Corrupt the file on disk by truncating to 0 bytes
+    with open(file_path, "wb") as f:
+        f.write(b"")
+    assert os.path.getsize(file_path) == 0
+
+    # 3. GET request must detect 0-byte cache, self-heal from DB, and return valid bytes
+    get_resp = client.get(f"/clients/photo/{filename}")
+    assert get_resp.status_code == 200
+    assert get_resp.content == TINY_PNG
+    assert os.path.getsize(file_path) == len(TINY_PNG)
+

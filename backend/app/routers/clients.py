@@ -894,19 +894,19 @@ def get_client_photo(
         raise HTTPException(status_code=404, detail="Photo not found or unauthorized.")
 
     file_path = os.path.join(UPLOAD_DIR, filename)
-    if not os.path.exists(file_path):
+    if not os.path.isfile(file_path) or os.path.getsize(file_path) == 0:
         # Look in fallback directories and auto-migrate if found
         for fallback_dir in FALLBACK_UPLOAD_DIRS:
             candidate = os.path.join(fallback_dir, filename)
-            if os.path.exists(candidate):
+            if os.path.isfile(candidate) and os.path.getsize(candidate) > 0:
                 try:
                     shutil.copy2(candidate, file_path)
                 except Exception:
                     file_path = candidate
                 break
 
-    # 1. Fast Path: Cached on local disk -> return FileResponse
-    if os.path.exists(file_path):
+    # 1. Fast Path: Cached on local disk with valid content -> return FileResponse
+    if os.path.isfile(file_path) and os.path.getsize(file_path) > 0:
         return FileResponse(file_path, headers={"Cache-Control": "private, max-age=86400"})
 
     # 2. Self-Healing Path: File missing from disk (e.g., after redeploy or container replacement)

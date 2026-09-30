@@ -38,11 +38,13 @@ export function ClientPhotoUploader({
     };
   }, [previewUrl]);
 
-  // Reset internal preview when external photo URL changes
-  useEffect(() => {
+  // Reset internal preview when external photo URL changes during render
+  const [prevPhotoUrl, setPrevPhotoUrl] = useState(currentPhotoUrl);
+  if (prevPhotoUrl !== currentPhotoUrl) {
+    setPrevPhotoUrl(currentPhotoUrl);
     setPreviewUrl(null);
     setIsDeleted(false);
-  }, [currentPhotoUrl]);
+  }
 
   const processFile = (file: File) => {
     const fileType = file.type ? file.type.toLowerCase() : '';
@@ -111,8 +113,8 @@ export function ClientPhotoUploader({
   const hasSavedPhoto = !!currentPhotoUrl && !isDeleted;
 
   return (
-    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-4 bg-bg-surface/50 border border-border-light rounded-xl">
-      {/* Accessible native file inputs (sr-only instead of hidden ensures mobile WebKit allows activation) */}
+    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-4.5 bg-surface-panel/80 border border-border-subtle rounded-2xl shadow-subtle backdrop-blur-sm transition-all duration-200">
+      {/* Accessible native file inputs */}
       <input
         id={fileInputId}
         type="file"
@@ -134,7 +136,7 @@ export function ClientPhotoUploader({
       />
 
       {/* Avatar Preview */}
-      <div className="relative w-24 h-24 rounded-full bg-bg-elevated border-2 border-border-medium flex items-center justify-center overflow-hidden shrink-0 shadow-inner group">
+      <div className="relative w-24 h-24 rounded-2xl bg-surface-base border-2 border-border-medium flex items-center justify-center overflow-hidden shrink-0 shadow-inner group transition-all duration-200">
         {hasPendingNewPhoto ? (
           <img
             src={previewUrl!}
@@ -149,25 +151,30 @@ export function ClientPhotoUploader({
           />
         ) : (
           <div className="flex flex-col items-center justify-center text-text-muted">
-            <UserIcon size={36} />
+            <UserIcon size={36} className="text-text-muted/60" />
           </div>
         )}
 
         {isDeleted && (
-          <div className="absolute inset-0 bg-red-950/80 flex flex-col items-center justify-center text-red-400 p-1 text-center">
-            <Trash2 size={20} className="mb-1" />
-            <span className="text-[10px] font-semibold leading-tight">Foto eliminada</span>
+          <div className="absolute inset-0 bg-red-950/85 backdrop-blur-[2px] flex flex-col items-center justify-center text-red-400 p-1 text-center">
+            <Trash2 size={20} className="mb-1 text-red-400" />
+            <span className="text-[10px] font-mono uppercase tracking-wider font-semibold leading-tight">Foto eliminada</span>
           </div>
         )}
       </div>
 
       {/* Controls & Details */}
       <div className="flex-1 flex flex-col items-center sm:items-start text-center sm:text-left">
-        <h4 className="text-sm font-semibold text-text-primary mb-0.5">
-          Fotografía del Cliente
-        </h4>
+        <div className="flex items-center gap-2 mb-0.5">
+          <h4 className="text-sm font-semibold text-text-primary tracking-tight">
+            Fotografía del Socio
+          </h4>
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-raised border border-border-subtle text-text-muted uppercase tracking-wider">
+            DB + Cache
+          </span>
+        </div>
         <p className="text-xs text-text-muted mb-3">
-          JPG, PNG o WEBP. Máximo 5MB.
+          JPG, PNG o WEBP. Máximo 5MB. Persistencia garantizada en PostgreSQL.
         </p>
 
         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
@@ -183,7 +190,7 @@ export function ClientPhotoUploader({
               }
             }}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand-primary hover:bg-brand-primary/90 rounded-lg transition-colors select-none shadow-sm",
+              "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand-primary hover:bg-brand-primary/90 active:scale-[0.98] rounded-xl transition-all select-none shadow-sm shadow-brand-primary/20",
               disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : "cursor-pointer"
             )}
             title="Seleccionar imagen desde tu dispositivo"
@@ -204,7 +211,7 @@ export function ClientPhotoUploader({
               }
             }}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary bg-bg-elevated hover:bg-white/10 hover:text-text-primary border border-border-light rounded-lg transition-colors select-none",
+              "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-raised hover:bg-surface-raised/80 hover:text-text-primary border border-border-medium rounded-xl transition-all select-none",
               disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : "cursor-pointer"
             )}
             title="Tomar foto con la cámara del dispositivo"
@@ -219,11 +226,11 @@ export function ClientPhotoUploader({
               type="button"
               onClick={handleClearSelection}
               disabled={disabled}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-lg transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-xl transition-colors cursor-pointer border border-amber-500/20"
               title="Cancelar selección de nueva fotografía"
             >
               <RotateCcw size={12} />
-              <span>Deshacer selección</span>
+              <span>Deshacer</span>
             </button>
           )}
 
@@ -232,11 +239,11 @@ export function ClientPhotoUploader({
               type="button"
               onClick={handleRemoveExistingPhoto}
               disabled={disabled}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-danger hover:text-danger/90 hover:bg-danger/10 rounded-lg transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-colors cursor-pointer border border-red-500/20"
               title="Quitar fotografía del cliente"
             >
               <Trash2 size={12} />
-              <span>Eliminar foto</span>
+              <span>Quitar foto</span>
             </button>
           )}
 
@@ -245,7 +252,7 @@ export function ClientPhotoUploader({
               type="button"
               onClick={handleUndoRemove}
               disabled={disabled}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-brand-primary hover:text-brand-primary/90 hover:bg-brand-primary/10 rounded-lg transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-brand-primary hover:text-brand-primary/90 hover:bg-brand-primary/10 rounded-xl transition-colors cursor-pointer border border-brand-primary/30"
               title="Restaurar fotografía anterior"
             >
               <RotateCcw size={12} />
@@ -255,9 +262,9 @@ export function ClientPhotoUploader({
         </div>
 
         {hasPendingNewPhoto && (
-          <p className="text-[11px] text-emerald-400 mt-2 flex items-center gap-1">
+          <p className="text-[11px] text-emerald-400 mt-2 flex items-center gap-1 font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            Nueva fotografía lista para guardar con los cambios del cliente.
+            Nueva fotografía lista para sincronizar.
           </p>
         )}
       </div>

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, Navigate, useSearchParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { Input } from '@shared/ui/Input';
@@ -19,51 +19,30 @@ export function Login({ isApp = false }: { isApp?: boolean }) {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // If already logged in, redirect based on role or selected plan
-  if (isAuthenticated && user) {
-    if (user.role === 'SUPERADMIN') {
-      if (isApp) {
-        window.location.assign('/superadmin');
-        return null;
+  // If already logged in on initial load, redirect based on role or selected plan
+  useEffect(() => {
+    if (isAuthenticated && user && !isLoading) {
+      if (user.role === 'SUPERADMIN') {
+        window.location.replace('/superadmin');
+      } else if (!user.onboarding_completed) {
+        window.location.replace('/onboarding');
+      } else if (planId) {
+        window.location.replace(`/subscription/checkout?planId=${planId}`);
+      } else if (redirect) {
+        window.location.replace(redirect);
+      } else {
+        window.location.replace('/app/dashboard');
       }
-      return <Navigate to="/superadmin" replace />;
     }
+  }, [isAuthenticated, user, isLoading, planId, redirect]);
 
-    if (!user.onboarding_completed) {
-      if (isApp) {
-        window.location.assign('/onboarding');
-        return null;
-      }
-      return <Navigate to="/onboarding" replace />;
-    }
-    
-    // If a planId was selected, take user directly to checkout
-    if (planId) {
-      if (isApp) {
-        window.location.assign(`/subscription/checkout?planId=${planId}`);
-        return null;
-      }
-      return <Navigate to={`/subscription/checkout?planId=${planId}`} replace />;
-    }
-
-    if (redirect) {
-      if (isApp) {
-        window.location.assign(redirect);
-        return null;
-      }
-      return <Navigate to={redirect} replace />;
-    }
-
-    // Normal user goes to App Dashboard
-    if (!isApp) {
-      window.location.assign('/app/dashboard');
-      return null;
-    }
-    return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated && user && !isLoading) {
+    return null;
   }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
     setIsLoading(true);
     
     try {
@@ -71,19 +50,15 @@ export function Login({ isApp = false }: { isApp?: boolean }) {
       toast({ type: 'success', title: 'Bienvenido', message: 'Inicio de sesión exitoso.' });
       
       if (profile.role === 'SUPERADMIN') {
-        if (isApp) window.location.assign('/superadmin');
-        else navigate('/superadmin');
+        window.location.replace('/superadmin');
       } else if (!profile.onboarding_completed) {
-        if (isApp) window.location.assign('/onboarding');
-        else navigate('/onboarding');
+        window.location.replace('/onboarding');
       } else if (planId) {
-        // Redirigir al checkout con el plan seleccionado
-        window.location.assign(`/subscription/checkout?planId=${planId}`);
+        window.location.replace(`/subscription/checkout?planId=${planId}`);
       } else if (redirect) {
-        window.location.assign(redirect);
+        window.location.replace(redirect);
       } else {
-        if (!isApp) window.location.assign('/app/dashboard');
-        else navigate('/dashboard');
+        window.location.replace('/app/dashboard');
       }
     } catch (error: any) {
       const status = error.response?.status;

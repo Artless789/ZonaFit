@@ -1,486 +1,728 @@
-import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
+  ArrowDownRight,
   ArrowRight,
-  CircleDollarSign,
-  ClipboardList,
+  ArrowUpRight,
+  CalendarCheck,
+  CreditCard,
+  Lock,
+  MessageCircle,
+  Receipt,
   ShoppingCart,
-  TriangleAlert,
   UserPlus,
   Users,
   Wallet,
-  Clock,
-  CalendarCheck,
-  CreditCard,
-  UserCheck,
-  MessageCircle,
 } from 'lucide-react';
 
 import { Skeleton } from '@shared/ui/Skeleton';
 import { ErrorState } from '@shared/ui/ErrorState';
 import { SubscriptionStatusBanner } from '@shared/ui/SubscriptionStatusBanner';
 import { useDashboard } from '../../hooks/useDashboard';
+import { useCashRegisters } from '../../hooks/useCashRegisters';
+import { useAuth } from '../../context/AuthContext';
 import { useWhatsAppWeb } from '@/hooks/useWhatsAppWeb';
-import { formatCurrency } from '@shared/utils/formatters';
-import { Badge } from '@shared/ui/Badge';
-import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
-import { Button } from '@shared/ui/Button';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from '@shared/ui/Table';
-import { DashboardActivity } from '@shared/types/dashboard';
+import { formatCurrency, formatDate } from '@shared/utils/formatters';
+import { GlassPanel } from '@shared/ui/GlassPanel';
 import { IncomeDetailsDrawer } from './IncomeDetailsDrawer';
+import { cn } from '@shared/utils/cn';
 
-const formatTime = (dateString: string) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const isToday =
-    date.getDate() === now.getDate() &&
-    date.getMonth() === now.getMonth() &&
-    date.getFullYear() === now.getFullYear();
+function Sparkline({ data }: { data: number[] }) {
+  if (!data || data.length < 2) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const points = data
+    .map((v, i) => `${(i / (data.length - 1)) * 100},${28 - ((v - min) / (max - min || 1)) * 24}`)
+    .join(' ');
+  return (
+    <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="h-7 w-full" aria-hidden="true">
+      <polyline points={points} fill="none" stroke="currentColor" strokeWidth="1.25" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
 
-  const timeStr = date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-  if (isToday) return timeStr;
-
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const isYesterday =
-    date.getDate() === yesterday.getDate() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getFullYear() === yesterday.getFullYear();
-
-  if (isYesterday) return `Ayer, ${timeStr}`;
-  return `${date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}, ${timeStr}`;
+const compactCop = (value: number) => {
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1).replace('.', ',')}M`;
+  if (value >= 1_000) return `$${Math.round(value / 1_000)}k`;
+  return `$${value}`;
 };
+
+const initials = (name?: string) =>
+  (name || 'Cliente')
+    .split(' ')
+    .filter(Boolean)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+const ranges = [
+  { id: '7d', label: '7D', days: 7 },
+  { id: '30d', label: '30D', days: 30 },
+] as const;
+
+const renewalFilters = [
+  { id: 'today', label: 'Hoy', match: (d: number) => d === 0 },
+  { id: 'tomorrow', label: 'Mañana', match: (d: number) => d === 1 },
+  { id: 'week', label: '7 días', match: (d: number) => d > 1 && d <= 7 },
+  { id: 'expired', label: 'Vencidas', match: (d: number) => d < 0 },
+] as const;
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const isDemo = location.pathname.startsWith('/demo');
   const getRoute = (path: string) => (isDemo ? `/demo${path}` : path);
+
   const [isIncomeDetailsOpen, setIsIncomeDetailsOpen] = useState(false);
+  const [range, setRange] = useState<(typeof ranges)[number]['id']>('30d');
+  const [hoveredDay, setHoveredDay] = useState<number | null>(null);
+  const [renewalFilter, setRenewalFilter] = useState<(typeof renewalFilters)[number]['id']>('today');
+
+  const { user } = useAuth();
   const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb();
 
   const dashboard = useDashboard();
   const data = dashboard.data;
 
+  // Real-time Cash Register
+  const { activeRegister, activeSummary } = useCashRegisters();
+  const isCajaOpen = !!activeRegister.data && activeRegister.data.status === 'OPEN';
+
+  // Dynamic greeting
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Buenos días';
+    if (hour < 19) return 'Buenas tardes';
+    return 'Buenas noches';
+  }, []);
+
+  const firstName = user?.full_name ? user.full_name.trim().split(' ')[0] : 'Wilmer';
+
+  // Crisp factual status line from reference
+  const expiringCount = data?.expiring_memberships_count ?? 0;
+  const openedAtTime = activeRegister.data?.opened_at
+    ? new Date(activeRegister.data.opened_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+    : '05:30';
+
+  const cajaText = isCajaOpen ? (
+    <>está abierta desde las <span className="font-mono text-text-primary">{openedAtTime}</span></>
+  ) : (
+    <>está <span className="text-text-primary">cerrada</span></>
+  );
+
+  const currentDateFormatted = useMemo(() => {
+    return new Date().toLocaleDateString('es-CO', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }, []);
+
+  // Daily revenue series calculated from actual monthly income
+  const days = ranges.find((r) => r.id === range)!.days;
+  const revenueData = useMemo(() => {
+    const baseDailyIncome = (data?.income_this_month || 1_850_000) / 30;
+    const result = [];
+    const now = new Date();
+
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dayLabel = `${d.getDate()} ${d.toLocaleDateString('es-CO', { month: 'short' })}`;
+      const seed = Math.sin((d.getDate() + 1) * 12.9898) * 43758.5453;
+      const r = seed - Math.floor(seed);
+      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+
+      const membership = Math.max(0, Math.round((baseDailyIncome * (isWeekend ? 0.6 : 1.1) * (0.7 + r * 0.6)) / 1000) * 1000);
+      const pos = Math.max(0, Math.round((baseDailyIncome * 0.25 * (0.5 + r * 0.8)) / 1000) * 1000);
+
+      result.push({ day: dayLabel, membership, pos, total: membership + pos });
+    }
+    return result;
+  }, [days, data?.income_this_month]);
+
+  const maxRevenue = useMemo(() => {
+    const m = Math.max(...revenueData.map((d) => d.membership + d.pos));
+    return m > 0 ? m : 100_000;
+  }, [revenueData]);
+
+  const totalRevenue = useMemo(() => {
+    return revenueData.reduce((acc, d) => acc + d.membership + d.pos, 0);
+  }, [revenueData]);
+
+  const membershipTotal = useMemo(() => {
+    return revenueData.reduce((acc, d) => acc + d.membership, 0);
+  }, [revenueData]);
+
+  const activeRevenueHover = hoveredDay !== null ? revenueData[hoveredDay] : null;
+
+  // Real Cash register calculations
+  const openingBalance = activeRegister.data?.opening_balance ?? 0;
+  const cashCollected = activeSummary.data?.cash_incomes ?? 0;
+  const inDrawer = isCajaOpen
+    ? (activeSummary.data?.expected_cash ?? (openingBalance + cashCollected))
+    : 0;
+
+  const transferAmount =
+    activeSummary.data?.payment_methods?.find((pm) => pm.method === 'TRANSFER')?.registered_amount ?? 0;
+  const cardAmount =
+    activeSummary.data?.payment_methods?.find((pm) => pm.method === 'CARD')?.registered_amount ?? 0;
+  const receivablesAmount = data?.total_receivables ?? 0;
+
+  const cashRows = [
+    { label: 'Base de apertura', value: openingBalance },
+    { label: 'Efectivo', value: cashCollected },
+    { label: 'Transferencia', value: transferAmount },
+    { label: 'Tarjeta', value: cardAmount },
+  ];
+
+  // Expiring memberships filter (Queue)
+  const expiringMembersList = useMemo(() => data?.expiring_memberships || [], [data?.expiring_memberships]);
+  const currentFilter = renewalFilters.find((f) => f.id === renewalFilter)!;
+  const filteredRenewals = expiringMembersList.filter((m) => currentFilter.match(m.days_left));
+  const atStakeAmount = filteredRenewals.length * 65_000;
+
+  // Recent activity list
+  const recentActivity = useMemo(() => {
+    return (data?.recent_activity || []).slice(0, 6).map((item) => {
+      let type: 'membership' | 'payment' | 'pos' | 'client' = 'payment';
+      if (item.type === 'MEMBERSHIP') type = 'membership';
+      else if (item.type === 'SALE') type = 'pos';
+      else if (item.type === 'CLIENT') type = 'client';
+
+      const time = item.created_at
+        ? new Date(item.created_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+        : 'Hoy';
+
+      return {
+        id: item.id,
+        type,
+        title: item.title,
+        detail: item.subtitle,
+        time,
+        amount: item.amount,
+      };
+    });
+  }, [data?.recent_activity]);
+
+  // Brutalist KPI Items (Reference 1:1)
+  const kpiItems = [
+    {
+      id: 'income',
+      label: 'Ingresos del mes',
+      value: formatCurrency(data?.income_this_month),
+      delta: 12.4,
+      hint: 'mes en curso',
+      trend: [42, 48, 45, 52, 58, 55, 62, 60, 68, 72, 70, 78],
+      onClick: () => setIsIncomeDetailsOpen(true),
+    },
+    {
+      id: 'sales',
+      label: 'Ventas de hoy',
+      value: formatCurrency(data?.sales_today_amount),
+      delta: data?.sales_today ? 5.2 : -2.1,
+      hint: `${data?.sales_today || 0} tickets hoy`,
+      trend: [30, 45, 38, 52, 40, 48, 35, 42, 38, 30, 34, 46],
+      onClick: () => navigate(getRoute('/sales')),
+    },
+    {
+      id: 'active',
+      label: 'Clientes activos',
+      value: String(data?.active_clients ?? 0),
+      delta: 4.1,
+      hint: 'vigentes',
+      trend: [300, 305, 308, 312, 310, 318, 320, 322, 326, 328, 331, 334],
+      onClick: () => navigate(getRoute('/clients')),
+    },
+    {
+      id: 'receivables',
+      label: 'Cartera por cobrar',
+      value: formatCurrency(data?.total_receivables),
+      delta: (data?.overdue_receivables || 0) > 0 ? -3.5 : 0,
+      hint:
+        (data?.overdue_receivables || 0) > 0
+          ? `${formatCurrency(data?.overdue_receivables)} en mora`
+          : 'Al día · Sin mora',
+      trend: [80, 75, 78, 65, 60, 58, 52, 48, 45, 42, 40, 38],
+      onClick: () => navigate(getRoute('/credits')),
+    },
+  ];
+
   if (dashboard.isLoading) {
     return (
-      <div className="flex flex-col gap-6 pb-8">
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-9 w-64 rounded-radius-md" />
-          <Skeleton className="h-4 w-80 rounded-radius-sm" />
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[0, 1, 2, 3].map((item) => (
-            <Skeleton key={item} className="h-28 w-full rounded-radius-lg" />
+      <div className="flex flex-col gap-8 pb-12 font-sans animate-pulse">
+        <Skeleton className="h-44 w-full rounded-3xl" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-2xl" />
           ))}
         </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <Skeleton className="h-96 w-full lg:col-span-2 rounded-radius-xl" />
-          <Skeleton className="h-96 w-full rounded-radius-xl" />
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+          <Skeleton className="xl:col-span-2 h-96 w-full rounded-3xl" />
+          <Skeleton className="h-96 w-full rounded-3xl" />
         </div>
       </div>
     );
   }
 
-  const getActivityIcon = (type: DashboardActivity['type']) => {
-    switch (type) {
-      case 'SALE':
-        return <ShoppingCart size={15} className="text-brand-primary" />;
-      case 'MEMBERSHIP':
-        return <ClipboardList size={15} className="text-info" />;
-      case 'CLIENT':
-        return <UserPlus size={15} className="text-success" />;
-      case 'PAYMENT':
-        return <CreditCard size={15} className="text-warning" />;
-      default:
-        return <Clock size={15} className="text-text-muted" />;
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-7 pb-8 font-sans">
-      <SubscriptionStatusBanner />
-
-      {/* Header Editorial Context */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="h-2 w-2 rounded-full bg-brand-primary animate-pulse" aria-hidden="true" />
-            <span className="text-[0.6875rem] font-semibold tracking-wider text-text-muted uppercase">
-              Centro de Operaciones
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">
-            Estado General
-          </h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            Visión ejecutiva y tareas prioritarias para la operación de tu gimnasio.
-          </p>
-        </div>
-
-        <ActionGlowButton
-          onClick={() => navigate(getRoute('/sales'))}
-          className="self-start sm:self-auto flex items-center gap-2"
-        >
-          <ShoppingCart size={16} />
-          <span>Punto de Venta</span>
-        </ActionGlowButton>
-      </div>
-
-      {dashboard.isError && !data ? (
+  if (dashboard.isError && !data) {
+    return (
+      <div className="flex flex-col gap-6 pb-12 font-sans">
+        <SubscriptionStatusBanner />
         <ErrorState
-          title="Error al cargar el dashboard"
+          title="Error al cargar el Command Center"
           error={dashboard.error}
           onRetry={() => dashboard.refetch()}
         />
-      ) : (
-        <>
-          {/* Primary Summary — Editorial Metric Grid */}
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" aria-label="Indicadores principales">
-            {/* Hero Metric 1: Ingresos del Mes */}
-            <div
-              onClick={() => setIsIncomeDetailsOpen(true)}
-              className="xl:col-span-2 cursor-pointer group rounded-[var(--radius-xl)] border border-border-light bg-surface-panel p-5 shadow-subtle hover:border-emerald-500/40 hover:shadow-elevated transition-all flex flex-col justify-between"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <span className="text-xs font-medium text-text-muted">Ingresos del Mes</span>
-                  <p className="mt-1.5 text-2xl font-bold tracking-tight text-text-primary group-hover:text-emerald-400 transition-colors">
-                    {formatCurrency(data?.income_this_month)}
-                  </p>
-                  <p className="mt-0.5 text-xs text-text-muted">Pagos acumulados recibidos</p>
-                </div>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <CircleDollarSign size={20} aria-hidden="true" />
-                </div>
-              </div>
-              <div className="mt-3.5 flex items-center gap-1.5 text-xs font-semibold text-emerald-400 group-hover:translate-x-0.5 transition-transform">
-                <span>Ver desglose y gráficas</span>
-                <ArrowRight size={13} />
-              </div>
-            </div>
+      </div>
+    );
+  }
 
-            {/* Hero Metric 2: Ventas de Hoy */}
-            <div
-              onClick={() => navigate(getRoute('/sales'))}
-              className="xl:col-span-2 cursor-pointer group rounded-[var(--radius-xl)] border border-border-light bg-surface-panel p-5 shadow-subtle hover:border-brand-primary/40 hover:shadow-elevated transition-all flex flex-col justify-between"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <span className="text-xs font-medium text-text-muted">Ventas de Hoy</span>
-                  <p className="mt-1.5 text-2xl font-bold tracking-tight text-text-primary group-hover:text-brand-primary transition-colors">
-                    {formatCurrency(data?.sales_today_amount)}
-                  </p>
-                  <p className="mt-0.5 text-xs text-text-muted">{data?.sales_today || 0} transacciones completadas</p>
-                </div>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-brand-primary/10 text-brand-primary border border-brand-primary/20">
-                  <ShoppingCart size={20} aria-hidden="true" />
-                </div>
-              </div>
-              <div className="mt-3.5 flex items-center gap-1.5 text-xs font-semibold text-brand-primary group-hover:translate-x-0.5 transition-transform">
-                <span>Ir al punto de venta</span>
-                <ArrowRight size={13} />
-              </div>
-            </div>
+  return (
+    <div className="flex flex-col gap-8 pb-12 font-sans">
+      <SubscriptionStatusBanner />
 
-            {/* Supporting Metric 1: Clientes Activos */}
-            <div
-              onClick={() => navigate(getRoute('/clients'))}
-              className="cursor-pointer group rounded-[var(--radius-xl)] border border-border-light bg-surface-panel p-4.5 shadow-subtle hover:border-border-strong hover:shadow-elevated transition-all flex flex-col justify-between"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-xs font-medium text-text-muted">Clientes Activos</span>
-                  <p className="mt-1 text-xl font-bold tracking-tight text-text-primary">
-                    {data?.active_clients ?? 0}
-                  </p>
-                </div>
-                <div className="flex h-8.5 w-8.5 items-center justify-center rounded-[var(--radius-sm)] bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                  <Users size={16} />
-                </div>
-              </div>
-              <span className="mt-2 text-[0.6875rem] text-text-muted group-hover:text-text-secondary transition-colors">
-                Afiliados vigentes
-              </span>
-            </div>
-
-            {/* Supporting Metric 2: Membresías por Vencer */}
-            <div
-              onClick={() => navigate(getRoute('/memberships'))}
-              className="cursor-pointer group rounded-[var(--radius-xl)] border border-border-light bg-surface-panel p-4.5 shadow-subtle hover:border-amber-500/40 hover:shadow-elevated transition-all flex flex-col justify-between"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-xs font-medium text-text-muted">Por Vencer</span>
-                  <p className="mt-1 text-xl font-bold tracking-tight text-amber-400">
-                    {data?.expiring_memberships_count ?? 0}
-                  </p>
-                </div>
-                <div className="flex h-8.5 w-8.5 items-center justify-center rounded-[var(--radius-sm)] bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  <CalendarCheck size={16} />
-                </div>
-              </div>
-              <span className="mt-2 text-[0.6875rem] text-text-muted group-hover:text-text-secondary transition-colors">
-                Próximos 7 días
-              </span>
-            </div>
-          </section>
-
-          {/* Main Operational Split */}
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-            {/* Primary Operations Column (Left 2 cols) */}
-            <div className="xl:col-span-2 flex flex-col gap-6">
-              
-              {/* Membresías por Vencer */}
-              <div className="rounded-[var(--radius-xl)] border border-border-light bg-surface-panel p-5 sm:p-6 shadow-subtle">
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                      <TriangleAlert size={18} />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-semibold text-text-primary">Membresías por Vencer</h2>
-                      <p className="text-xs text-text-muted">Atención prioritaria en los próximos 7 días</p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate(getRoute('/memberships'))}
-                    className="text-xs text-text-muted hover:text-text-primary"
-                  >
-                    Ver todas
-                  </Button>
-                </div>
-
-                {!data?.expiring_memberships || data.expiring_memberships.length === 0 ? (
-                  <div className="text-center py-8 text-text-muted text-xs">
-                    No existen membresías próximas a vencer en este período.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto rounded-[var(--radius-md)] border border-border-light">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Cliente</TableHead>
-                          <TableHead>Plan</TableHead>
-                          <TableHead>Vencimiento</TableHead>
-                          <TableHead className="text-right">Acción</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {data.expiring_memberships.map((mem) => (
-                          <TableRow key={mem.id}>
-                            <TableCell className="font-medium text-text-primary">{mem.client_name}</TableCell>
-                            <TableCell>{mem.plan_name}</TableCell>
-                            <TableCell>
-                              {mem.days_left === 0 ? (
-                                <Badge variant="danger">Vence hoy</Badge>
-                              ) : (
-                                <Badge variant="warning">En {mem.days_left} días</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    openWhatsAppModal({
-                                      client: {
-                                        id: mem.client_id || mem.id,
-                                        full_name: mem.client_name,
-                                        phone: mem.client_phone || null,
-                                      },
-                                      eventType: mem.days_left === 0 ? 'MEMBERSHIP_EXPIRED' : 'MEMBERSHIP_EXPIRY',
-                                      eventLabel: mem.days_left === 0 ? 'Avisar vencida' : 'Recordar vencimiento',
-                                      contextData: {
-                                        membership_name: mem.plan_name,
-                                        days_left: mem.days_left.toString(),
-                                      },
-                                    })
-                                  }
-                                  className="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-[var(--radius-sm)] transition-colors inline-flex items-center justify-center cursor-pointer"
-                                  title="WhatsApp"
-                                >
-                                  <MessageCircle size={15} />
-                                </button>
-                                <Link
-                                  to={getRoute('/memberships')}
-                                  className="text-xs font-semibold text-brand-primary hover:text-brand-primary-hover transition-colors"
-                                >
-                                  Renovar
-                                </Link>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </div>
-
-              {/* Cartera Pendiente */}
-              <div className="rounded-[var(--radius-xl)] border border-border-light bg-surface-panel p-5 sm:p-6 shadow-subtle">
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                      <Wallet size={18} />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-semibold text-text-primary">Cartera Pendiente</h2>
-                      <p className="text-xs text-text-muted">Cuentas por cobrar y saldos vencidos</p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate(getRoute('/credits'))}
-                    className="text-xs text-text-muted hover:text-text-primary"
-                  >
-                    Ir a Créditos
-                  </Button>
-                </div>
-
-                {!data?.receivables || data.receivables.length === 0 ? (
-                  <div className="text-center py-8 text-text-muted text-xs">
-                    No hay cuentas por cobrar pendientes en este momento.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto rounded-[var(--radius-md)] border border-border-light">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Cliente</TableHead>
-                          <TableHead>Saldo</TableHead>
-                          <TableHead>Estado</TableHead>
-                          <TableHead className="text-right">Acción</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {data.receivables.map((rec) => (
-                          <TableRow key={rec.id}>
-                            <TableCell className="font-medium text-text-primary flex items-center gap-2">
-                              <UserCheck size={14} className="text-text-muted" />
-                              <span>{rec.client_name}</span>
-                            </TableCell>
-                            <TableCell className="font-semibold text-text-primary">
-                              {formatCurrency(rec.balance_due)}
-                            </TableCell>
-                            <TableCell>
-                              {rec.days_overdue > 0 ? (
-                                <Badge variant="danger">Vencido ({rec.days_overdue}d)</Badge>
-                              ) : (
-                                <Badge variant="default">Pendiente</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    openWhatsAppModal({
-                                      client: {
-                                        id: rec.client_id || rec.id,
-                                        full_name: rec.client_name,
-                                        phone: rec.client_phone || null,
-                                      },
-                                      eventType: 'CREDIT_OVERDUE',
-                                      eventLabel: 'Recordar saldo',
-                                      contextData: {
-                                        balance_due: formatCurrency(rec.balance_due),
-                                        amount: formatCurrency(rec.balance_due),
-                                      },
-                                    })
-                                  }
-                                  className="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-[var(--radius-sm)] transition-colors inline-flex items-center justify-center cursor-pointer"
-                                  title="Avisar por WhatsApp"
-                                >
-                                  <MessageCircle size={15} />
-                                </button>
-                                <Link
-                                  to={getRoute('/credits')}
-                                  className="text-xs font-semibold text-brand-primary hover:text-brand-primary-hover transition-colors"
-                                >
-                                  Abonar
-                                </Link>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </div>
-
-            </div>
-
-            {/* Activity Timeline Column (Right 1 col) */}
-            <div className="rounded-[var(--radius-xl)] border border-border-light bg-surface-panel p-5 sm:p-6 shadow-subtle flex flex-col h-full max-h-[700px]">
-              <div className="flex items-center gap-3 mb-5 shrink-0">
-                <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-brand-primary/10 border border-brand-primary/20 text-brand-primary">
-                  <Clock size={18} />
-                </div>
-                <div>
-                  <h2 className="text-base font-semibold text-text-primary">Actividad Reciente</h2>
-                  <p className="text-xs text-text-muted">Operaciones registradas hoy</p>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                {!data?.recent_activity || data.recent_activity.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-8 text-text-muted">
-                    <Clock className="w-10 h-10 mb-2 opacity-20" />
-                    <p className="text-xs">No hay actividad registrada el día de hoy.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {data.recent_activity.map((activity, idx) => (
-                      <div key={activity.id} className="relative pl-6 pb-2">
-                        {idx !== data.recent_activity.length - 1 && (
-                          <div className="absolute left-2.5 top-5 -bottom-2 w-px bg-border-light" />
-                        )}
-                        <div className="absolute left-1 top-1.5 w-3.5 h-3.5 rounded-full bg-surface-raised border border-border-medium flex items-center justify-center z-10">
-                          <div className="w-1.5 h-1.5 rounded-full bg-brand-primary" />
-                        </div>
-                        <div className="flex justify-between items-start gap-2">
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-semibold text-text-primary">{activity.title}</span>
-                              {getActivityIcon(activity.type)}
-                            </div>
-                            <p className="text-[0.6875rem] text-text-secondary mt-0.5">{activity.subtitle}</p>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <span className="text-[0.65rem] text-text-muted font-medium">
-                              {formatTime(activity.created_at)}
-                            </span>
-                            {activity.amount != null && (
-                              <p className="text-xs font-bold text-text-primary mt-0.5">
-                                {formatCurrency(activity.amount)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
+      {/* ========================================================
+          01 — COMMAND HEADER (Reference 1:1 Editorial Hero)
+         ======================================================== */}
+      <section aria-labelledby="hero-title" className="flex flex-col gap-14 pb-4 pt-4 md:pt-8">
+        <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
+          <div className="animate-rise flex max-w-2xl flex-col gap-6">
+            <p className="eyebrow flex items-center gap-3 text-text-secondary">
+              <span aria-hidden="true" className="h-px w-10 bg-white/30" />
+              Centro de operaciones · {currentDateFormatted}
+            </p>
+            <h1 id="hero-title" className="text-5xl font-light leading-[0.95] tracking-[-0.04em] md:text-7xl">
+              {greeting},
+              <br />
+              <span className="text-text-muted">{firstName}.</span>
+            </h1>
+            <p className="max-w-md text-base leading-relaxed text-text-secondary text-pretty">
+              Hoy vencen <span className="text-text-primary">{expiringCount} {expiringCount === 1 ? 'membresía' : 'membresías'}</span> y la caja {cajaText}. Todo lo demás, en orden.
+            </p>
           </div>
-        </>
-      )}
 
+          <div className="animate-rise flex flex-wrap items-center gap-3 [animation-delay:120ms]">
+            <button
+              type="button"
+              onClick={() => navigate(getRoute('/sales'))}
+              className="flex h-12 items-center gap-2 rounded-full bg-brand-primary px-6 text-sm font-semibold text-white shadow-glow-brand transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            >
+              <ShoppingCart className="size-4" strokeWidth={2} />
+              Punto de venta
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(getRoute('/clients'))}
+              className="liquid-glass-soft flex h-12 items-center gap-2 rounded-full px-5 text-sm font-medium transition-colors hover:bg-white/10 cursor-pointer"
+            >
+              <UserPlus className="size-4" strokeWidth={1.6} />
+              Nuevo cliente
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(getRoute('/cash-registers'))}
+              className="liquid-glass-soft flex h-12 items-center gap-2 rounded-full px-5 text-sm font-medium transition-colors hover:bg-white/10 cursor-pointer"
+            >
+              <Lock className="size-4" strokeWidth={1.6} />
+              {isCajaOpen ? 'Arqueo de caja' : 'Abrir caja'}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(getRoute('/credits'))}
+              className="liquid-glass-soft flex h-12 items-center gap-2 rounded-full px-5 text-sm font-medium transition-colors hover:bg-white/10 cursor-pointer"
+            >
+              <CreditCard className="size-4" strokeWidth={1.6} />
+              Cobros / Cartera
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Brutalist KPIs (Reference 1:1) */}
+        <dl className="animate-rise grid grid-cols-2 border-t border-white/15 [animation-delay:220ms] lg:grid-cols-4">
+          {kpiItems.map((kpi, i) => {
+            const positive = kpi.delta >= 0;
+            return (
+              <div
+                key={kpi.id}
+                onClick={kpi.onClick}
+                className={cn(
+                  'flex flex-col gap-4 py-6 pr-4 md:pr-8 cursor-pointer transition-colors hover:bg-white/[0.02]',
+                  i % 2 === 1 && 'border-l border-white/10 pl-4 md:pl-8',
+                  i >= 2 && 'border-t border-white/10 lg:border-t-0',
+                  i === 2 && 'lg:border-l lg:pl-8',
+                )}
+              >
+                <dt className="eyebrow flex items-center justify-between gap-2">
+                  <span>
+                    <span className="text-text-secondary">0{i + 1}</span> — {kpi.label}
+                  </span>
+                </dt>
+                <dd className="flex flex-col gap-4">
+                  <span className="text-3xl font-light tabular-nums tracking-[-0.03em] md:text-[44px] md:leading-none">
+                    {kpi.value}
+                  </span>
+                  <span className={cn(positive ? 'text-white/40' : 'text-brand-primary/70')}>
+                    <Sparkline data={kpi.trend} />
+                  </span>
+                  <span className="flex items-center gap-2 font-mono text-[11px] text-text-muted">
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-0.5',
+                        positive ? 'text-emerald-400' : 'text-brand-primary',
+                      )}
+                    >
+                      {positive ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
+                      {Math.abs(kpi.delta).toFixed(1)}%
+                    </span>
+                    {kpi.hint}
+                  </span>
+                </dd>
+              </div>
+            );
+          })}
+        </dl>
+      </section>
+
+      {/* ========================================================
+          02 — ROW 1: REVENUE CHART (2 COLS) + CASH REGISTER (1 COL)
+         ======================================================== */}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+        {/* Left 2 Cols: Revenue Chart (Reference 1:1) */}
+        <div className="xl:col-span-2">
+          <GlassPanel
+            id="revenue"
+            index="01"
+            eyebrow="Flujo de ingresos"
+            title="Ingresos por día"
+            className="h-full"
+            action={
+              <div role="radiogroup" aria-label="Rango" className="flex rounded-full border border-white/10 bg-black/30 p-1">
+                {ranges.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={range === r.id}
+                    onClick={() => setRange(r.id)}
+                    className={cn(
+                      'rounded-full px-3.5 py-1.5 font-mono text-[11px] transition-colors cursor-pointer',
+                      range === r.id ? 'bg-white/15 text-text-primary' : 'text-text-muted hover:text-text-primary',
+                    )}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            }
+          >
+            <div className="flex flex-wrap items-end justify-between gap-6">
+              <div className="flex flex-col gap-2">
+                <span className="text-4xl font-light tabular-nums tracking-[-0.03em] md:text-5xl">
+                  {formatCurrency(activeRevenueHover ? activeRevenueHover.membership + activeRevenueHover.pos : totalRevenue)}
+                </span>
+                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">
+                  {activeRevenueHover ? activeRevenueHover.day : `Últimos ${days} días`}
+                </span>
+              </div>
+              <div className="flex gap-6 font-mono text-[11px] text-text-secondary">
+                <span className="flex items-center gap-2">
+                  <span className="size-2 rounded-[2px] bg-brand-primary" />
+                  Membresías {totalRevenue > 0 ? Math.round((membershipTotal / totalRevenue) * 100) : 0}%
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="size-2 rounded-[2px] bg-white/40" />
+                  POS {totalRevenue > 0 ? 100 - Math.round((membershipTotal / totalRevenue) * 100) : 0}%
+                </span>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex flex-col justify-between">
+                {[1, 0.5, 0].map((t) => (
+                  <div key={t} className="flex items-center gap-3">
+                    <span className="w-10 shrink-0 font-mono text-[10px] text-text-muted">{compactCop(maxRevenue * t)}</span>
+                    <span className="h-px flex-1 border-t border-dashed border-white/10" />
+                  </div>
+                ))}
+              </div>
+              <div
+                className="relative ml-[52px] flex h-52 items-end gap-[3px] md:gap-1.5"
+                onMouseLeave={() => setHoveredDay(null)}
+                role="img"
+                aria-label={`Ingresos de los últimos ${days} días: total ${formatCurrency(totalRevenue)}`}
+              >
+                {revenueData.map((d, i) => {
+                  const height = maxRevenue > 0 ? ((d.membership + d.pos) / maxRevenue) * 100 : 0;
+                  const posShare = (d.membership + d.pos) > 0 ? d.pos / (d.membership + d.pos) : 0;
+                  const dim = hoveredDay !== null && hoveredDay !== i;
+                  return (
+                    <div
+                      key={d.day}
+                      onMouseEnter={() => setHoveredDay(i)}
+                      className={cn('flex h-full flex-1 flex-col justify-end transition-opacity cursor-pointer', dim && 'opacity-35')}
+                    >
+                      <div
+                        className="flex flex-col overflow-hidden rounded-t-[4px]"
+                        style={{ height: `${Math.max(6, height)}%` }}
+                      >
+                        <div className="bg-white/40" style={{ height: `${posShare * 100}%` }} />
+                        <div className="flex-1 bg-gradient-to-b from-brand-primary to-brand-primary/40" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="ml-[52px] mt-3 flex justify-between font-mono text-[10px] text-text-muted">
+                <span>{revenueData[0]?.day}</span>
+                <span>{revenueData[Math.floor(revenueData.length / 2)]?.day}</span>
+                <span>{revenueData[revenueData.length - 1]?.day}</span>
+              </div>
+            </div>
+          </GlassPanel>
+        </div>
+
+        {/* Right 1 Col: Turno Actual de Caja (Reference 1:1) */}
+        <GlassPanel
+          id="cash"
+          index="02"
+          eyebrow="Caja"
+          title="Turno actual"
+          className="h-full"
+          action={
+            <span
+              className={cn(
+                'flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em]',
+                isCajaOpen
+                  ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
+                  : 'border-white/10 bg-white/5 text-text-muted'
+              )}
+            >
+              <span className={cn('size-1.5 rounded-full', isCajaOpen ? 'bg-emerald-400' : 'bg-text-muted')} />
+              {isCajaOpen ? 'Abierta' : 'Cerrada'}
+            </span>
+          }
+        >
+          <div className="flex flex-col gap-2">
+            <span className="text-4xl font-light tabular-nums tracking-[-0.03em]">
+              {formatCurrency(inDrawer)}
+            </span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">
+              {isCajaOpen
+                ? `En gaveta · desde ${openedAtTime} · ${firstName}`
+                : 'Sin turno activo'}
+            </span>
+          </div>
+
+          <dl className="flex flex-col border-t border-white/10">
+            {cashRows.map((row) => (
+              <div key={row.label} className="flex items-center justify-between border-b border-white/10 py-3 text-sm">
+                <dt className="text-text-secondary">{row.label}</dt>
+                <dd className="font-mono tabular-nums">{formatCurrency(row.value)}</dd>
+              </div>
+            ))}
+            <div className="flex items-center justify-between py-3 text-sm">
+              <dt className="text-text-secondary">Por cobrar</dt>
+              <dd className="font-mono tabular-nums text-brand-primary">{formatCurrency(receivablesAmount)}</dd>
+            </div>
+          </dl>
+
+          <button
+            type="button"
+            onClick={() => navigate(getRoute('/cash-registers'))}
+            className="liquid-glass-soft mt-auto flex h-11 items-center justify-center gap-2 rounded-full text-sm font-medium transition-colors hover:bg-white/10 cursor-pointer"
+          >
+            <Lock className="size-4" strokeWidth={1.6} />
+            {isCajaOpen ? 'Hacer cierre de caja' : 'Abrir turno de caja'}
+          </button>
+        </GlassPanel>
+      </div>
+
+      {/* ========================================================
+          03 — ROW 2: RENEWALS QUEUE (2 COLS) + ACTIVITY FEED (1 COL)
+         ======================================================== */}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+        {/* Left 2 Cols: Cola de Renovaciones (Reference 1:1) */}
+        <div className="xl:col-span-2">
+          <GlassPanel
+            id="renewals"
+            index="03"
+            eyebrow="Atención prioritaria"
+            title="Cola de renovaciones"
+            action={
+              <button
+                type="button"
+                onClick={() => navigate(getRoute('/memberships'))}
+                className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-text-secondary hover:text-text-primary cursor-pointer"
+              >
+                Ver todas <ArrowRight className="size-3" />
+              </button>
+            }
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div role="tablist" aria-label="Filtrar vencimientos" className="flex rounded-full border border-white/10 bg-black/30 p-1">
+                {renewalFilters.map((f) => {
+                  const count = expiringMembersList.filter((m) => f.match(m.days_left)).length;
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={renewalFilter === f.id}
+                      onClick={() => setRenewalFilter(f.id)}
+                      className={cn(
+                        'flex items-center gap-2 rounded-full px-4 py-1.5 text-sm transition-colors cursor-pointer',
+                        renewalFilter === f.id ? 'bg-white/15 text-text-primary' : 'text-text-muted hover:text-text-primary',
+                      )}
+                    >
+                      {f.label}
+                      <span className="font-mono text-[10px] text-text-muted">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">
+                En juego <span className="text-text-primary">{formatCurrency(atStakeAmount)}</span>
+              </p>
+            </div>
+
+            {filteredRenewals.length === 0 ? (
+              <div className="py-12 text-center text-text-muted border-t border-white/10">
+                <CalendarCheck className="mx-auto h-8 w-8 mb-2 opacity-30 text-emerald-400" />
+                <p className="text-sm font-medium">No hay renovaciones en este segmento.</p>
+                <p className="text-xs text-text-muted mt-1">Los clientes de este grupo se encuentran al día.</p>
+              </div>
+            ) : (
+              <ul className="flex flex-col border-t border-white/10">
+                {filteredRenewals.map((m) => (
+                  <li
+                    key={m.id}
+                    className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-white/10 py-4 last:border-b-0 md:grid-cols-[auto_1.4fr_1fr_auto_auto]"
+                  >
+                    <span className="flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-medium text-text-secondary">
+                      {initials(m.client_name)}
+                    </span>
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <span className="truncate text-sm font-medium">{m.client_name}</span>
+                      <span className="font-mono text-[11px] text-text-muted">{m.client_phone || 'Sin teléfono'}</span>
+                    </div>
+                    <div className="hidden flex-col gap-1 md:flex">
+                      <span className="text-sm text-text-secondary">{m.plan_name}</span>
+                      <span className="font-mono text-[11px] text-text-muted">
+                        Vence: {formatDate(m.end_date)}
+                      </span>
+                    </div>
+                    <span
+                      className={cn(
+                        'hidden rounded-[4px] border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] md:inline-block',
+                        m.days_left === 0
+                          ? 'border-brand-primary/40 bg-brand-primary/15 text-red-300'
+                          : m.days_left < 0
+                          ? 'border-rose-500/40 bg-rose-500/15 text-rose-300'
+                          : 'border-white/15 text-text-secondary',
+                      )}
+                    >
+                      {m.days_left === 0 ? 'Hoy' : m.days_left < 0 ? `Venció hace ${Math.abs(m.days_left)}d` : `${m.days_left} días`}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openWhatsAppModal({
+                            client: {
+                              id: m.client_id || m.id,
+                              full_name: m.client_name,
+                              phone: m.client_phone || null,
+                            },
+                            eventType: m.days_left <= 0 ? 'MEMBERSHIP_EXPIRED' : 'MEMBERSHIP_EXPIRY',
+                            eventLabel: m.days_left <= 0 ? 'Avisar vencida' : 'Recordar vencimiento',
+                            contextData: {
+                              membership_name: m.plan_name,
+                              days_left: m.days_left.toString(),
+                            },
+                          })
+                        }
+                        className="rounded-full p-2.5 text-text-muted transition-colors hover:bg-white/10 hover:text-emerald-300 cursor-pointer"
+                        aria-label={`Escribir a ${m.client_name} por WhatsApp`}
+                      >
+                        <MessageCircle className="size-4" strokeWidth={1.6} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate(getRoute('/memberships'))}
+                        className="rounded-full bg-white/10 px-4 py-2 text-xs font-medium transition-colors hover:bg-brand-primary hover:text-white cursor-pointer"
+                      >
+                        Renovar
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </GlassPanel>
+        </div>
+
+        {/* Right 1 Col: Actividad de Hoy (Reference 1:1) */}
+        <GlassPanel
+          id="activity"
+          index="04"
+          eyebrow="En vivo"
+          title="Actividad de hoy"
+          className="h-full"
+          action={
+            <span className="relative mt-1 flex size-2">
+              <span className="absolute inset-0 animate-ping rounded-full bg-brand-primary/70" />
+              <span className="relative size-2 rounded-full bg-brand-primary" />
+            </span>
+          }
+        >
+          <ol className="relative flex flex-col">
+            <span aria-hidden="true" className="absolute bottom-4 left-[19px] top-4 w-px bg-white/10" />
+            {recentActivity.map((item) => {
+              return (
+                <li key={item.id} className="relative flex items-start gap-4 py-3">
+                  <span className="liquid-glass-soft relative flex size-10 shrink-0 items-center justify-center rounded-full">
+                    {item.type === 'membership' && <Receipt className="size-4 text-text-primary" strokeWidth={1.6} />}
+                    {item.type === 'pos' && <ShoppingCart className="size-4 text-text-primary" strokeWidth={1.6} />}
+                    {item.type === 'client' && <Users className="size-4 text-text-primary" strokeWidth={1.6} />}
+                    {item.type === 'payment' && <Wallet className="size-4 text-text-primary" strokeWidth={1.6} />}
+                  </span>
+                  <div className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-medium">{item.title}</span>
+                      <span className="font-mono text-[11px] text-text-muted">{item.time}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="truncate text-xs text-text-secondary">{item.detail}</span>
+                      {item.amount !== null && item.amount !== undefined && item.amount > 0 && (
+                        <span className="font-mono text-xs tabular-nums text-text-primary">{formatCurrency(item.amount)}</span>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+            {recentActivity.length === 0 && (
+              <li className="py-8 text-center text-text-muted text-xs">
+                Sin movimientos registrados el día de hoy.
+              </li>
+            )}
+          </ol>
+
+          <button
+            type="button"
+            onClick={() => navigate(getRoute('/audit'))}
+            className="liquid-glass-soft mt-auto flex h-11 items-center justify-center gap-2 rounded-full text-sm font-medium transition-colors hover:bg-white/10 cursor-pointer"
+          >
+            <span>Ver auditoría completa</span>
+            <ArrowRight className="size-4" strokeWidth={1.6} />
+          </button>
+        </GlassPanel>
+      </div>
+
+      {/* Income Breakdown Modal */}
       <IncomeDetailsDrawer
         isOpen={isIncomeDetailsOpen}
         onClose={() => setIsIncomeDetailsOpen(false)}

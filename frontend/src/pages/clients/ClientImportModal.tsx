@@ -1,12 +1,12 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
-import { 
-  Upload, 
-  FileSpreadsheet, 
-  Download, 
-  AlertTriangle, 
-  FileCheck, 
-  RefreshCw, 
+import {
+  Upload,
+  FileSpreadsheet,
+  Download,
+  AlertTriangle,
+  FileCheck,
+  RefreshCw,
   ArrowRight,
   ShieldCheck,
   Check
@@ -15,8 +15,8 @@ import { Modal } from '@shared/ui/Modal';
 import { Button } from '@shared/ui/Button';
 import { useToast } from '@shared/ui/Toast';
 import { clientService } from '../../services/clientService';
-import type { 
-  ClientImportPreviewResponse, 
+import type {
+  ClientImportPreviewResponse,
   ImportCategory,
   ClientImportApplyRequest
 } from '@shared/types/clientExcel';
@@ -276,12 +276,12 @@ export function ClientImportModal({ isOpen, onClose, onSuccess }: ClientImportMo
       {/* PASO 1: UPLOAD                                                */}
       {/* ------------------------------------------------------------- */}
       {step === 'upload' && (
-        <div className="flex flex-col gap-6 py-2">
+        <div className="flex flex-col gap-5 py-2">
           {/* Official template download banner */}
-          <div className="flex items-center justify-between p-4 rounded-xl border border-brand-primary/20 bg-brand-primary/5">
+          <div className="flex items-center justify-between p-4 rounded-2xl border border-brand-primary/20 bg-brand-primary/5 shadow-subtle">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary shrink-0">
-                <FileSpreadsheet size={22} />
+              <div className="w-10 h-10 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary shrink-0">
+                <FileSpreadsheet size={20} />
               </div>
               <div>
                 <h4 className="text-sm font-semibold text-text-primary">Plantilla Oficial de Importación</h4>
@@ -295,9 +295,9 @@ export function ClientImportModal({ isOpen, onClose, onSuccess }: ClientImportMo
               variant="outline"
               size="sm"
               onClick={handleDownloadTemplate}
-              className="shrink-0 flex items-center gap-2 border-brand-primary/30 text-brand-primary hover:bg-brand-primary/10"
+              className="shrink-0 flex items-center gap-2 border-brand-primary/30 text-brand-primary hover:bg-brand-primary/10 rounded-xl text-xs"
             >
-              <Download size={15} />
+              <Download size={14} />
               <span>Descargar plantilla</span>
             </Button>
           </div>
@@ -307,9 +307,9 @@ export function ClientImportModal({ isOpen, onClose, onSuccess }: ClientImportMo
             onClick={() => fileInputRef.current?.click()}
             className={cn(
               "border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200",
-              selectedFile 
-                ? "border-brand-primary bg-brand-primary/5" 
-                : "border-border-medium hover:border-border-strong hover:bg-bg-surface-hover"
+              selectedFile
+                ? "border-brand-primary bg-brand-primary/5"
+                : "border-border-medium hover:border-border-strong hover:bg-surface-raised/50"
             )}
           >
             <input
@@ -319,14 +319,14 @@ export function ClientImportModal({ isOpen, onClose, onSuccess }: ClientImportMo
               onChange={handleFileChange}
               className="hidden"
             />
-            <div className="w-14 h-14 rounded-2xl bg-bg-elevated/70 flex items-center justify-center text-text-muted mb-3">
-              <Upload size={28} className={selectedFile ? "text-brand-primary" : ""} />
+            <div className="w-14 h-14 rounded-2xl bg-surface-raised flex items-center justify-center text-text-muted mb-3 border border-border-subtle shadow-inner">
+              <Upload size={26} className={selectedFile ? "text-brand-primary" : ""} />
             </div>
 
             {selectedFile ? (
               <div>
-                <p className="text-sm font-semibold text-text-primary">{selectedFile.name}</p>
-                <p className="text-xs text-text-muted mt-1">
+                <p className="text-sm font-bold text-text-primary">{selectedFile.name}</p>
+                <p className="text-xs text-text-muted mt-1 font-mono">
                   {(selectedFile.size / 1024).toFixed(1)} KB • Clic para cambiar de archivo
                 </p>
               </div>
@@ -344,7 +344,7 @@ export function ClientImportModal({ isOpen, onClose, onSuccess }: ClientImportMo
 
           {/* Error display */}
           {errorMessage && (
-            <div className="p-4 rounded-xl border border-danger/30 bg-danger/10 text-danger text-sm flex items-start gap-3">
+            <div className="p-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-400 text-sm flex items-start gap-3">
               <AlertTriangle size={18} className="shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold">Archivo no válido</p>
@@ -354,32 +354,32 @@ export function ClientImportModal({ isOpen, onClose, onSuccess }: ClientImportMo
           )}
 
           {/* Missing clients safety note */}
-          <div className="flex items-start gap-3 p-3.5 rounded-xl border border-border-light bg-bg-surface/50 text-text-secondary text-xs">
+          <div className="flex items-start gap-3 p-3.5 rounded-2xl border border-border-subtle bg-surface-base text-text-secondary text-xs">
             <ShieldCheck size={18} className="text-brand-primary shrink-0 mt-0.5" />
             <p>
-              <strong className="text-text-primary font-semibold">Seguridad garantizada:</strong> Los clientes que no aparezcan en el archivo <span className="underline font-semibold">NO serán eliminados ni desactivados</span> de tu gimnasio.
+              <strong className="text-text-primary font-semibold">Seguridad garantizada:</strong> Los clientes que no aparezcan en el archivo <span className="underline font-semibold text-text-primary">NO serán eliminados ni desactivados</span> de tu gimnasio.
             </p>
           </div>
 
           {/* Footer Actions */}
           <div className="flex items-center justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={handleClose}>
+            <Button variant="ghost" onClick={handleClose} className="rounded-xl text-xs">
               Cancelar
             </Button>
             <Button
               variant="primary"
               disabled={!selectedFile || isAnalyzing}
               onClick={handleAnalyze}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 rounded-xl text-xs bg-brand-primary hover:bg-brand-primary/90"
             >
               {isAnalyzing ? (
                 <>
-                  <RefreshCw size={16} className="animate-spin" />
+                  <RefreshCw size={15} className="animate-spin" />
                   <span>Analizando archivo...</span>
                 </>
               ) : (
                 <>
-                  <FileCheck size={16} />
+                  <FileCheck size={15} />
                   <span>Analizar y Comparar</span>
                 </>
               )}
@@ -392,95 +392,95 @@ export function ClientImportModal({ isOpen, onClose, onSuccess }: ClientImportMo
       {/* PASO 2: PREVIEW Y COMPARACIÓN                                 */}
       {/* ------------------------------------------------------------- */}
       {step === 'preview' && previewData && (
-        <div className="flex flex-col gap-5 py-1">
+        <div className="flex flex-col gap-4 py-1">
           {/* Summary Metric Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-            <div 
+            <div
               onClick={() => setActiveTab('ALL')}
               className={cn(
-                "p-3 rounded-xl border text-center cursor-pointer transition-colors",
-                activeTab === 'ALL' ? "border-brand-primary bg-brand-primary/10" : "border-border-light bg-bg-surface/40 hover:bg-bg-surface"
+                "p-3 rounded-xl border text-center cursor-pointer transition-colors font-mono",
+                activeTab === 'ALL' ? "border-brand-primary bg-brand-primary/10" : "border-border-subtle bg-surface-base hover:bg-surface-raised"
               )}
             >
-              <p className="text-[11px] font-medium text-text-muted">Total Filas</p>
-              <p className="text-lg font-bold text-text-primary">{previewData.summary.total_rows}</p>
+              <p className="text-[10px] uppercase tracking-wider text-text-muted font-sans font-medium">Total Filas</p>
+              <p className="text-lg font-bold text-text-primary mt-0.5">{previewData.summary.total_rows}</p>
             </div>
 
-            <div 
+            <div
               onClick={() => setActiveTab('NO_CHANGE')}
               className={cn(
-                "p-3 rounded-xl border text-center cursor-pointer transition-colors",
-                activeTab === 'NO_CHANGE' ? "border-text-muted bg-text-muted/10" : "border-border-light bg-bg-surface/40 hover:bg-bg-surface"
+                "p-3 rounded-xl border text-center cursor-pointer transition-colors font-mono",
+                activeTab === 'NO_CHANGE' ? "border-border-strong bg-surface-raised" : "border-border-subtle bg-surface-base hover:bg-surface-raised"
               )}
             >
-              <p className="text-[11px] font-medium text-text-muted">Sin Cambios</p>
-              <p className="text-lg font-bold text-text-secondary">{previewData.summary.no_change_count}</p>
+              <p className="text-[10px] uppercase tracking-wider text-text-muted font-sans font-medium">Sin Cambios</p>
+              <p className="text-lg font-bold text-text-secondary mt-0.5">{previewData.summary.no_change_count}</p>
             </div>
 
-            <div 
+            <div
               onClick={() => setActiveTab('NEW')}
               className={cn(
-                "p-3 rounded-xl border text-center cursor-pointer transition-colors",
-                activeTab === 'NEW' ? "border-success bg-success/15" : "border-border-light bg-bg-surface/40 hover:bg-bg-surface"
+                "p-3 rounded-xl border text-center cursor-pointer transition-colors font-mono",
+                activeTab === 'NEW' ? "border-emerald-500/40 bg-emerald-500/15" : "border-border-subtle bg-surface-base hover:bg-surface-raised"
               )}
             >
-              <p className="text-[11px] font-medium text-success">Nuevos</p>
-              <p className="text-lg font-bold text-success">{previewData.summary.new_count}</p>
+              <p className="text-[10px] uppercase tracking-wider text-emerald-400 font-sans font-medium">Nuevos</p>
+              <p className="text-lg font-bold text-emerald-400 mt-0.5">{previewData.summary.new_count}</p>
             </div>
 
-            <div 
+            <div
               onClick={() => setActiveTab('MODIFIED')}
               className={cn(
-                "p-3 rounded-xl border text-center cursor-pointer transition-colors",
-                activeTab === 'MODIFIED' ? "border-warning bg-warning/15" : "border-border-light bg-bg-surface/40 hover:bg-bg-surface"
+                "p-3 rounded-xl border text-center cursor-pointer transition-colors font-mono",
+                activeTab === 'MODIFIED' ? "border-amber-500/40 bg-amber-500/15" : "border-border-subtle bg-surface-base hover:bg-surface-raised"
               )}
             >
-              <p className="text-[11px] font-medium text-warning">Modificados</p>
-              <p className="text-lg font-bold text-warning">{previewData.summary.modified_count}</p>
+              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-sans font-medium">Modificados</p>
+              <p className="text-lg font-bold text-amber-400 mt-0.5">{previewData.summary.modified_count}</p>
             </div>
 
-            <div 
+            <div
               onClick={() => setActiveTab('MISSING')}
               className={cn(
-                "p-3 rounded-xl border text-center cursor-pointer transition-colors",
-                activeTab === 'MISSING' ? "border-indigo-400 bg-indigo-500/15" : "border-border-light bg-bg-surface/40 hover:bg-bg-surface"
+                "p-3 rounded-xl border text-center cursor-pointer transition-colors font-mono",
+                activeTab === 'MISSING' ? "border-indigo-500/40 bg-indigo-500/15" : "border-border-subtle bg-surface-base hover:bg-surface-raised"
               )}
             >
-              <p className="text-[11px] font-medium text-indigo-400">Faltantes</p>
-              <p className="text-lg font-bold text-indigo-400">{previewData.summary.missing_count}</p>
+              <p className="text-[10px] uppercase tracking-wider text-indigo-400 font-sans font-medium">Faltantes</p>
+              <p className="text-lg font-bold text-indigo-400 mt-0.5">{previewData.summary.missing_count}</p>
             </div>
 
-            <div 
+            <div
               onClick={() => setActiveTab('CONFLICT')}
               className={cn(
-                "p-3 rounded-xl border text-center cursor-pointer transition-colors",
-                activeTab === 'CONFLICT' ? "border-danger bg-danger/15" : "border-border-light bg-bg-surface/40 hover:bg-bg-surface"
+                "p-3 rounded-xl border text-center cursor-pointer transition-colors font-mono",
+                activeTab === 'CONFLICT' ? "border-rose-500/40 bg-rose-500/15" : "border-border-subtle bg-surface-base hover:bg-surface-raised"
               )}
             >
-              <p className="text-[11px] font-medium text-danger">Conflictos</p>
-              <p className="text-lg font-bold text-danger">{previewData.summary.conflict_count}</p>
+              <p className="text-[10px] uppercase tracking-wider text-rose-400 font-sans font-medium">Conflictos</p>
+              <p className="text-lg font-bold text-rose-400 mt-0.5">{previewData.summary.conflict_count}</p>
             </div>
 
-            <div 
+            <div
               onClick={() => setActiveTab('DUPLICATE')}
               className={cn(
-                "p-3 rounded-xl border text-center cursor-pointer transition-colors",
-                activeTab === 'DUPLICATE' ? "border-danger bg-danger/15" : "border-border-light bg-bg-surface/40 hover:bg-bg-surface"
+                "p-3 rounded-xl border text-center cursor-pointer transition-colors font-mono",
+                activeTab === 'DUPLICATE' ? "border-rose-500/40 bg-rose-500/15" : "border-border-subtle bg-surface-base hover:bg-surface-raised"
               )}
             >
-              <p className="text-[11px] font-medium text-danger">Duplicados</p>
-              <p className="text-lg font-bold text-danger">{previewData.summary.duplicate_count}</p>
+              <p className="text-[10px] uppercase tracking-wider text-rose-400 font-sans font-medium">Duplicados</p>
+              <p className="text-lg font-bold text-rose-400 mt-0.5">{previewData.summary.duplicate_count}</p>
             </div>
 
-            <div 
+            <div
               onClick={() => setActiveTab('NO_DOCUMENT')}
               className={cn(
-                "p-3 rounded-xl border text-center cursor-pointer transition-colors",
-                activeTab === 'NO_DOCUMENT' ? "border-amber-500 bg-amber-500/15" : "border-border-light bg-bg-surface/40 hover:bg-bg-surface"
+                "p-3 rounded-xl border text-center cursor-pointer transition-colors font-mono",
+                activeTab === 'NO_DOCUMENT' ? "border-amber-500/40 bg-amber-500/15" : "border-border-subtle bg-surface-base hover:bg-surface-raised"
               )}
             >
-              <p className="text-[11px] font-medium text-amber-500">Sin Doc.</p>
-              <p className="text-lg font-bold text-amber-500">{previewData.summary.no_document_count}</p>
+              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-sans font-medium">Sin Doc.</p>
+              <p className="text-lg font-bold text-amber-400 mt-0.5">{previewData.summary.no_document_count}</p>
             </div>
           </div>
 
@@ -542,23 +542,23 @@ export function ClientImportModal({ isOpen, onClose, onSuccess }: ClientImportMo
           </div>
 
           {/* Data Table */}
-          <div className="border border-border-light rounded-xl overflow-hidden max-h-95 overflow-y-auto">
+          <div className="border border-border-subtle rounded-2xl overflow-hidden max-h-95 overflow-y-auto bg-surface-base shadow-subtle">
             <table className="w-full text-left text-xs">
-              <thead className="bg-bg-elevated/70 text-text-muted border-b border-border-light sticky top-0 z-10 backdrop-blur-md">
+              <thead className="bg-surface-raised text-text-muted border-b border-border-subtle sticky top-0 z-10 backdrop-blur-md">
                 <tr>
-                  <th className="py-2.5 px-3 w-10 text-center">Sel.</th>
-                  <th className="py-2.5 px-3 w-14">Fila</th>
-                  <th className="py-2.5 px-3 w-28">Estado</th>
-                  <th className="py-2.5 px-3">Documento</th>
-                  <th className="py-2.5 px-3">Nombre Completo</th>
-                  <th className="py-2.5 px-3">Teléfono</th>
-                  <th className="py-2.5 px-3">Detalle / Diferencias</th>
+                  <th className="py-3 px-3.5 w-10 text-center font-mono">Sel.</th>
+                  <th className="py-3 px-3.5 w-14 font-mono">Fila</th>
+                  <th className="py-3 px-3.5 w-28 uppercase font-mono tracking-wider text-[11px]">Estado</th>
+                  <th className="py-3 px-3.5 uppercase font-mono tracking-wider text-[11px]">Documento</th>
+                  <th className="py-3 px-3.5 uppercase font-mono tracking-wider text-[11px]">Nombre Completo</th>
+                  <th className="py-3 px-3.5 uppercase font-mono tracking-wider text-[11px]">Teléfono</th>
+                  <th className="py-3 px-3.5 uppercase font-mono tracking-wider text-[11px]">Detalle / Diferencias</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border-light/50 bg-bg-surface/30">
+              <tbody className="divide-y divide-border-subtle bg-surface-base">
                 {filteredItems.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-text-muted">
+                    <td colSpan={7} className="py-10 text-center text-text-muted">
                       No hay registros en esta categoría.
                     </td>
                   </tr>
@@ -574,15 +574,15 @@ export function ClientImportModal({ isOpen, onClose, onSuccess }: ClientImportMo
                       : false;
 
                     return (
-                      <tr 
+                      <tr
                         key={`${item.category}-${item.row_number}-${item.document}-${idx}`}
                         className={cn(
-                          "hover:bg-bg-surface-hover/50 transition-colors",
+                          "hover:bg-surface-raised/40 transition-colors",
                           isChecked && "bg-brand-primary/5"
                         )}
                       >
                         {/* Checkbox */}
-                        <td className="py-2.5 px-3 text-center">
+                        <td className="py-2.5 px-3.5 text-center">
                           {isSelectable ? (
                             <input
                               type="checkbox"
@@ -591,7 +591,7 @@ export function ClientImportModal({ isOpen, onClose, onSuccess }: ClientImportMo
                                 if (isNew) toggleSelectNewRow(item.row_number);
                                 else if (isMod && item.client_id) toggleSelectModifiedClient(item.client_id);
                               }}
-                              className="rounded border-border-medium text-brand-primary focus:ring-brand-primary/30"
+                              className="rounded border-border-medium text-brand-primary focus:ring-brand-primary/30 cursor-pointer"
                             />
                           ) : (
                             <span className="text-text-muted/40">•</span>
@@ -599,69 +599,69 @@ export function ClientImportModal({ isOpen, onClose, onSuccess }: ClientImportMo
                         </td>
 
                         {/* Fila */}
-                        <td className="py-2.5 px-3 font-mono text-text-muted">
+                        <td className="py-2.5 px-3.5 font-mono text-text-muted text-[11px]">
                           {item.row_number > 0 ? `#${item.row_number}` : '-'}
                         </td>
 
                         {/* Categoría Badge */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3.5">
                           {item.category === 'NO_CHANGE' && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-bg-elevated text-text-secondary">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider font-semibold bg-surface-raised border border-border-subtle text-text-secondary">
                               Sin Cambios
                             </span>
                           )}
                           {item.category === 'NEW' && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-success/15 text-success">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
                               Nuevo
                             </span>
                           )}
                           {item.category === 'MODIFIED' && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-warning/15 text-warning">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider font-semibold bg-amber-500/10 border border-amber-500/20 text-amber-400">
                               Modificado
                             </span>
                           )}
                           {item.category === 'MISSING' && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/15 text-indigo-400">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider font-semibold bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
                               Faltante
                             </span>
                           )}
                           {item.category === 'CONFLICT' && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-danger/15 text-danger">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider font-semibold bg-rose-500/10 border border-rose-500/20 text-rose-400">
                               Conflicto
                             </span>
                           )}
                           {item.category === 'DUPLICATE' && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-danger/15 text-danger">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider font-semibold bg-rose-500/10 border border-rose-500/20 text-rose-400">
                               Duplicado
                             </span>
                           )}
                           {item.category === 'NO_DOCUMENT' && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-500">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider font-semibold bg-amber-500/10 border border-amber-500/20 text-amber-400">
                               Sin Doc.
                             </span>
                           )}
                         </td>
 
                         {/* Documento */}
-                        <td className="py-2.5 px-3 font-medium text-text-primary">
-                          <span className="text-text-muted text-[11px] mr-1">{item.document_type}</span>
-                          {item.document || <span className="text-danger italic">Sin documento</span>}
+                        <td className="py-2.5 px-3.5 font-medium text-text-primary">
+                          <span className="text-text-muted font-mono text-[11px] mr-1">{item.document_type}</span>
+                          <span className="font-mono">{item.document || <span className="text-rose-400 italic">Sin documento</span>}</span>
                         </td>
 
                         {/* Nombre */}
-                        <td className="py-2.5 px-3 text-text-primary">
+                        <td className="py-2.5 px-3.5 text-text-primary font-medium">
                           {item.full_name}
                         </td>
 
                         {/* Teléfono */}
-                        <td className="py-2.5 px-3 text-text-secondary font-mono">
+                        <td className="py-2.5 px-3.5 text-text-secondary font-mono">
                           {item.phone || '-'}
                         </td>
 
                         {/* Diferencias / Conflicto Detalle */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3.5">
                           {item.conflict_reason ? (
-                            <span className="text-danger flex items-center gap-1">
+                            <span className="text-rose-400 flex items-center gap-1 font-mono text-[11px]">
                               <AlertTriangle size={13} className="shrink-0" />
                               <span className="truncate max-w-xs" title={item.conflict_reason}>
                                 {item.conflict_reason}
@@ -670,22 +670,22 @@ export function ClientImportModal({ isOpen, onClose, onSuccess }: ClientImportMo
                           ) : item.diffs && Object.keys(item.diffs).length > 0 ? (
                             <div className="space-y-1">
                               {Object.entries(item.diffs).map(([field, d]) => (
-                                <div key={field} className="text-[11px] flex items-center gap-1.5">
+                                <div key={field} className="text-[11px] flex items-center gap-1.5 font-mono">
                                   <span className="font-semibold text-text-muted capitalize w-16">{field}:</span>
-                                  <span className="line-through text-danger/80 truncate max-w-25" title={d.old_value || '(vacío)'}>
+                                  <span className="line-through text-rose-400/80 truncate max-w-25" title={d.old_value || '(vacío)'}>
                                     {d.old_value || '(vacío)'}
                                   </span>
                                   <ArrowRight size={11} className="text-text-muted shrink-0" />
-                                  <span className="text-success font-medium truncate max-w-30" title={d.new_value || '(vacío)'}>
+                                  <span className="text-emerald-400 font-medium truncate max-w-30" title={d.new_value || '(vacío)'}>
                                     {d.new_value || '(vacío)'}
                                   </span>
                                 </div>
                               ))}
                             </div>
                           ) : item.category === 'NEW' ? (
-                            <span className="text-success text-[11px]">Listo para creación</span>
+                            <span className="text-emerald-400 text-[11px] font-medium">Listo para registrar</span>
                           ) : (
-                            <span className="text-text-muted text-[11px]">—</span>
+                            <span className="text-text-muted text-[11px] font-mono">—</span>
                           )}
                         </td>
                       </tr>
@@ -697,25 +697,25 @@ export function ClientImportModal({ isOpen, onClose, onSuccess }: ClientImportMo
           </div>
 
           {/* Selection summary and action footer */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-border-light">
-            <div className="text-xs text-text-secondary">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-3 border-t border-border-subtle">
+            <div className="text-xs text-text-secondary font-mono">
               Seleccionados para aplicar:{' '}
-              <strong className="text-success font-semibold">{selectedNewRows.size} nuevos</strong> y{' '}
-              <strong className="text-warning font-semibold">{selectedModifiedClients.size} modificados</strong>.
+              <strong className="text-emerald-400 font-semibold">{selectedNewRows.size} nuevos</strong> y{' '}
+              <strong className="text-amber-400 font-semibold">{selectedModifiedClients.size} modificados</strong>.
             </div>
 
             <div className="flex items-center gap-3">
-              <Button variant="ghost" onClick={() => setStep('upload')}>
+              <Button variant="ghost" onClick={() => setStep('upload')} className="rounded-xl text-xs">
                 Subir otro archivo
               </Button>
               <Button
                 variant="primary"
                 disabled={selectedNewRows.size === 0 && selectedModifiedClients.size === 0}
                 onClick={() => setStep('confirm')}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 rounded-xl text-xs bg-brand-primary hover:bg-brand-primary/90"
               >
                 <span>Revisar y Confirmar ({selectedNewRows.size + selectedModifiedClients.size})</span>
-                <ArrowRight size={16} />
+                <ArrowRight size={15} />
               </Button>
             </div>
           </div>
@@ -727,39 +727,39 @@ export function ClientImportModal({ isOpen, onClose, onSuccess }: ClientImportMo
       {/* ------------------------------------------------------------- */}
       {step === 'confirm' && (
         <div className="flex flex-col gap-6 py-4">
-          <div className="p-5 rounded-2xl border border-brand-primary/30 bg-brand-primary/5 space-y-3">
+          <div className="p-5 rounded-2xl border border-brand-primary/30 bg-brand-primary/5 space-y-3 shadow-subtle">
             <div className="flex items-center gap-3 text-brand-primary">
               <ShieldCheck size={26} />
-              <h3 className="text-base font-bold text-text-primary">Confirmación de Actualización Masiva</h3>
+              <h3 className="text-base font-bold text-text-primary tracking-tight">Confirmación de Actualización Masiva</h3>
             </div>
             <p className="text-sm text-text-secondary leading-relaxed">
-              Vas a crear <strong className="text-success font-semibold">{selectedNewRows.size} clientes nuevos</strong> y actualizar los datos de <strong className="text-warning font-semibold">{selectedModifiedClients.size} clientes existentes</strong>.
+              Vas a crear <strong className="text-emerald-400 font-semibold">{selectedNewRows.size} socios nuevos</strong> y actualizar los datos de <strong className="text-amber-400 font-semibold">{selectedModifiedClients.size} socios existentes</strong>.
             </p>
-            <p className="text-xs text-text-muted border-t border-border-light pt-2">
-              • Los campos de identidad (<code className="text-brand-primary">document_type</code> y <code className="text-brand-primary">document</code>) no serán alterados.<br />
+            <p className="text-xs text-text-muted border-t border-border-subtle pt-3 leading-relaxed">
+              • Los campos de identidad (<code className="text-brand-primary font-mono">document_type</code> y <code className="text-brand-primary font-mono">document</code>) no serán alterados.<br />
               • Los clientes que no aparezcan en el archivo <strong className="text-text-primary">NO serán eliminados ni desactivados</strong>.<br />
-              • La operación se ejecutará dentro de una transacción atómica segura.
+              • La operación se ejecutará dentro de una transacción atómica protegida.
             </p>
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-2">
-            <Button variant="ghost" disabled={isApplying} onClick={() => setStep('preview')}>
+            <Button variant="ghost" disabled={isApplying} onClick={() => setStep('preview')} className="rounded-xl text-xs">
               Volver a la previsualización
             </Button>
             <Button
               variant="primary"
               disabled={isApplying}
               onClick={handleApply}
-              className="flex items-center gap-2 bg-brand-primary hover:bg-brand-primary/90"
+              className="flex items-center gap-2 rounded-xl text-xs bg-brand-primary hover:bg-brand-primary/90"
             >
               {isApplying ? (
                 <>
-                  <RefreshCw size={16} className="animate-spin" />
+                  <RefreshCw size={15} className="animate-spin" />
                   <span>Aplicando cambios...</span>
                 </>
               ) : (
                 <>
-                  <Check size={16} />
+                  <Check size={15} />
                   <span>Sí, ejecutar actualización</span>
                 </>
               )}

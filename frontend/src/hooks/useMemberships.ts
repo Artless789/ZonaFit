@@ -18,30 +18,30 @@ export const useMemberships = () => {
   const createMutation = useMutation<Membership, Error, MembershipCreate>({
     mutationFn: membershipService.createMembership,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['memberships'] });
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['cash-registers'] });
-      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['accounts-receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['memberships'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['clients'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['cash-registers'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['cash-movements'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['accounts-receivables'], refetchType: 'all' });
     },
   });
 
   const updateMutation = useMutation<Membership, Error, { id: number; data: MembershipUpdate }>({
     mutationFn: ({ id, data }) => membershipService.updateMembership(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['memberships'] });
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['memberships'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['clients'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'all' });
     },
   });
 
   const deleteMutation = useMutation<void, Error, number>({
     mutationFn: membershipService.deleteMembership,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['memberships'] });
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['memberships'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['clients'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'all' });
     },
   });
 

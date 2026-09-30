@@ -1,12 +1,12 @@
-﻿import { QueryClient } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 5, // 5 minutos
+      refetchOnWindowFocus: true,
+      staleTime: 1000 * 10, // 10 segundos para reactividad operacional inmediata
       gcTime: 1000 * 60 * 60 * 24, // 24 horas en caché para offline
       networkMode: 'offlineFirst',
     },

@@ -68,21 +68,6 @@ export function ManualDrawer({ isOpen, onClose }: ManualDrawerProps) {
   // Custom templates list
   const [customTemplates, setCustomTemplates] = useState<NotificationTemplate[]>([]);
 
-  // Reset on open
-  useEffect(() => {
-    if (isOpen) {
-      setSearchTerm('');
-      setActiveFilter('all');
-      setSelectedClient(null);
-      setEventType('GENERAL');
-      setMessage('');
-      fetchClients('', 'all');
-      notificationService.getTemplates().then((res) => {
-        setCustomTemplates(res.items || []);
-      }).catch(() => {});
-    }
-  }, [isOpen]);
-
   // Remote Search Function
   const fetchClients = useCallback(async (query: string, filter: FilterType) => {
     try {
@@ -96,6 +81,21 @@ export function ManualDrawer({ isOpen, onClose }: ManualDrawerProps) {
       setIsSearching(false);
     }
   }, []);
+
+  // Reset on open
+  useEffect(() => {
+    if (isOpen) {
+      setSearchTerm('');
+      setActiveFilter('all');
+      setSelectedClient(null);
+      setEventType('GENERAL');
+      setMessage('');
+      fetchClients('', 'all');
+      notificationService.getTemplates().then((res) => {
+        setCustomTemplates(res.items || []);
+      }).catch(() => {});
+    }
+  }, [isOpen, fetchClients]);
 
   // Debounced search on query/filter change
   useEffect(() => {

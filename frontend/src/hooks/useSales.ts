@@ -17,21 +17,30 @@ export const useSales = () => {
   const createMutation = useMutation<Sale, Error, SaleCreate>({
     mutationFn: saleService.createSale,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey, refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: productsQueryKey, refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['cash-registers'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['cash-movements'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['accounts-receivables'], refetchType: 'all' });
     },
   });
 
   const updateMutation = useMutation<Sale, Error, { id: number; data: SaleUpdate }>({
     mutationFn: ({ id, data }) => saleService.updateSale(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey, refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: productsQueryKey, refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'all' });
     },
   });
 
   const deleteMutation = useMutation<void, Error, number>({
     mutationFn: saleService.deleteSale,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey, refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: productsQueryKey, refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'all' });
     },
   });
 
@@ -39,7 +48,8 @@ export const useSales = () => {
     mutationFn: saleService.createSaleDetail,
     onSuccess: () => {
       // Need to invalidate products to reflect new stock
-      queryClient.invalidateQueries({ queryKey: productsQueryKey });
+      queryClient.invalidateQueries({ queryKey: productsQueryKey, refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey, refetchType: 'all' });
     },
   });
 

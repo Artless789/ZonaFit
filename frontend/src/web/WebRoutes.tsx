@@ -35,6 +35,7 @@ const SalesPage = lazy(() => import('../pages/sales/SalesPage').then(module => (
 const CreditsPage = lazy(() => import('../pages/credits/CreditsPage').then(module => ({ default: module.CreditsPage })));
 const CashRegisterPage = lazy(() => import('../pages/cash_registers/CashRegisterPage').then(module => ({ default: module.CashRegisterPage })));
 const AuditPage = lazy(() => import('../pages/audit/AuditPage').then(module => ({ default: module.AuditPage })));
+const ReportsPage = lazy(() => import('../pages/reports/ReportsPage').then(module => ({ default: module.ReportsPage })));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen bg-bg-screen">
@@ -77,6 +78,7 @@ export function WebRoutes() {
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="audit" element={<AuditPage />} />
+            <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<GymSettingsPage />} />
             <Route path="settings/subscription" element={<SubscriptionManagementPage />} />
             <Route path="subscription/checkout" element={<SubscriptionCheckoutPage />} />

@@ -18,6 +18,7 @@ const CashRegisterPage = lazy(() => import('../pages/cash_registers/CashRegister
 const GymSettingsPage = lazy(() => import('../pages/GymSettings').then(module => ({ default: module.GymSettingsPage })));
 const SubscriptionManagementPage = lazy(() => import('../pages/subscription/SubscriptionManagementPage').then(module => ({ default: module.SubscriptionManagementPage })));
 const SubscriptionCheckoutPage = lazy(() => import('../pages/subscription/SubscriptionCheckoutPage').then(module => ({ default: module.SubscriptionCheckoutPage })));
+const ReportsPage = lazy(() => import('../pages/reports/ReportsPage').then(module => ({ default: module.ReportsPage })));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen bg-bg-screen">
@@ -42,9 +43,11 @@ export function AppOperativaRoutes() {
             <Route path="cash-registers" element={<CashRegisterPage />} />
             <Route path="invoices" element={<InvoicesPage />} />
             <Route path="sales" element={<SalesPage />} />
+            <Route path="inventory" element={<Navigate to="/sales?tab=inventory" replace />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="audit" element={<AuditPage />} />
+            <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<GymSettingsPage />} />
             <Route path="settings/subscription" element={<SubscriptionManagementPage />} />
             <Route path="subscription/checkout" element={<SubscriptionCheckoutPage />} />

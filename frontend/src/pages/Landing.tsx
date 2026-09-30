@@ -1,85 +1,87 @@
 import { useState, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { subscriptionService } from '../services/subscriptionService';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@shared/ui/Button';
-import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePWAInstall } from '../hooks/usePWAInstall';
-import { 
-  Users, 
-  CreditCard, 
-  Package, 
-  Settings, 
-  ShieldCheck, 
-  Layers, 
-  LogIn, 
-  Play, 
-  Download, 
-  Smartphone, 
-  Monitor, 
-  Apple, 
-  CheckCircle2, 
-  Menu, 
-  X, 
-  FileText, 
-  MessageSquare, 
+import {
+  ArrowRight,
+  CheckCircle2,
   Coins,
-  Star,
-  Sparkles
+  Download,
+  Lock,
+  LogIn,
+  Menu,
+  MessageCircle,
+  Play,
+  Smartphone,
+  Users,
+  WalletCards,
+  X,
 } from 'lucide-react';
+import { formatCurrency } from '@shared/utils/formatters';
+import { cn } from '@shared/utils/cn';
 
 export function Landing() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { isInstallable, isInstalled, platform, installPWA } = usePWAInstall();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [selectedInstallPlatform, setSelectedInstallPlatform] = useState<'desktop' | 'android' | 'ios'>(
+  const [selectedPwaPlatform, setSelectedPwaPlatform] = useState<'desktop' | 'android' | 'ios'>(
     platform === 'ios' ? 'ios' : platform === 'android' ? 'android' : 'desktop'
   );
 
-  const { data: plans, isLoading: isLoadingPlans } = useQuery({
-    queryKey: ['availablePlans'],
-    queryFn: subscriptionService.getPlans
-  });
-
-  const [planIntervalFilter, setPlanIntervalFilter] = useState<string>('ALL');
-
-  const getIntervalMonths = (interval: string) => {
-    switch (interval) {
-      case 'BIMONTHLY': return 2;
-      case 'QUARTERLY': return 3;
-      case 'SEMIANNUAL': return 6;
-      case 'YEARLY': return 12;
-      default: return 1;
-    }
-  };
-
-  const getIntervalName = (interval: string) => {
-    switch (interval) {
-      case 'MONTHLY': return 'Mensual';
-      case 'BIMONTHLY': return 'Bimestral';
-      case 'QUARTERLY': return 'Trimestral';
-      case 'SEMIANNUAL': return 'Semestral';
-      case 'YEARLY': return 'Anual';
-      default: return interval;
-    }
-  };
-
-  const DEFAULT_PLAN_BENEFITS = [
-    'Gestión ilimitada de socios',
-    'Control de acceso con código QR',
-    'Módulo de punto de venta (POS) y caja',
-    'Recordatorios y avisos por WhatsApp',
-    'Reportes financieros y de membresías'
-  ];
-
-  const filteredPlans = useMemo(() => {
-    if (!plans) return [];
-    if (planIntervalFilter === 'ALL') return plans;
-    return plans.filter(p => p.billing_interval === planIntervalFilter);
-  }, [plans, planIntervalFilter]);
+  const defaultPlans = useMemo(() => {
+    return [
+      {
+        id: 1,
+        name: 'Plan Mensual',
+        price: 65000,
+        interval: 'MONTHLY',
+        badge: 'Operación Básica',
+        desc: 'Para gimnasios y centros deportivos que inician su digitalización sin compromisos de largo plazo.',
+        popular: false,
+        features: [
+          'Clientes y membresías ilimitadas',
+          'Punto de Venta (POS) y facturación PDF',
+          'Arqueos de caja y control de turno',
+          'Cobranza y alertas por WhatsApp Web',
+          'Instalación PWA en móvil y desktop',
+        ],
+      },
+      {
+        id: 2,
+        name: 'Plan Trimestral',
+        price: 180000,
+        interval: 'QUARTERLY',
+        badge: 'Más Popular',
+        desc: 'La opción recomendada para dueños que buscan estabilidad operativa y ahorro comprobado.',
+        popular: true,
+        features: [
+          'Todo lo incluido en el Plan Mensual',
+          'Soporte prioritario 7 días a la semana',
+          'Módulo de Cuentas por Cobrar (CxC)',
+          'Control de kardex y stock mínimo',
+          'Reportes analíticos de retención y bajas',
+          'Descuento del 10% sobre la tarifa mensual',
+        ],
+      },
+      {
+        id: 3,
+        name: 'Plan Anual',
+        price: 590000,
+        interval: 'YEARLY',
+        badge: 'Máximo Ahorro',
+        desc: 'Compromiso de alto rendimiento con la mayor tasa de retorno para tu infraestructura deportiva.',
+        popular: false,
+        features: [
+          'Todo lo del plan trimestral',
+          'Ahorro equivalente a casi 3 meses gratis',
+          'Capacitación inicial personalizada para tu equipo',
+          'Respaldo prioritario en la nube',
+          'Garantía de actualización continua',
+        ],
+      },
+    ];
+  }, []);
 
   const handleSelectPlan = (planId?: number) => {
     if (planId) {
@@ -95,639 +97,695 @@ export function Landing() {
     } else if (isInstalled) {
       window.location.assign('/app/dashboard');
     } else {
-      // Scroll to install guide
-      document.getElementById('install-section')?.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  const features = [
-    { 
-      icon: <Users size={24} className="text-brand-primary" />, 
-      title: 'Gestión y Foto de Clientes', 
-      desc: 'Control integral de afiliados, registro documental y captura de fotos de perfil autorizadas.' 
-    },
-    { 
-      icon: <CreditCard size={24} className="text-brand-primary" />, 
-      title: 'Membresías y Planes', 
-      desc: 'Planes configurables por días, cálculo automático de vigencias, precios históricos protegidos y control de abonos.' 
-    },
-    { 
-      icon: <Coins size={24} className="text-brand-primary" />, 
-      title: 'Caja y Turnos', 
-      desc: 'Control estricto de efectivo físico, transferencias, arqueos y cierres de turno por operador.' 
-    },
-    { 
-      icon: <Package size={24} className="text-brand-primary" />, 
-      title: 'POS e Inventario', 
-      desc: 'Punto de venta ágil para productos físicos, control de stock mínimo y categorización.' 
-    },
-    { 
-      icon: <FileText size={24} className="text-brand-primary" />, 
-      title: 'Comprobantes y Facturación PDF', 
-      desc: 'Generación instantánea de comprobantes oficiales y recibos en formato PDF estándar.' 
-    },
-    { 
-      icon: <MessageSquare size={24} className="text-brand-primary" />, 
-      title: 'WhatsApp Business Cloud API', 
-      desc: 'Notificaciones automáticas y alertas transaccionales directas al móvil del afiliado.' 
-    },
-    { 
-      icon: <Settings size={24} className="text-brand-primary" />, 
-      title: 'Configuración de Sede y Marca', 
-      desc: 'Personalización de logotipo, moneda local, régimen tributario y datos fiscales del gimnasio.' 
-    },
-    { 
-      icon: <ShieldCheck size={24} className="text-brand-primary" />, 
-      title: 'Multi-Tenant y Auditoría', 
-      desc: 'Aislamiento seguro de datos por sede y registro inmutable de trazabilidad operativa.' 
-    }
-  ];
-
-  const benefits = [
-    { title: 'Centralización Total', desc: 'Todo tu negocio opera desde una única fuente de verdad con sincronización instantánea.' },
-    { title: 'Multi-Tenant Nativo', desc: 'Aislamiento absoluto de información financiera y operativa para tu gimnasio.' },
-    { title: 'Ahorro de Tiempo', desc: 'Procesos administrativos de membresías y caja reducidos a un par de clics.' },
-    { title: 'Tecnología PWA Multiplataforma', desc: 'Accede e instala Merwil ZonaFit en computadores de escritorio, tablets y teléfonos móviles.' }
-  ];
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { staggerChildren: 0.15, delayChildren: 0.2 }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { type: "spring" as const, stiffness: 100, damping: 20 }
+      document.getElementById('pwa-section')?.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
   return (
-    <div className="min-h-screen bg-transparent relative z-10 overflow-hidden font-sans">
-      {/* Premium Video Background */}
-      <div className="fixed inset-0 -z-10 w-full h-full overflow-hidden bg-bg-page">
-        <video 
-          autoPlay 
-          muted 
-          loop 
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover opacity-80"
-          poster="/logo.png"
-        >
-          <source src="/videos/landing-bg.mp4" type="video/mp4" />
-        </video>
-        {/* Cinematic Overlays */}
-        <div className="absolute inset-0 bg-black/85 mix-blend-multiply"></div>
-        <div className="absolute inset-0 bg-brand-primary/15 backdrop-blur-[2px]"></div>
-        <div className="absolute inset-0 bg-linear-to-b from-bg-page/90 via-transparent to-bg-page"></div>
+    <div className="min-h-screen bg-[#020202] text-[#F3F4F6] font-sans selection:bg-[#DC2626] selection:text-white">
+      {/* Background Subtle Ambience */}
+      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-gradient-to-b from-[#DC2626]/12 to-transparent blur-[140px] opacity-70" />
+        <div className="absolute top-[35%] -right-40 w-[600px] h-[600px] bg-[#32292F]/20 blur-[160px] opacity-50" />
+        <div className="absolute inset-0 bg-[radial-gradient(#ffffff08_1px,transparent_1px)] [background-size:24px_24px] opacity-35" />
       </div>
 
-      {/* Header */}
-      <header className="absolute top-0 w-full p-4 sm:p-6 z-50">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Merwil ZonaFit Logo" className="w-10 object-contain drop-shadow-md" style={{ aspectRatio: '1664/1776' }} />
-            <span className="text-xl font-bold text-white tracking-tight">MERWIL ZONAFIT</span>
+      {/* ========================================================
+          01 — NAVBAR EDITORIAL
+         ======================================================== */}
+      <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-[#020202]/80 border-b border-white/[0.08]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between">
+          {/* Brand */}
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <div className="relative">
+              <img
+                src="/logo.png"
+                alt="Merwil ZonaFit"
+                className="w-9 h-9 object-contain drop-shadow-[0_0_12px_rgba(220,38,38,0.5)]"
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-mono text-sm font-extrabold tracking-widest text-white uppercase flex items-center gap-2">
+                MERWIL ZONAFIT
+              </span>
+              <span className="text-[10px] font-mono text-neutral-400 tracking-wider">SISTEMA DE GESTIÓN OPERATIVA</span>
+            </div>
           </div>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate('/demo')} className="flex items-center gap-2 border-brand-primary text-brand-primary hover:bg-brand-primary/10">
-              <Play size={16} fill="currentColor" />
-              Explorar Merwil ZonaFit Demo
-            </Button>
-            <Button variant="ghost" onClick={() => handleInstallClick()} className="flex items-center gap-2 text-text-primary hover:text-brand-primary">
-              <Download size={16} />
-              {isInstalled ? 'App Instalada' : 'Instalar App'}
-            </Button>
-            <Button variant="ghost" onClick={() => navigate('/login')} className="flex items-center gap-2">
-              <LogIn size={18} />
-              Iniciar sesión
-            </Button>
-            <ActionGlowButton onClick={() => handleSelectPlan()} className="px-5 py-2 text-sm font-semibold h-10">
-              Comenzar
-            </ActionGlowButton>
+          {/* Desktop Nav Links */}
+          <nav className="hidden lg:flex items-center gap-7 text-xs font-semibold text-neutral-300">
+            <a href="#features" className="hover:text-white transition-colors">Funcionalidades</a>
+            <a href="#metrics" className="hover:text-white transition-colors">Rendimiento</a>
+            <a href="#comparativa" className="hover:text-white transition-colors">Comparativa</a>
+            <a href="#pricing" className="hover:text-white transition-colors">Precios</a>
+            <a href="#pwa" className="hover:text-white transition-colors">App PWA</a>
+          </nav>
+
+          {/* Desktop CTAs */}
+          <div className="hidden sm:flex items-center gap-3">
+            <button
+              onClick={() => navigate('/demo')}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-neutral-300 hover:text-white hover:bg-white/[0.05] rounded-full transition-colors cursor-pointer border border-transparent hover:border-white/10"
+            >
+              <Play size={13} className="text-[#DC2626]" />
+              <span>Ver Demo</span>
+            </button>
+            <button
+              onClick={() => navigate('/login')}
+              className="px-4 py-2 text-xs font-semibold text-neutral-200 hover:text-white bg-[#171717] hover:bg-[#1D1D1D] border border-white/10 rounded-full transition-colors cursor-pointer"
+            >
+              Iniciar Sesión
+            </button>
+            <button
+              onClick={() => handleSelectPlan()}
+              className="px-5 py-2 text-xs font-bold text-white bg-[#DC2626] hover:bg-[#EF4444] rounded-full transition-all shadow-md shadow-[#DC2626]/30 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            >
+              Probar Gratis 14 Días
+            </button>
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="flex md:hidden items-center gap-2">
-            <ActionGlowButton onClick={() => handleSelectPlan()} className="px-3 py-1.5 text-xs font-semibold h-9">
-              Comenzar
-            </ActionGlowButton>
-            <button 
+          {/* Mobile Hamburger */}
+          <div className="flex sm:hidden items-center gap-2">
+            <button
+              onClick={() => handleSelectPlan()}
+              className="px-3.5 py-1.5 text-xs font-bold text-white bg-[#DC2626] rounded-full shadow-sm"
+            >
+              Probar Gratis
+            </button>
+            <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-text-primary hover:text-brand-primary bg-bg-surface/60 rounded-xl border border-border-light"
+              className="p-2 text-neutral-300 hover:text-white bg-[#171717] rounded-xl border border-white/10"
               aria-label="Abrir menú"
             >
-              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Dropdown Menu */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="md:hidden mt-3 p-4 bg-bg-surface/95 backdrop-blur-xl border border-border-light rounded-2xl shadow-xl flex flex-col gap-3"
-            >
-              <Button variant="outline" onClick={() => { setMobileMenuOpen(false); navigate('/demo'); }} className="w-full justify-center gap-2 border-brand-primary text-brand-primary">
-                <Play size={16} fill="currentColor" />
-                Explorar Merwil ZonaFit Demo
-              </Button>
-              <Button variant="ghost" onClick={() => { setMobileMenuOpen(false); handleInstallClick(); }} className="w-full justify-center gap-2 text-text-primary">
-                <Download size={16} />
-                {isInstalled ? 'App Instalada' : 'Instalar App (PWA)'}
-              </Button>
-              <Button variant="ghost" onClick={() => { setMobileMenuOpen(false); navigate('/login'); }} className="w-full justify-center gap-2">
-                <LogIn size={18} />
-                Iniciar sesión
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Mobile Dropdown */}
+        {mobileMenuOpen && (
+          <div className="sm:hidden px-4 py-5 bg-[#020202] border-b border-white/10 flex flex-col gap-3 text-xs font-semibold">
+            <a href="#features" onClick={() => setMobileMenuOpen(false)} className="py-2 text-neutral-300 hover:text-white">Funcionalidades</a>
+            <a href="#metrics" onClick={() => setMobileMenuOpen(false)} className="py-2 text-neutral-300 hover:text-white">Rendimiento</a>
+            <a href="#comparativa" onClick={() => setMobileMenuOpen(false)} className="py-2 text-neutral-300 hover:text-white">Comparativa</a>
+            <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="py-2 text-neutral-300 hover:text-white">Precios</a>
+            <a href="#pwa" onClick={() => setMobileMenuOpen(false)} className="py-2 text-neutral-300 hover:text-white">App Móvil (PWA)</a>
+            <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
+              <button
+                onClick={() => { setMobileMenuOpen(false); navigate('/demo'); }}
+                className="w-full py-2.5 rounded-xl bg-[#171717] text-white flex items-center justify-center gap-2"
+              >
+                <Play size={14} className="text-[#DC2626]" />
+                <span>Explorar Demo</span>
+              </button>
+              <button
+                onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
+                className="w-full py-2.5 rounded-xl bg-[#171717] text-white flex items-center justify-center gap-2"
+              >
+                <LogIn size={14} />
+                <span>Iniciar Sesión</span>
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 px-4 flex flex-col items-center justify-center min-h-[85vh] text-center">
-        <div className="absolute inset-0 bg-brand-primary/20 blur-[120px] rounded-full scale-150 -z-10 opacity-30 pointer-events-none max-w-lg mx-auto top-20"></div>
-        
-        <motion.div 
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="max-w-4xl mx-auto"
-        >
-          <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-primary/15 border border-brand-primary/30 text-brand-primary text-sm font-medium mb-6 backdrop-blur-md">
-            <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.8)]"></span>
-            Merwil ZonaFit • Plataforma SaaS & PWA para Gimnasios
-          </motion.div>
-          
-          <motion.h1 variants={itemVariants} className="text-4xl sm:text-6xl md:text-7xl font-bold text-white tracking-tight leading-tight drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] mb-6">
-            Gestiona tu gimnasio con <span className="text-transparent bg-clip-text bg-linear-to-r from-brand-primary via-brand-primary-hover to-red-400">Merwil ZonaFit</span>.<br />
-            Todo en un solo lugar.
-          </motion.h1>
-          
-          <motion.p variants={itemVariants} className="text-base sm:text-lg md:text-xl text-text-secondary max-w-2xl mx-auto font-medium mb-10 leading-relaxed drop-shadow-md">
-            La herramienta definitiva para la gestión operativa, financiera y administrativa de centros fitness. Membresías, caja, ventas, fotos, WhatsApp y facturación PDF en una sola App.
-          </motion.p>
-
-          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <ActionGlowButton onClick={() => handleSelectPlan()} className="w-full sm:w-auto px-8 h-14 text-base font-bold shadow-[0_8px_30px_rgba(220,38,38,0.4)]">
-              Probar gratis
-            </ActionGlowButton>
-            <Button onClick={() => navigate('/demo')} variant="outline" className="w-full sm:w-auto h-14 px-8 text-base font-semibold border-brand-primary text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 backdrop-blur-md transition-colors flex items-center gap-2 justify-center">
-              <Play size={18} fill="currentColor" />
-              Explorar Merwil ZonaFit Demo
-            </Button>
-          </motion.div>
-        </motion.div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-24 px-4 relative">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Potencia Operativa</h2>
-            <p className="text-text-secondary max-w-2xl mx-auto">Controla todos los aspectos de tu gimnasio con módulos especializados diseñados para la máxima eficiencia diaria.</p>
+      {/* ========================================================
+          02 — HERO SECTION (BRUTALIST EDITORIAL)
+         ======================================================== */}
+      <section className="relative pt-12 pb-20 md:pt-20 md:pb-28 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col items-center text-center">
+          {/* Eyebrow Pill */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#171717] border border-white/10 text-neutral-300 font-mono text-[11px] uppercase tracking-wider mb-6">
+            <span className="size-2 rounded-full bg-[#DC2626] animate-pulse" />
+            <span>SOFTWARE DE GESTIÓN PARA GIMNASIOS DE ALTO RENDIMIENTO</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((feat, idx) => (
-              <motion.div 
-                key={idx} 
-                initial={{ opacity: 0, y: 30 }} 
-                whileInView={{ opacity: 1, y: 0 }} 
-                viewport={{ once: true, margin: "-50px" }} 
-                transition={{ duration: 0.5, delay: idx * 0.1 }}
-                whileHover={{ y: -5 }}
-              >
-                <div className="rounded-xl border border-border-light bg-bg-surface/40 p-6 h-full flex flex-col hover:border-brand-primary/40 hover:bg-glass-highlight/5 transition-all group shadow-glass-up">
-                  <div className="w-12 h-12 rounded-xl bg-glass-overlay border border-border-light flex items-center justify-center mb-4 group-hover:scale-110 group-hover:shadow-[0_0_15px_rgba(220,38,38,0.3)] transition-all">
-                    {feat.icon}
-                  </div>
-                  <h3 className="text-lg font-semibold text-white mb-2">{feat.title}</h3>
-                  <p className="text-text-muted text-sm leading-relaxed grow">{feat.desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+          {/* Brutal Impact H1 */}
+          <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-[-0.04em] uppercase text-white leading-[0.96] max-w-5xl">
+            EL CONTROL DE TU GIMNASIO,{' '}
+            <span className="inline-block bg-[#DC2626] text-white px-3 sm:px-5 py-0.5 sm:py-1 rounded-sm shadow-[0_0_30px_rgba(220,38,38,0.35)] align-baseline">
+              SIN EL CAOS.
+            </span>
+          </h1>
 
-      {/* P3.2, P3.3, P3.4 — PWA App Download / Installation Section */}
-      <section id="install-section" className="py-24 px-4 relative bg-surface-darker/60 border-y border-border-light/40">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-primary/10 border border-brand-primary/30 text-brand-primary text-xs font-semibold mb-3">
-              <Smartphone size={14} />
-              Aplicación Multiplataforma
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Lleva Merwil ZonaFit a todos tus dispositivos</h2>
-            <p className="text-text-secondary max-w-2xl mx-auto">
-              Merwil ZonaFit funciona como una Progressive Web App (PWA) de alto rendimiento. Instálala en tu computador o teléfono móvil para un acceso rápido y sin descargas pesadas.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* CTA Card */}
-            <div className="lg:col-span-5 flex flex-col gap-6 p-8 rounded-2xl bg-bg-surface/60 border border-border-light shadow-glass">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center">
-                  <img src="/logo.png" alt="Merwil ZonaFit App" className="w-10 object-contain" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-text-primary">Merwil ZonaFit App</h3>
-                  <span className="text-xs text-brand-primary font-medium">Sistema de Gestión para Gimnasios</span>
-                </div>
-              </div>
-
-              <p className="text-sm text-text-secondary leading-relaxed">
-                Disfruta de una experiencia fluida a pantalla completa, inicio rápido desde tu escritorio o pantalla de inicio, y sincronización en tiempo real.
-              </p>
-
-              <div className="flex flex-col gap-3">
-                {isInstallable ? (
-                  <ActionGlowButton onClick={handleInstallClick} className="w-full h-12 flex items-center justify-center gap-2 text-base font-bold">
-                    <Download size={18} />
-                    Instalar Merwil ZonaFit en este dispositivo
-                  </ActionGlowButton>
-                ) : isInstalled ? (
-                  <Button onClick={() => window.location.assign('/app/dashboard')} className="w-full h-12 flex items-center justify-center gap-2 bg-success/20 text-success border border-success/30 hover:bg-success/30 font-bold">
-                    <CheckCircle2 size={18} />
-                    Aplicación Instalada (Abrir App)
-                  </Button>
-                ) : (
-                  <ActionGlowButton onClick={() => window.location.assign('/app/dashboard')} className="w-full h-12 flex items-center justify-center gap-2 text-base font-bold">
-                    <Monitor size={18} />
-                    Abrir App en el Navegador
-                  </ActionGlowButton>
-                )}
-              </div>
-            </div>
-
-            {/* Installation Step-by-Step Guide */}
-            <div className="lg:col-span-7 flex flex-col gap-4">
-              <div className="flex items-center gap-2 p-1 bg-bg-surface border border-border-light rounded-xl max-w-md">
-                <button
-                  onClick={() => setSelectedInstallPlatform('desktop')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-lg transition-colors ${
-                    selectedInstallPlatform === 'desktop' ? 'bg-bg-elevated text-brand-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
-                  }`}
-                >
-                  <Monitor size={14} />
-                  Escritorio (PC/Mac)
-                </button>
-                <button
-                  onClick={() => setSelectedInstallPlatform('android')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-lg transition-colors ${
-                    selectedInstallPlatform === 'android' ? 'bg-bg-elevated text-brand-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
-                  }`}
-                >
-                  <Smartphone size={14} />
-                  Android
-                </button>
-                <button
-                  onClick={() => setSelectedInstallPlatform('ios')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-lg transition-colors ${
-                    selectedInstallPlatform === 'ios' ? 'bg-bg-elevated text-brand-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
-                  }`}
-                >
-                  <Apple size={14} />
-                  iOS (iPhone)
-                </button>
-              </div>
-
-              <div className="p-6 rounded-2xl bg-bg-surface/40 border border-border-light flex flex-col gap-4">
-                {selectedInstallPlatform === 'desktop' && (
-                  <div className="space-y-3 text-sm text-text-secondary">
-                    <h4 className="text-text-primary font-semibold flex items-center gap-2">
-                      <Monitor size={16} className="text-brand-primary" />
-                      Instalación en Google Chrome / Microsoft Edge (Windows & Mac)
-                    </h4>
-                    <ol className="list-decimal list-inside space-y-2 pl-1">
-                      <li>Abre <strong>Merwil ZonaFit</strong> en tu navegador compatible.</li>
-                      <li>Haz clic en el ícono de instalación <span className="text-brand-primary font-mono font-bold">⊕</span> ubicado a la derecha en la barra de direcciones, o abre el menú de opciones (<span className="font-mono">⋮</span>).</li>
-                      <li>Selecciona <strong>"Instalar Merwil ZonaFit"</strong> y confirma en el cuadro de diálogo.</li>
-                      <li>¡Listo! Merwil ZonaFit se abrirá en su propia ventana dedicada como aplicación de escritorio.</li>
-                    </ol>
-                  </div>
-                )}
-
-                {selectedInstallPlatform === 'android' && (
-                  <div className="space-y-3 text-sm text-text-secondary">
-                    <h4 className="text-text-primary font-semibold flex items-center gap-2">
-                      <Smartphone size={16} className="text-brand-primary" />
-                      Instalación en Android (Google Chrome)
-                    </h4>
-                    <ol className="list-decimal list-inside space-y-2 pl-1">
-                      <li>Abre <strong>Merwil ZonaFit</strong> desde Chrome en tu teléfono.</li>
-                      <li>Toca el menú de tres puntos (<span className="font-mono">⋮</span>) en la esquina superior derecha.</li>
-                      <li>Selecciona la opción <strong>"Instalar aplicación"</strong> o <strong>"Agregar a la pantalla principal"</strong>.</li>
-                      <li>Confirma la instalación. El acceso directo aparecerá en tu menú de aplicaciones.</li>
-                    </ol>
-                  </div>
-                )}
-
-                {selectedInstallPlatform === 'ios' && (
-                  <div className="space-y-3 text-sm text-text-secondary">
-                    <h4 className="text-text-primary font-semibold flex items-center gap-2">
-                      <Apple size={16} className="text-brand-primary" />
-                      Instalación en iPhone / iPad (Safari)
-                    </h4>
-                    <ol className="list-decimal list-inside space-y-2 pl-1">
-                      <li>Abre <strong>Merwil ZonaFit</strong> en el navegador <strong>Safari</strong> de tu dispositivo iOS.</li>
-                      <li>Toca el botón <strong>Compartir</strong> (el ícono de un cuadrado con una flecha hacia arriba <span className="font-mono">⎘</span>) en la barra inferior.</li>
-                      <li>Desplázate hacia abajo y selecciona <strong>"Agregar al inicio"</strong> (<span className="font-mono">➕</span>).</li>
-                      <li>Toca <strong>"Agregar"</strong> en la esquina superior derecha para finalizar.</li>
-                    </ol>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits Section */}
-      <section className="py-24 px-4 relative bg-surface-darker/50">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 leading-tight">Por qué elegir <span className="text-brand-primary">Merwil ZonaFit</span></h2>
-              <p className="text-text-secondary mb-8 text-lg">Hemos diseñado una plataforma que entiende la realidad operativa de los gimnasios modernos, eliminando la fricción diaria de la administración.</p>
-              
-              <div className="space-y-6">
-                {benefits.map((benefit, idx) => (
-                  <div key={idx} className="flex gap-4">
-                    <div className="mt-1 w-6 h-6 rounded-full bg-brand-primary/20 flex items-center justify-center shrink-0">
-                      <Layers size={14} className="text-brand-primary" />
-                    </div>
-                    <div>
-                      <h4 className="text-white font-semibold mb-1">{benefit.title}</h4>
-                      <p className="text-text-muted text-sm">{benefit.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="relative">
-              <div className="absolute inset-0 bg-brand-primary/10 blur-[80px] rounded-full"></div>
-              <div className="rounded-xl border border-brand-primary/20 p-2 overflow-hidden relative z-10 aspect-video flex items-center justify-center bg-surface-dark/80">
-                <img src="/logo.png" alt="Plataforma Merwil ZonaFit" className="w-32 opacity-80" />
-                <div className="absolute bottom-4 left-4 right-4 h-24 bg-linear-to-t from-surface-dark to-transparent"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section className="py-24 px-4 relative text-center">
-        <div className="max-w-6xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-primary/10 border border-brand-primary/20 text-brand-primary text-xs font-semibold uppercase tracking-wider mb-3">
-            <Sparkles size={14} />
-            Precios Claros y Transparentes
-          </div>
-          <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 tracking-tight">
-            Planes Comerciales Merwil ZonaFit
-          </h2>
-          <p className="text-text-secondary max-w-2xl mx-auto mb-8 text-base">
-            Elige el plan ideal para digitalizar tu centro deportivo. Sin cobros ocultos ni permanencia obligatoria.
+          {/* Subtitle */}
+          <p className="mt-7 text-base sm:text-lg md:text-xl text-neutral-300 max-w-3xl leading-relaxed">
+            Controla membresías con renovación continua, POS en mostrador en tiempo real, corte de caja al centavo y retención directa por WhatsApp. Diseñado para dueños de gimnasios que exigen precisión absoluta.
           </p>
 
-          {/* Billing Interval Filter Tabs */}
-          {plans && plans.length > 0 && (
-            <div className="flex flex-wrap items-center justify-center gap-2 mb-12">
-              {[
-                { id: 'ALL', label: 'Todos los Planes' },
-                { id: 'MONTHLY', label: 'Mensual' },
-                { id: 'QUARTERLY', label: 'Trimestral', badge: 'Ahorra 15%' },
-                { id: 'SEMIANNUAL', label: 'Semestral', badge: 'Ahorra 20%' },
-                { id: 'YEARLY', label: 'Anual', badge: 'Ahorra 25%' },
-              ].map((tab) => {
-                const isActive = planIntervalFilter === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setPlanIntervalFilter(tab.id)}
-                    className={`relative px-4 py-2 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 ${
-                      isActive
-                        ? 'bg-brand-primary text-white shadow-[0_0_20px_rgba(239,68,68,0.4)]'
-                        : 'bg-white/3 text-text-secondary border border-border-light hover:bg-white/8 hover:text-white'
-                    }`}
-                  >
-                    <span>{tab.label}</span>
-                    {tab.badge && (
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                        isActive ? 'bg-white/20 text-white font-bold' : 'bg-brand-primary/20 text-brand-primary font-bold'
-                      }`}>
-                        {tab.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          
-          {isLoadingPlans ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-               <div className="h-96 bg-glass-overlay animate-pulse rounded-2xl"></div>
-               <div className="h-96 bg-glass-overlay animate-pulse rounded-2xl"></div>
-               <div className="h-96 bg-glass-overlay animate-pulse rounded-2xl"></div>
-            </div>
-          ) : filteredPlans && filteredPlans.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-left">
-              {filteredPlans.map((plan) => {
-                const months = getIntervalMonths(plan.billing_interval);
-                const isPopular = !!plan.is_popular;
-                const featuresList = plan.features && plan.features.length > 0 
-                  ? plan.features 
-                  : DEFAULT_PLAN_BENEFITS;
+          {/* Trust Badges */}
+          <div className="mt-6 flex flex-wrap justify-center items-center gap-3 sm:gap-6 text-xs text-neutral-400 font-mono">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 size={14} className="text-[#DC2626]" />
+              14 Días Gratis
+            </span>
+            <span className="text-white/20 hidden sm:inline">·</span>
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 size={14} className="text-[#DC2626]" />
+              Sin Tarjeta Requerida
+            </span>
+            <span className="text-white/20 hidden sm:inline">·</span>
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 size={14} className="text-[#DC2626]" />
+              Cero Contratos Forzosos
+            </span>
+            <span className="text-white/20 hidden sm:inline">·</span>
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 size={14} className="text-[#DC2626]" />
+              Offline-Ready & PWA
+            </span>
+          </div>
 
-                return (
-                  <div 
-                    key={plan.id} 
-                    className={`relative rounded-xl p-8 transition-all flex flex-col h-full ${
-                      isPopular 
-                        ? 'border-2 border-brand-primary bg-bg-surface/90 shadow-[0_0_40px_rgba(239,68,68,0.25)] ring-1 ring-brand-primary/50' 
-                        : 'border border-border-light bg-bg-surface/40 hover:border-brand-primary/40 hover:bg-bg-surface/60'
-                    }`}
-                  >
-                    {/* Popular Badge */}
-                    {isPopular && (
-                      <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 bg-linear-to-r from-brand-primary to-orange-500 text-white text-[11px] font-extrabold rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-lg border border-white/20 whitespace-nowrap">
-                        <Star size={12} className="fill-white" /> MÁS POPULAR
-                      </div>
-                    )}
+          {/* CTAs */}
+          <div className="mt-9 flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+            <button
+              onClick={() => handleSelectPlan()}
+              className="w-full sm:w-auto px-8 py-4 text-sm font-extrabold uppercase tracking-wider text-white bg-[#DC2626] hover:bg-[#EF4444] rounded-full transition-all shadow-[0_0_35px_rgba(220,38,38,0.45)] hover:scale-105 active:scale-95 flex items-center justify-center gap-3 cursor-pointer"
+            >
+              <span>Iniciar Prueba Gratuita</span>
+              <ArrowRight size={17} />
+            </button>
+            <button
+              onClick={() => navigate('/demo')}
+              className="w-full sm:w-auto px-7 py-4 text-sm font-semibold text-white bg-[#171717] hover:bg-[#1D1D1D] border border-white/15 rounded-full transition-colors flex items-center justify-center gap-2.5 cursor-pointer"
+            >
+              <Play size={15} className="text-[#DC2626]" />
+              <span>Ver Demostración Operativa</span>
+            </button>
+          </div>
 
-                    {/* Plan Header */}
-                    <div className="mb-4">
-                      <span className="px-3 py-1 bg-brand-primary/15 text-brand-primary text-xs font-bold rounded-full mb-3 inline-block border border-brand-primary/20">
-                        {getIntervalName(plan.billing_interval)}
-                      </span>
-                      <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
-                      {plan.description && (
-                        <p className="text-text-secondary text-xs line-clamp-2 min-h-8">{plan.description}</p>
-                      )}
-                    </div>
+          {/* Cinematic Showcase Container */}
+          <div className="mt-14 w-full max-w-6xl relative">
+            <div className="relative rounded-3xl overflow-hidden border border-white/15 shadow-[0_25px_80px_-15px_rgba(0,0,0,0.9)] bg-[#171717]">
+              {/* Cinematic Gym Background Image */}
+              <div className="relative h-[320px] sm:h-[480px] lg:h-[580px] w-full overflow-hidden">
+                <img
+                  src="/images/cinematic-gym.png"
+                  alt="Merwil ZonaFit Cinematic Environment"
+                  className="w-full h-full object-cover opacity-75 scale-105 transition-transform duration-700 hover:scale-100"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#020202] via-[#020202]/50 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#020202]/70 via-transparent to-[#020202]/70" />
 
-                    {/* Pricing */}
-                    <div className="mb-6 pt-2 border-t border-white/5">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-4xl font-black text-white tracking-tight">
-                          ${plan.price.toLocaleString()}
-                        </span>
-                        <span className="text-text-muted text-xs font-semibold ml-1">{plan.currency}</span>
-                        <span className="text-text-muted text-xs">/ {getIntervalName(plan.billing_interval).toLowerCase()}</span>
-                      </div>
-                      {months > 1 && plan.price > 0 && (
-                        <p className="text-xs text-brand-primary font-medium mt-1">
-                          Equivale a ${(Math.round(plan.price / months)).toLocaleString()} {plan.currency} al mes
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Features Checklist */}
-                    <div className="space-y-2.5 mb-8 grow border-t border-white/5 pt-4">
-                      <div className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">
-                        Lo que incluye:
-                      </div>
-                      {featuresList.map((feat: string, idx: number) => (
-                        <div key={idx} className="flex items-start gap-2.5 text-xs text-text-secondary">
-                          <CheckCircle2 size={15} className="text-success shrink-0 mt-0.5" />
-                          <span className="leading-snug">{feat}</span>
+                {/* Live Mockup Overlay Card */}
+                <div className="absolute inset-x-4 bottom-4 sm:inset-x-8 sm:bottom-8 lg:inset-x-12 lg:bottom-12 p-5 sm:p-7 rounded-2xl bg-[#020202]/90 backdrop-blur-2xl border border-white/15 shadow-2xl">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                      <span className="size-2.5 rounded-full bg-[#22C55E] animate-pulse" />
+                      <div>
+                        <div className="font-mono text-xs font-bold text-white uppercase tracking-wider">
+                          CENTRO DE OPERACIONES EN VIVO
                         </div>
-                      ))}
+                        <div className="text-[11px] text-neutral-400">
+                          Turno activo · Arqueo conciliado al centavo
+                        </div>
+                      </div>
                     </div>
-
-                    {/* Action Button */}
-                    <div className="mt-auto">
-                      <ActionGlowButton onClick={() => handleSelectPlan(plan.id)} className="w-full">
-                        Comenzar ahora
-                      </ActionGlowButton>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-[#22C55E]/10 border border-[#22C55E]/30 text-[#22C55E] font-bold">
+                        Caja Abierta
+                      </span>
+                      <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-neutral-300">
+                        334 Clientes Activos
+                      </span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-brand-primary/30 bg-bg-surface/40 max-w-md mx-auto p-8 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4">
-                <div className="px-3 py-1 bg-brand-primary/20 text-brand-primary text-xs font-bold rounded-full">BETA</div>
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-2">Sin planes en esta categoría</h3>
-              <p className="text-text-muted text-sm mb-6">No hay planes registrados para este periodo en este momento.</p>
-              <Button variant="ghost" size="sm" onClick={() => setPlanIntervalFilter('ALL')}>
-                Ver todos los planes
-              </Button>
-            </div>
-          )}
 
-          {/* Trust and Guarantees Banner */}
-          <div className="mt-16 pt-8 border-t border-white/5 flex flex-wrap items-center justify-center gap-6 sm:gap-12 text-xs text-text-muted">
-            <div className="flex items-center gap-2">
-              <ShieldCheck size={16} className="text-brand-primary" />
-              <span>Sin permanencia obligatoria</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Sparkles size={16} className="text-brand-primary" />
-              <span>Cancela cuando quieras</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-brand-primary" />
-              <span>Activación inmediata</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Users size={16} className="text-brand-primary" />
-              <span>Soporte técnico 24/7</span>
+                  {/* 3 Metric Previews */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+                    <div className="p-3.5 rounded-xl bg-[#171717] border border-white/5 flex flex-col gap-1">
+                      <span className="text-[10px] font-mono uppercase text-neutral-400">Ingresos del Mes</span>
+                      <span className="text-xl sm:text-2xl font-light font-mono text-white">$2.503.000 COP</span>
+                      <span className="text-[10px] text-[#22C55E] font-mono font-bold">+12.4% vs mes previo</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-[#171717] border border-white/5 flex flex-col gap-1">
+                      <span className="text-[10px] font-mono uppercase text-neutral-400">Ventas Mostrador (POS)</span>
+                      <span className="text-xl sm:text-2xl font-light font-mono text-white">$71.000 COP</span>
+                      <span className="text-[10px] text-neutral-400 font-mono">14 ventas rápidas hoy</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-[#171717] border border-white/5 flex flex-col gap-1">
+                      <span className="text-[10px] font-mono uppercase text-neutral-400">Retención por WhatsApp</span>
+                      <span className="text-xl sm:text-2xl font-light font-mono text-white">4 por vencer</span>
+                      <span className="text-[10px] text-[#DC2626] font-mono font-bold">1 toque para contactar</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-24 px-4 relative">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="max-w-5xl mx-auto text-center"
-        >
-          <div className="rounded-xl border border-brand-primary/30 p-12 md:p-16 bg-linear-to-br from-glass-overlay to-brand-primary/10 shadow-glass-large overflow-hidden relative">
-            <div className="absolute inset-0 bg-brand-primary/5 backdrop-blur-[1px]"></div>
-            <div className="relative z-10">
-              <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 drop-shadow-md">Empieza a gestionar tu gimnasio con Merwil ZonaFit</h2>
-              <p className="text-lg text-text-secondary mb-10 max-w-2xl mx-auto drop-shadow-sm">Únete a la plataforma tecnológica que transformará la manera en la que operas tu negocio fitness.</p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <ActionGlowButton onClick={() => handleSelectPlan()} className="w-full sm:w-auto px-8 h-14 text-lg font-bold shadow-[0_0_40px_rgba(220,38,38,0.5)] hover:shadow-[0_0_60px_rgba(220,38,38,0.7)] transition-shadow">
-                  Crear mi gimnasio
-                </ActionGlowButton>
-                <Button onClick={() => navigate('/demo')} variant="outline" className="w-full sm:w-auto h-14 px-8 text-lg font-semibold border-brand-primary text-brand-primary hover:bg-brand-primary/10 transition-colors flex items-center justify-center gap-2">
-                  <Play size={18} fill="currentColor" />
-                  Ver Demo
-                </Button>
-              </div>
+      {/* ========================================================
+          03 — SOCIAL PROOF / METRICS BAND
+         ======================================================== */}
+      <section id="metrics" className="py-12 border-y border-white/10 bg-[#171717]/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
+            <div className="flex flex-col gap-1">
+              <span className="text-3xl sm:text-5xl font-black font-mono text-[#DC2626] tracking-tight">+98.4%</span>
+              <span className="text-xs sm:text-sm font-semibold text-white">Precisión en Arqueos</span>
+              <span className="text-[11px] text-neutral-400">Cero descuadres entre efectivo y sistemas</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-3xl sm:text-5xl font-black font-mono text-white tracking-tight">3x</span>
+              <span className="text-xs sm:text-sm font-semibold text-white">Más Rápido en Cobros</span>
+              <span className="text-[11px] text-neutral-400">Recordatorios con 1 clic por WhatsApp</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-3xl sm:text-5xl font-black font-mono text-[#22C55E] tracking-tight">0%</span>
+              <span className="text-xs sm:text-sm font-semibold text-white">Pérdida en Cartera</span>
+              <span className="text-[11px] text-neutral-400">Cuentas por cobrar con balance auditado</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-3xl sm:text-5xl font-black font-mono text-white tracking-tight">100%</span>
+              <span className="text-xs sm:text-sm font-semibold text-white">Multi-Dispositivo</span>
+              <span className="text-[11px] text-neutral-400">Funciona en PC, tablet o celular como PWA</span>
             </div>
           </div>
-        </motion.div>
+        </div>
+      </section>
+
+      {/* ========================================================
+          04 — BENTO GRID DE CAPACIDADES PRINCIPALES
+         ======================================================== */}
+      <section id="features" className="py-24 max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="flex flex-col items-center text-center mb-16">
+          <p className="font-mono text-xs uppercase tracking-widest text-[#DC2626] font-bold">
+            ARQUITECTURA DE CONTROL
+          </p>
+          <h2 className="mt-3 text-3xl sm:text-5xl font-black tracking-tight uppercase text-white">
+            POTENCIA OPERATIVA EN CADA MÓDULO.
+          </h2>
+          <p className="mt-4 text-sm sm:text-base text-neutral-400 max-w-2xl">
+            Herramientas construidas específicamente para resolver las fugas de dinero, el desorden de membresías y la lentitud en mostrador.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Card 1: POS */}
+          <div className="p-7 rounded-2xl bg-[#171717] border border-white/10 hover:border-[#DC2626]/40 transition-all flex flex-col justify-between group">
+            <div className="space-y-4">
+              <div className="size-12 rounded-xl bg-[#DC2626]/10 border border-[#DC2626]/20 flex items-center justify-center text-[#DC2626] group-hover:scale-110 transition-transform">
+                <Coins size={22} />
+              </div>
+              <h3 className="text-xl font-bold text-white">Punto de Venta (POS) Instantáneo</h3>
+              <p className="text-xs leading-relaxed text-neutral-400">
+                Factura suplementos, bebidas y accesorios en segundos. Soporta venta de contado, pagos mixtos y venta a crédito vinculada directamente a la ficha del socio.
+              </p>
+            </div>
+            <div className="mt-6 pt-4 border-t border-white/5 flex items-center gap-2 text-xs font-mono text-neutral-400">
+              <CheckCircle2 size={13} className="text-[#22C55E]" />
+              <span>Tickets PDF automáticos</span>
+            </div>
+          </div>
+
+          {/* Card 2: Caja */}
+          <div className="p-7 rounded-2xl bg-[#171717] border border-white/10 hover:border-[#DC2626]/40 transition-all flex flex-col justify-between group">
+            <div className="space-y-4">
+              <div className="size-12 rounded-xl bg-[#22C55E]/10 border border-[#22C55E]/20 flex items-center justify-center text-[#22C55E] group-hover:scale-110 transition-transform">
+                <Lock size={22} />
+              </div>
+              <h3 className="text-xl font-bold text-white">Arqueos y Cierres al Centavo</h3>
+              <p className="text-xs leading-relaxed text-neutral-400">
+                Control ciego de turno por cajero. Separa en tiempo real lo recibido en efectivo, transferencias bancarias y tarjetas, impidiendo fugas silenciosas de dinero.
+              </p>
+            </div>
+            <div className="mt-6 pt-4 border-t border-white/5 flex items-center gap-2 text-xs font-mono text-neutral-400">
+              <CheckCircle2 size={13} className="text-[#22C55E]" />
+              <span>Auditoría inmutable por turno</span>
+            </div>
+          </div>
+
+          {/* Card 3: Membresías */}
+          <div className="p-7 rounded-2xl bg-[#171717] border border-white/10 hover:border-[#DC2626]/40 transition-all flex flex-col justify-between group">
+            <div className="space-y-4">
+              <div className="size-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
+                <Users size={22} />
+              </div>
+              <h3 className="text-xl font-bold text-white">Membresías con Cobertura Continua</h3>
+              <p className="text-xs leading-relaxed text-neutral-400">
+                Al renovar a un cliente activo, el sistema extiende automáticamente la fecha de corte sin quitarle los días que aún le quedaban. Cero reclamos de clientes.
+              </p>
+            </div>
+            <div className="mt-6 pt-4 border-t border-white/5 flex items-center gap-2 text-xs font-mono text-neutral-400">
+              <CheckCircle2 size={13} className="text-[#22C55E]" />
+              <span>Cálculo matemático de vigencias</span>
+            </div>
+          </div>
+
+          {/* Card 4: WhatsApp */}
+          <div className="p-7 rounded-2xl bg-[#171717] border border-white/10 hover:border-[#DC2626]/40 transition-all flex flex-col justify-between group">
+            <div className="space-y-4">
+              <div className="size-12 rounded-xl bg-[#22C55E]/10 border border-[#22C55E]/20 flex items-center justify-center text-[#22C55E] group-hover:scale-110 transition-transform">
+                <MessageCircle size={22} />
+              </div>
+              <h3 className="text-xl font-bold text-white">Cobranza y Alertas por WhatsApp</h3>
+              <p className="text-xs leading-relaxed text-neutral-400">
+                Envía recordatorios de vencimiento y cobros de saldos pendientes con un clic, con mensajes profesionales listos para enviar al WhatsApp del cliente.
+              </p>
+            </div>
+            <div className="mt-6 pt-4 border-t border-white/5 flex items-center gap-2 text-xs font-mono text-neutral-400">
+              <CheckCircle2 size={13} className="text-[#22C55E]" />
+              <span>Sin costos de mensajes SMS</span>
+            </div>
+          </div>
+
+          {/* Card 5: CxC */}
+          <div className="p-7 rounded-2xl bg-[#171717] border border-white/10 hover:border-[#DC2626]/40 transition-all flex flex-col justify-between group">
+            <div className="space-y-4">
+              <div className="size-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
+                <WalletCards size={22} />
+              </div>
+              <h3 className="text-xl font-bold text-white">Cartera Activa vs Historial</h3>
+              <p className="text-xs leading-relaxed text-neutral-400">
+                Separación estricta de deudas vigentes e historial de cuentas pagadas. Cuando una cuenta queda en $0, sale automáticamente de tu cartera activa.
+              </p>
+            </div>
+            <div className="mt-6 pt-4 border-t border-white/5 flex items-center gap-2 text-xs font-mono text-neutral-400">
+              <CheckCircle2 size={13} className="text-[#22C55E]" />
+              <span>Abonos parciales con recibo</span>
+            </div>
+          </div>
+
+          {/* Card 6: PWA */}
+          <div className="p-7 rounded-2xl bg-[#171717] border border-white/10 hover:border-[#DC2626]/40 transition-all flex flex-col justify-between group">
+            <div className="space-y-4">
+              <div className="size-12 rounded-xl bg-[#DC2626]/10 border border-[#DC2626]/20 flex items-center justify-center text-[#DC2626] group-hover:scale-110 transition-transform">
+                <Smartphone size={22} />
+              </div>
+              <h3 className="text-xl font-bold text-white">PWA Móvil y Escritorio</h3>
+              <p className="text-xs leading-relaxed text-neutral-400">
+                Instálalo directamente en tu celular, tablet o laptop. Sin pasar por App Store ni Google Play. Carga ultra veloz y funcionamiento en red local.
+              </p>
+            </div>
+            <div className="mt-6 pt-4 border-t border-white/5 flex items-center gap-2 text-xs font-mono text-neutral-400">
+              <CheckCircle2 size={13} className="text-[#22C55E]" />
+              <span>Instalación instantánea 1-click</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================
+          05 — COMPARATIVA DE MERCADO
+         ======================================================== */}
+      <section id="comparativa" className="py-20 border-y border-white/10 bg-[#171717]/40">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-14">
+            <p className="font-mono text-xs uppercase tracking-widest text-[#DC2626] font-bold">
+              ANÁLISIS COMPARATIVO
+            </p>
+            <h2 className="mt-3 text-3xl sm:text-4xl font-black uppercase text-white">
+              ¿POR QUÉ LOS GIMNASIOS CAMBIAN A ZONAFIT?
+            </h2>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#020202]">
+            <table className="w-full text-left text-xs sm:text-sm">
+              <thead>
+                <tr className="border-b border-white/10 bg-[#171717]/80 font-mono text-xs uppercase">
+                  <th className="p-4 sm:p-5 text-neutral-400">Aspecto Crítico</th>
+                  <th className="p-4 sm:p-5 text-neutral-400">Excel / Cuaderno / Antiguo</th>
+                  <th className="p-4 sm:p-5 text-[#DC2626] font-bold">Merwil ZonaFit</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 font-sans">
+                <tr>
+                  <td className="p-4 sm:p-5 font-semibold text-white">Control de Caja</td>
+                  <td className="p-4 sm:p-5 text-neutral-400">Descuadres frecuentes, dinero sin registrar</td>
+                  <td className="p-4 sm:p-5 text-[#22C55E] font-medium">Arqueo ciego auditado al centavo</td>
+                </tr>
+                <tr>
+                  <td className="p-4 sm:p-5 font-semibold text-white">Vencimiento de Planes</td>
+                  <td className="p-4 sm:p-5 text-neutral-400">Clientes entrenan gratis por semanas</td>
+                  <td className="p-4 sm:p-5 text-[#22C55E] font-medium">Alerta automática y recordatorio WhatsApp</td>
+                </tr>
+                <tr>
+                  <td className="p-4 sm:p-5 font-semibold text-white">Velocidad en Mostrador</td>
+                  <td className="p-4 sm:p-5 text-neutral-400">3 a 5 minutos por cliente</td>
+                  <td className="p-4 sm:p-5 text-[#22C55E] font-medium">Menos de 15 segundos por ticket POS</td>
+                </tr>
+                <tr>
+                  <td className="p-4 sm:p-5 font-semibold text-white">Cuentas por Cobrar</td>
+                  <td className="p-4 sm:p-5 text-neutral-400">Anotadas en papeles que se extravían</td>
+                  <td className="p-4 sm:p-5 text-[#22C55E] font-medium">Cartera activa vs saldada en tiempo real</td>
+                </tr>
+                <tr>
+                  <td className="p-4 sm:p-5 font-semibold text-white">Movilidad</td>
+                  <td className="p-4 sm:p-5 text-neutral-400">Atado al computador viejo de la recepción</td>
+                  <td className="p-4 sm:p-5 text-[#22C55E] font-medium">PWA en tu bolsillo, tablet o laptop</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================
+          06 — PRICING CARDS
+         ======================================================== */}
+      <section id="pricing" className="py-24 max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="flex flex-col items-center text-center mb-16">
+          <p className="font-mono text-xs uppercase tracking-widest text-[#DC2626] font-bold">
+            PLANES CLAROS Y TRANSPARENTES
+          </p>
+          <h2 className="mt-3 text-3xl sm:text-5xl font-black tracking-tight uppercase text-white">
+            INVIERTE EN CONTROL Y RETENCIÓN.
+          </h2>
+          <p className="mt-4 text-sm sm:text-base text-neutral-400 max-w-2xl">
+            Sin costos ocultos, sin comisiones por socio y sin contratos atados.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+          {defaultPlans.map((plan) => (
+            <div
+              key={plan.id}
+              className={cn(
+                'rounded-3xl p-8 flex flex-col justify-between transition-all relative',
+                plan.popular
+                  ? 'bg-[#171717] border-2 border-[#DC2626] shadow-[0_0_40px_rgba(220,38,38,0.25)] scale-105 z-10'
+                  : 'bg-[#171717]/60 border border-white/10 hover:border-white/20'
+              )}
+            >
+              {plan.popular && (
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[#DC2626] text-white text-[11px] font-mono uppercase tracking-wider font-extrabold shadow-md">
+                  {plan.badge}
+                </div>
+              )}
+
+              <div>
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+                    <p className="text-xs text-neutral-400 mt-1">{plan.desc}</p>
+                  </div>
+                </div>
+
+                <div className="my-6">
+                  <span className="text-4xl font-extrabold font-mono text-white">
+                    {formatCurrency(plan.price)}
+                  </span>
+                  <span className="text-xs text-neutral-400 ml-2 font-mono">COP</span>
+                </div>
+
+                <ul className="space-y-3 pt-4 border-t border-white/10">
+                  {plan.features.map((feat, idx) => (
+                    <li key={idx} className="flex items-start gap-2.5 text-xs text-neutral-300">
+                      <CheckCircle2 size={15} className="text-[#DC2626] shrink-0 mt-0.5" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-white/10">
+                <button
+                  onClick={() => handleSelectPlan(plan.id)}
+                  className={cn(
+                    'w-full py-3.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2',
+                    plan.popular
+                      ? 'bg-[#DC2626] hover:bg-[#EF4444] text-white shadow-lg shadow-[#DC2626]/40 hover:scale-[1.02]'
+                      : 'bg-[#020202] hover:bg-[#1D1D1D] text-white border border-white/15'
+                  )}
+                >
+                  <span>Seleccionar Plan</span>
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ========================================================
+          07 — PWA INSTALL GUIDE SECTION
+         ======================================================== */}
+      <section id="pwa" className="py-20 border-t border-white/10 bg-[#171717]/40">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#171717] border border-white/10 text-neutral-400 font-mono text-xs uppercase mb-4">
+            <Smartphone size={14} className="text-[#DC2626]" />
+            <span>PROGRESSIVE WEB APP</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-black uppercase text-white tracking-tight">
+            INSTÁLALO EN CUALQUIER DISPOSITIVO EN 10 SEGUNDOS
+          </h2>
+          <p className="mt-3 text-sm text-neutral-400 max-w-xl mx-auto">
+            Disfruta de una experiencia idéntica a una aplicación nativa sin consumir memoria pesada y con acceso directo desde tu pantalla principal.
+          </p>
+
+          {/* Platform Switcher */}
+          <div className="mt-8 flex justify-center gap-2 p-1 rounded-full bg-[#020202] border border-white/10 w-fit mx-auto">
+            <button
+              onClick={() => setSelectedPwaPlatform('desktop')}
+              className={cn(
+                'px-4 py-2 rounded-full text-xs font-semibold transition-colors cursor-pointer',
+                selectedPwaPlatform === 'desktop' ? 'bg-[#171717] text-white border border-white/10' : 'text-neutral-400 hover:text-white'
+              )}
+            >
+              PC / Mac (Chrome/Edge)
+            </button>
+            <button
+              onClick={() => setSelectedPwaPlatform('android')}
+              className={cn(
+                'px-4 py-2 rounded-full text-xs font-semibold transition-colors cursor-pointer',
+                selectedPwaPlatform === 'android' ? 'bg-[#171717] text-white border border-white/10' : 'text-neutral-400 hover:text-white'
+              )}
+            >
+              Android
+            </button>
+            <button
+              onClick={() => setSelectedPwaPlatform('ios')}
+              className={cn(
+                'px-4 py-2 rounded-full text-xs font-semibold transition-colors cursor-pointer',
+                selectedPwaPlatform === 'ios' ? 'bg-[#171717] text-white border border-white/10' : 'text-neutral-400 hover:text-white'
+              )}
+            >
+              iPhone / iPad (iOS)
+            </button>
+          </div>
+
+          {/* Guide Content */}
+          <div className="mt-8 p-6 rounded-2xl bg-[#020202] border border-white/10 text-left max-w-xl mx-auto text-xs leading-relaxed text-neutral-300 space-y-3 font-mono">
+            {selectedPwaPlatform === 'desktop' && (
+              <>
+                <p>1. Abre este sitio en Google Chrome o Microsoft Edge.</p>
+                <p>2. Haz clic en el icono de instalación (pantalla con flecha) ubicado en la barra de direcciones.</p>
+                <p>3. Haz clic en "Instalar Merwil ZonaFit" para tener la app en tu escritorio.</p>
+              </>
+            )}
+            {selectedPwaPlatform === 'android' && (
+              <>
+                <p>1. Abre este sitio en Google Chrome desde tu teléfono Android.</p>
+                <p>2. Toca el botón "Instalar Aplicación" abajo o toca los 3 puntos de Chrome.</p>
+                <p>3. Selecciona "Añadir a la pantalla de inicio" o "Instalar aplicación".</p>
+              </>
+            )}
+            {selectedPwaPlatform === 'ios' && (
+              <>
+                <p>1. Abre este enlace en el navegador Safari de tu iPhone o iPad.</p>
+                <p>2. Toca el botón Compartir (el cuadrado con la flecha hacia arriba).</p>
+                <p>3. Desplázate hacia abajo y selecciona "Añadir a la pantalla de inicio".</p>
+              </>
+            )}
+          </div>
+
+          <div className="mt-8">
+            <button
+              onClick={handleInstallClick}
+              className="px-7 py-3 text-xs font-bold uppercase tracking-wider text-white bg-[#171717] hover:bg-[#1D1D1D] border border-white/20 rounded-full transition-all inline-flex items-center gap-2 cursor-pointer shadow-md"
+            >
+              <Download size={14} className="text-[#DC2626]" />
+              <span>{isInstalled ? 'App ya instalada (Abrir)' : 'Instalar Merwil ZonaFit PWA'}</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================
+          08 — FINAL CTA & FOOTER EDITORIAL
+         ======================================================== */}
+      <section className="py-24 border-t border-white/10 relative overflow-hidden bg-gradient-to-b from-[#020202] via-[#171717]/80 to-[#020202]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-7">
+          <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black uppercase text-white tracking-tight leading-none">
+            EMPIEZA HOY MISMO A TRANSFORMAR TU GIMNASIO.
+          </h2>
+          <p className="text-sm sm:text-base text-neutral-300 max-w-xl mx-auto">
+            Configuración en 3 minutos. Sin contratos obligatorios. Prueba la versión completa durante 14 días sin costo.
+          </p>
+          <div>
+            <button
+              onClick={() => handleSelectPlan()}
+              className="px-9 py-4 text-sm font-extrabold uppercase tracking-wider text-white bg-[#DC2626] hover:bg-[#EF4444] rounded-full transition-all shadow-[0_0_40px_rgba(220,38,38,0.5)] hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              Comenzar Prueba Gratuita de 14 Días
+            </button>
+          </div>
+        </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border-light bg-surface-darker pt-16 pb-8 px-4 mt-auto">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-          <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center gap-3 mb-4">
-              <img src="/logo.png" alt="Merwil ZonaFit Logo" className="w-8 object-contain" />
-              <span className="text-lg font-bold text-white tracking-tight">MERWIL ZONAFIT</span>
+      <footer className="border-t border-white/10 py-12 bg-[#020202] text-neutral-400 text-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-white/10">
+            {/* Col 1: Brand */}
+            <div className="md:col-span-1 flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <img src="/logo.png" alt="Merwil ZonaFit" className="w-7 h-7 object-contain" />
+                <span className="font-mono font-bold text-white tracking-wider">MERWIL ZONAFIT</span>
+              </div>
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                Sistema de gestión operativa de alto rendimiento para gimnasios y centros deportivos.
+              </p>
+              <div className="flex items-center gap-2 text-[11px] font-mono text-neutral-400 mt-1">
+                <span className="size-2 rounded-full bg-[#22C55E]" />
+                <span>Sistemas operativos en línea · Colombia</span>
+              </div>
             </div>
-            <p className="text-text-muted text-sm max-w-md">
-              Software integral (SaaS & PWA) para la administración y operación de centros de acondicionamiento físico.
-            </p>
+
+            {/* Col 2: Plataforma */}
+            <div className="flex flex-col gap-2.5">
+              <span className="font-mono text-xs uppercase tracking-wider text-white font-bold">Plataforma</span>
+              <a href="#features" className="hover:text-white transition-colors text-neutral-400">Funcionalidades</a>
+              <a href="#metrics" className="hover:text-white transition-colors text-neutral-400">Rendimiento</a>
+              <a href="#comparativa" className="hover:text-white transition-colors text-neutral-400">Comparativa</a>
+              <a href="#pricing" className="hover:text-white transition-colors text-neutral-400">Planes y Precios</a>
+            </div>
+
+            {/* Col 3: Acceso y Recursos */}
+            <div className="flex flex-col gap-2.5">
+              <span className="font-mono text-xs uppercase tracking-wider text-white font-bold">Acceso</span>
+              <button onClick={() => navigate('/demo')} className="text-left hover:text-white transition-colors text-neutral-400 cursor-pointer">Demo Interactiva</button>
+              <button onClick={() => navigate('/login')} className="text-left hover:text-white transition-colors text-neutral-400 cursor-pointer">Iniciar Sesión</button>
+              <button onClick={() => handleSelectPlan()} className="text-left hover:text-white transition-colors text-neutral-400 cursor-pointer">Crear Cuenta (Trial 14d)</button>
+              <a href="mailto:soporte@merwilzonafit.com" className="hover:text-white transition-colors text-neutral-400">Contacto y Soporte</a>
+            </div>
+
+            {/* Col 4: Legal & Cumplimiento */}
+            <div className="flex flex-col gap-2.5">
+              <span className="font-mono text-xs uppercase tracking-wider text-white font-bold">Legal</span>
+              <button onClick={() => navigate('/terms')} className="text-left hover:text-white transition-colors text-neutral-400 cursor-pointer">
+                Términos y Condiciones
+              </button>
+              <button onClick={() => navigate('/privacy')} className="text-left hover:text-white transition-colors text-neutral-400 cursor-pointer">
+                Política de Privacidad
+              </button>
+              <button onClick={() => navigate('/data-deletion')} className="text-left hover:text-white transition-colors text-neutral-400 cursor-pointer">
+                Tratamiento y Supresión de Datos
+              </button>
+            </div>
           </div>
-          <div>
-            <h4 className="text-white font-semibold mb-4">Plataforma</h4>
-            <ul className="space-y-2 text-sm text-text-muted">
-              <li><button onClick={() => navigate('/login')} className="hover:text-brand-primary transition-colors">Iniciar sesión</button></li>
-              <li><button onClick={() => navigate('/register')} className="hover:text-brand-primary transition-colors">Crear gimnasio</button></li>
-              <li><button onClick={() => handleInstallClick()} className="hover:text-brand-primary transition-colors">Descargar App</button></li>
-            </ul>
+
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left text-neutral-500 font-mono text-[11px]">
+            <div>
+              © {new Date().getFullYear()} Merwil ZonaFit. Todos los derechos reservados.
+            </div>
+            <div>
+              Software como Servicio (SaaS) regulado bajo las leyes de la República de Colombia.
+            </div>
           </div>
-          <div>
-            <h4 className="text-white font-semibold mb-4">Legal</h4>
-            <ul className="space-y-4">
-              <li>
-                <Link to="/terms" className="text-text-muted hover:text-brand-primary transition-colors text-sm flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-transparent group-hover:bg-brand-primary transition-colors"></span>
-                  Términos y condiciones
-                </Link>
-              </li>
-              <li>
-                <Link to="/privacy" className="text-text-muted hover:text-brand-primary transition-colors text-sm flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-transparent group-hover:bg-brand-primary transition-colors"></span>
-                  Política de privacidad
-                </Link>
-              </li>
-              <li>
-                <Link to="/data-deletion" className="text-text-muted hover:text-brand-primary transition-colors text-sm flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-transparent group-hover:bg-brand-primary transition-colors"></span>
-                  Eliminación de datos
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto text-center text-xs text-text-muted pt-8 border-t border-border-light/50">
-          &copy; {new Date().getFullYear()} Merwil ZonaFit. Todos los derechos reservados.
         </div>
       </footer>
     </div>

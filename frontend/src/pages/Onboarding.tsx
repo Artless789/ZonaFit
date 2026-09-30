@@ -6,23 +6,25 @@ import { Button } from '@shared/ui/Button';
 import { Card } from '@shared/ui/Card';
 
 import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, setCachedUser } from '../context/AuthContext';
 import { useToast } from '@shared/ui/Toast';
 import { gymSettingsService } from '../services/gymSettingsService';
 import { subscriptionService } from '../services/subscriptionService';
 import { SUBSCRIPTION_QUERY_KEY } from '../shared/subscription/useLicenseStatus';
 import { ErrorState } from '@shared/ui/ErrorState';
-import { Building, Settings, ChevronRight, ChevronLeft, Globe, DollarSign, Zap, Clock } from 'lucide-react';
+import { Building, Settings, ChevronRight, ChevronLeft, Globe, DollarSign, Zap, Clock, Loader2 } from 'lucide-react';
 import { COUNTRIES, CURRENCIES, TIMEZONES } from '@shared/utils/constants';
+import { cn } from '@shared/utils/cn';
 import type { GymSettingsUpdate } from '@shared/types/gymSettings';
 
 export function Onboarding() {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<GymSettingsUpdate>({});
+  const [isFinishing, setIsFinishing] = useState(false);
 
   // Redirigir si ya completó onboarding
   useEffect(() => {
@@ -138,19 +140,44 @@ export function Onboarding() {
   };
 
   const handleFinish = async (intent: 'TRIAL' | 'PURCHASE') => {
+    if (isFinishing) return;
+    setIsFinishing(true);
     try {
       await startSubMutation.mutateAsync({ intent });
       await completeMutation.mutateAsync();
+
+      // Persistir onboarding_completed en caché local y contexto antes de la redirección
+      if (user) {
+        const updatedUser = { ...user, onboarding_completed: true };
+        setCachedUser(updatedUser);
+      }
+
+      try {
+        await refreshProfile?.();
+      } catch {
+        // Ignorar si el profile falla en background
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['gymSettings'] });
+      await queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_QUERY_KEY });
+
+      toast({
+        type: 'success',
+        title: '¡Gimnasio Configurado!',
+        message: 'Bienvenido a Merwil ZonaFit.',
+      });
+
       if (intent === 'PURCHASE') {
-        window.location.assign('/subscription/checkout');
+        window.location.replace('/subscription/checkout');
       } else {
-        window.location.assign('/app/dashboard');
+        window.location.replace('/app/dashboard');
       }
     } catch (err: any) {
+      setIsFinishing(false);
       toast({
         type: 'error',
-        title: 'Error',
-        message: err.response?.data?.detail || err.userMessage || 'Ocurrió un error al iniciar tu suscripción.'
+        title: 'Error al finalizar',
+        message: err.response?.data?.detail || err.userMessage || 'Ocurrió un error al iniciar tu suscripción. Intenta nuevamente.'
       });
     }
   };
@@ -398,31 +425,45 @@ export function Onboarding() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                     <div 
-                      className="bg-surface-dark border border-border-strong hover:border-brand-primary/50 hover:bg-surface-dark/80 rounded-xl p-6 cursor-pointer transition-all duration-300 flex flex-col items-center text-center group"
-                      onClick={() => handleFinish('TRIAL')}
+                      className={cn(
+                        "bg-surface-dark border border-border-strong hover:border-brand-primary/50 hover:bg-surface-dark/80 rounded-xl p-6 cursor-pointer transition-all duration-300 flex flex-col items-center text-center group",
+                        isFinishing && "opacity-50 pointer-events-none"
+                      )}
+                      onClick={() => !isFinishing && handleFinish('TRIAL')}
                     >
                       <div className="w-12 h-12 rounded-full bg-surface-darker flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <Clock size={24} className="text-brand-primary" />
+                        {isFinishing ? (
+                          <Loader2 size={24} className="text-brand-primary animate-spin" />
+                        ) : (
+                          <Clock size={24} className="text-brand-primary" />
+                        )}
                       </div>
                       <h4 className="text-xl font-bold text-white mb-2">Probar gratis</h4>
                       <p className="text-sm text-text-muted mb-6 flex-grow">Explora la plataforma completa y todos los planes durante 14 días sin compromiso.</p>
-                      <Button variant="outline" className="w-full group-hover:bg-brand-primary/10 group-hover:text-brand-primary group-hover:border-brand-primary/50 transition-colors pointer-events-none">
-                        Iniciar Prueba
+                      <Button variant="outline" disabled={isFinishing} className="w-full group-hover:bg-brand-primary/10 group-hover:text-brand-primary group-hover:border-brand-primary/50 transition-colors pointer-events-none">
+                        {isFinishing ? 'Iniciando...' : 'Iniciar Prueba'}
                       </Button>
                     </div>
 
                     <div 
-                      className="bg-gradient-to-br from-brand-primary/20 to-surface-dark border border-brand-primary/40 hover:border-brand-primary rounded-xl p-6 cursor-pointer transition-all duration-300 flex flex-col items-center text-center group relative overflow-hidden"
-                      onClick={() => handleFinish('PURCHASE')}
+                      className={cn(
+                        "bg-gradient-to-br from-brand-primary/20 to-surface-dark border border-brand-primary/40 hover:border-brand-primary rounded-xl p-6 cursor-pointer transition-all duration-300 flex flex-col items-center text-center group relative overflow-hidden",
+                        isFinishing && "opacity-50 pointer-events-none"
+                      )}
+                      onClick={() => !isFinishing && handleFinish('PURCHASE')}
                     >
                       <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-primary/20 rounded-full blur-2xl"></div>
                       <div className="w-12 h-12 rounded-full bg-brand-primary/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <DollarSign size={24} className="text-brand-primary" />
+                        {isFinishing ? (
+                          <Loader2 size={24} className="text-brand-primary animate-spin" />
+                        ) : (
+                          <DollarSign size={24} className="text-brand-primary" />
+                        )}
                       </div>
                       <h4 className="text-xl font-bold text-white mb-2">Comprar ahora</h4>
                       <p className="text-sm text-text-muted mb-6 flex-grow">Activa tu plan preferido inmediatamente y obtén acceso total permanente.</p>
-                      <ActionGlowButton className="w-full pointer-events-none">
-                        Elegir Plan
+                      <ActionGlowButton disabled={isFinishing} className="w-full pointer-events-none">
+                        {isFinishing ? 'Procesando...' : 'Elegir Plan'}
                       </ActionGlowButton>
                     </div>
                   </div>

@@ -16,11 +16,7 @@ export function SubscriptionGuard() {
   const { data: subscription, isLoading, isError, refetch } = useLicenseStatus();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Siempre permitir acceso a checkout y gestión de suscripción para no atrapar al usuario en bucle de bloqueo
   const isBillingRoute = location.pathname.includes('/subscription/checkout') || location.pathname.includes('/settings/subscription');
-  if (isBillingRoute) {
-    return <Outlet />;
-  }
 
   const emergencyMutation = useMutation({
     mutationFn: subscriptionService.requestEmergencyExtension,
@@ -40,6 +36,11 @@ export function SubscriptionGuard() {
     window.addEventListener('subscription-restricted', handleSubscriptionRestricted);
     return () => window.removeEventListener('subscription-restricted', handleSubscriptionRestricted);
   }, [queryClient]);
+
+  // Siempre permitir acceso a checkout y gestión de suscripción para no atrapar al usuario en bucle de bloqueo
+  if (isBillingRoute) {
+    return <Outlet />;
+  }
 
   if (isLoading) {
     return (

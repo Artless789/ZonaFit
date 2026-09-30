@@ -23,11 +23,11 @@ export function useAccountsReceivables(params?: { page?: number; limit?: number;
       accountsReceivableService.registerPayment(id, data),
     onSuccess: (data, variables) => {
       // Invalidate specific lists and details
-      queryClient.invalidateQueries({ queryKey: ACCOUNTS_RECEIVABLES_KEYS.all });
-      queryClient.invalidateQueries({ queryKey: ['cash-registers'] });
-      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['memberships'] });
+      queryClient.invalidateQueries({ queryKey: ACCOUNTS_RECEIVABLES_KEYS.all, refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['cash-registers'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['cash-movements'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['memberships'], refetchType: 'all' });
       queryClient.setQueryData(ACCOUNTS_RECEIVABLES_KEYS.detail(variables.id), data);
     },
   });

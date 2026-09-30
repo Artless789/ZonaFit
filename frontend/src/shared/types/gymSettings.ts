@@ -20,3 +20,4 @@ export interface GymSettings {
 
 export type GymSettingsCreate = Omit<GymSettings, 'id' | 'gym_id' | 'created_at' | 'updated_at'>;
 export type GymSettingsUpdate = Partial<GymSettingsCreate>;
+export type GymSettingsFormInput = GymSettingsCreate;

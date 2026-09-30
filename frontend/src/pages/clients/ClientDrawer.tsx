@@ -15,11 +15,11 @@ import { useClients } from '../../hooks/useClients';
 import { useMembershipPlans } from '../../hooks/useMembershipPlans';
 import { useGymSettings } from '../../hooks/useGymSettings';
 import { clientService } from '../../services/clientService';
-import { 
-  Sparkles, 
-  DollarSign, 
-  MessageSquare, 
-  Users 
+import {
+  Sparkles,
+  DollarSign,
+  MessageSquare,
+  Users
 } from 'lucide-react';
 import { Button } from '@shared/ui/Button';
 import { PaymentSuccessModal } from '@shared/ui/PaymentSuccessModal';
@@ -30,9 +30,9 @@ import { ClientPhotoUploader } from './ClientPhotoUploader';
 import { formatCurrency } from '@shared/utils/formatters';
 import { format, addDays, parse } from 'date-fns';
 import { es } from 'date-fns/locale/es';
-import { 
-  generateMembershipPaymentReceiptPDF, 
-  type GenerateMembershipReceiptProps 
+import {
+  generateMembershipPaymentReceiptPDF,
+  type GenerateMembershipReceiptProps
 } from '@shared/utils/pdfGenerator';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -90,7 +90,6 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
     setValue,
     control,
     reset,
-    watch,
     formState: { errors, isDirty },
   } = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
@@ -136,6 +135,7 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
   const paymentMethodWatched = useWatch({ control, name: 'payment_method' });
   const paymentMethod = paymentMethodWatched || 'CASH';
   const amountPaidRaw = useWatch({ control, name: 'amount_paid' });
+  const whatsappGroupIdWatched = useWatch({ control, name: 'whatsapp_group_id' });
 
   const selectedPlan = useMemo(() => {
     return activePlans.find(p => p.id === Number(selectedPlanId)) || null;
@@ -250,8 +250,8 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
     try {
       setIsUploading(true);
       if (isEditing) {
-        await updateMutation.mutateAsync({ 
-          id: client.id, 
+        await updateMutation.mutateAsync({
+          id: client.id,
           data: {
             ...data,
             whatsapp_opt_in: !!data.whatsapp_opt_in,
@@ -362,12 +362,12 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
           });
           onClose();
         } else {
-          toast({ 
-            type: 'success', 
-            title: 'Cliente Creado', 
-            message: data.assign_membership 
-              ? 'Cliente y membresía registrados exitosamente.' 
-              : 'El cliente fue registrado exitosamente.' 
+          toast({
+            type: 'success',
+            title: 'Cliente Creado',
+            message: data.assign_membership
+              ? 'Cliente y membresía registrados exitosamente.'
+              : 'El cliente fue registrado exitosamente.'
           });
           onClose();
         }
@@ -398,14 +398,15 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
 
   return (
     <>
-      <Drawer 
-        isOpen={isOpen} 
-        onClose={onClose} 
-        title={isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}
+      <Drawer
+        isOpen={isOpen}
+        onClose={onClose}
+        title={isEditing ? 'Editar Socio' : 'Nuevo Socio'}
+        size="md"
       >
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full">
           <div className="flex flex-col gap-5 flex-1 pb-4">
-            
+
             {/* Photo Upload Section */}
             <ClientPhotoUploader
               currentPhotoUrl={client?.photo_url}
@@ -420,79 +421,101 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
               disabled={isSaving}
             />
 
-            <Input
-              label="Nombre Completo"
-              placeholder="Ej. Juan Pérez"
-              error={!!errors.full_name}
-              helperText={errors.full_name?.message}
-              disabled={isSaving}
-              {...register('full_name')}
-            />
-            
-            <div className="grid grid-cols-3 gap-4">
-              <Select
-                label="Tipo"
-                className="col-span-1"
-                options={[
-                  { value: 'CC', label: 'CC' },
-                  { value: 'CE', label: 'CE' },
-                  { value: 'PAS', label: 'PAS' },
-                  { value: 'NIT', label: 'NIT' },
-                ]}
-                error={!!errors.document_type}
-                disabled={isSaving}
-                {...register('document_type')}
-              />
+            {/* Identidad */}
+            <div className="p-4 rounded-2xl bg-surface-panel/80 border border-border-subtle space-y-4 shadow-subtle">
+              <span className="text-xs font-mono uppercase tracking-wider text-text-muted block">
+                Identidad del Socio
+              </span>
+
               <Input
-                label="Documento"
-                className="col-span-2"
-                placeholder="Ej. 1020304050"
-                error={!!errors.document}
-                helperText={errors.document?.message}
-                disabled={isSaving || isEditing}
-                {...register('document')}
+                label="Nombre Completo"
+                placeholder="Ej. Juan Pérez"
+                error={!!errors.full_name}
+                helperText={errors.full_name?.message}
+                disabled={isSaving}
+                className="rounded-xl border-border-medium bg-surface-base"
+                {...register('full_name')}
+              />
+
+              <div className="grid grid-cols-3 gap-3">
+                <Select
+                  label="Tipo"
+                  className="col-span-1"
+                  options={[
+                    { value: 'CC', label: 'CC' },
+                    { value: 'CE', label: 'CE' },
+                    { value: 'PAS', label: 'PAS' },
+                    { value: 'NIT', label: 'NIT' },
+                  ]}
+                  error={!!errors.document_type}
+                  disabled={isSaving}
+                  {...register('document_type')}
+                />
+                <Input
+                  label="Documento"
+                  className="col-span-2 rounded-xl border-border-medium bg-surface-base"
+                  placeholder="Ej. 1020304050"
+                  error={!!errors.document}
+                  helperText={errors.document?.message}
+                  disabled={isSaving || isEditing}
+                  {...register('document')}
+                />
+              </div>
+
+              <Input
+                label="Teléfono Móvil"
+                placeholder="Ej. 3001234567"
+                error={!!errors.phone}
+                helperText={errors.phone?.message}
+                disabled={isSaving}
+                className="rounded-xl border-border-medium bg-surface-base font-mono"
+                {...register('phone')}
+              />
+
+              <Input
+                label="Correo Electrónico (Opcional)"
+                type="email"
+                placeholder="ejemplo@correo.com"
+                error={!!errors.email}
+                helperText={errors.email?.message}
+                disabled={isSaving}
+                className="rounded-xl border-border-medium bg-surface-base"
+                {...register('email')}
               />
             </div>
 
-            <Input
-              label="Teléfono"
-              placeholder="Ej. 3001234567"
-              error={!!errors.phone}
-              helperText={errors.phone?.message}
-              disabled={isSaving}
-              {...register('phone')}
-            />
-
             {/* SECCIÓN COMUNICACIÓN & GRUPOS DE WHATSAPP */}
-            <div className="p-3.5 rounded-xl border border-border-light bg-bg-surface/60 space-y-3">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-text-muted flex items-center gap-1.5">
+            <div className="p-4 rounded-2xl border border-border-subtle bg-surface-panel/80 space-y-3.5 shadow-subtle">
+              <div className="text-xs font-mono uppercase tracking-wider text-text-muted flex items-center gap-1.5">
                 <MessageSquare size={13} className="text-emerald-400" />
-                <span>COMUNICACIÓN</span>
+                <span>COMUNICACIÓN DIRECTA & WHATSAPP</span>
               </div>
 
-              <label className="flex items-center gap-2.5 cursor-pointer text-sm text-text-primary select-none">
+              <label className="flex items-center gap-3 cursor-pointer text-sm text-text-primary select-none p-2.5 rounded-xl bg-surface-base border border-border-subtle hover:bg-surface-raised transition-colors">
                 <input
                   type="checkbox"
                   {...register('whatsapp_opt_in')}
                   disabled={isSaving}
-                  className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-bg-surface border-border-medium"
+                  className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-surface-base border-border-medium cursor-pointer"
                 />
-                <span className="text-xs sm:text-sm font-medium">Desea recibir comunicaciones por WhatsApp</span>
+                <span className="text-xs font-medium text-text-primary">
+                  Desea recibir comunicaciones oficiales por WhatsApp
+                </span>
               </label>
 
-              <div className="space-y-1.5 pt-1 border-t border-border-light/60">
+              <div className="space-y-1.5 pt-1">
                 <label className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
                   <Users size={12} className="text-brand-primary" />
-                  <span>GRUPO DE WHATSAPP (OPCIONAL)</span>
+                  <span>GRUPO DE WHATSAPP ASOCIADO (OPCIONAL)</span>
                 </label>
                 <select
-                  value={watch('whatsapp_group_id') || ''}
+                  value={whatsappGroupIdWatched || ''}
                   onChange={(e) => {
                     const val = e.target.value ? Number(e.target.value) : null;
                     setValue('whatsapp_group_id', val, { shouldValidate: true });
                   }}
                   disabled={isSaving}
-                  className="w-full rounded-xl border border-border-medium bg-bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/50 transition-colors"
+                  className="w-full rounded-xl border border-border-medium bg-surface-base px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/50 transition-colors"
                 >
                   <option value="">No agregar a ningún grupo</option>
                   {Array.isArray(availableGroups) && availableGroups.map((g) => (
@@ -507,22 +530,14 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
               </div>
             </div>
 
-            <Input
-              label="Correo Electrónico (Opcional)"
-              type="email"
-              placeholder="ejemplo@correo.com"
-              error={!!errors.email}
-              helperText={errors.email?.message}
-              disabled={isSaving}
-              {...register('email')}
-            />
-
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-text-muted mb-1">Notas (Opcional)</label>
+            <div className="flex flex-col gap-1 p-4 rounded-2xl border border-border-subtle bg-surface-panel/80 shadow-subtle">
+              <label className="text-xs font-mono uppercase tracking-wider text-text-muted mb-1">
+                Notas & Observaciones (Opcional)
+              </label>
               <textarea
                 rows={3}
-                placeholder="Condiciones médicas, observaciones especiales..."
-                className={`w-full rounded-md border ${errors.notes ? 'border-danger' : 'border-border-medium'} bg-bg-surface px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary transition-fast disabled:opacity-50`}
+                placeholder="Condiciones médicas, observaciones de entrenamiento, notas del socio..."
+                className={`w-full rounded-xl border ${errors.notes ? 'border-red-500' : 'border-border-medium'} bg-surface-base px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-primary transition-all disabled:opacity-50`}
                 disabled={isSaving}
                 {...register('notes')}
               />
@@ -530,22 +545,22 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
 
             {/* SECCIÓN OPCIONAL: ASIGNAR MEMBRESÍA INICIAL AL CREAR */}
             {!isEditing && (
-              <div className="pt-2">
-                <div className="rounded-xl border border-border-medium bg-bg-surface/40 overflow-hidden">
-                  <div 
+              <div className="pt-1">
+                <div className="rounded-2xl border border-border-subtle bg-surface-panel/80 overflow-hidden shadow-subtle">
+                  <div
                     onClick={() => setValue('assign_membership', !assignMembership, { shouldValidate: true })}
-                    className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-bg-elevated/40 transition-colors"
+                    className="p-4 flex items-center justify-between cursor-pointer hover:bg-surface-raised transition-colors"
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
                         checked={!!assignMembership}
                         onChange={(e) => setValue('assign_membership', e.target.checked, { shouldValidate: true })}
-                        className="w-4 h-4 rounded text-brand-primary focus:ring-brand-primary bg-bg-surface border-border-medium"
+                        className="w-4 h-4 rounded text-brand-primary focus:ring-brand-primary bg-surface-base border-border-medium cursor-pointer"
                         onClick={(e) => e.stopPropagation()}
                       />
                       <div>
-                        <span className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
+                        <span className="text-sm font-bold text-text-primary flex items-center gap-1.5 tracking-tight">
                           <Sparkles size={15} className="text-brand-primary" />
                           Asignar Membresía Inicial (Opcional)
                         </span>
@@ -557,11 +572,11 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
                   </div>
 
                   {assignMembership && (
-                    <div className="p-4 pt-2 border-t border-border-light space-y-4">
+                    <div className="p-4 pt-2 border-t border-border-subtle space-y-4 bg-surface-base/50">
                       {/* Selector de Plan */}
                       <div>
-                        <label className="block text-sm font-medium text-text-secondary mb-1">
-                          Plan de Membresía <span className="text-danger">*</span>
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
+                          Plan de Membresía <span className="text-red-400">*</span>
                         </label>
                         <Select
                           options={planOptions}
@@ -582,23 +597,23 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
                       {/* Fechas */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-sm font-medium text-text-secondary mb-1">
+                          <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
                             Fecha de Inicio
                           </label>
                           <input
                             type="date"
-                            className="flex h-10 w-full rounded-xl border border-border-medium bg-bg-surface/60 px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/50"
+                            className="flex h-10 w-full rounded-xl border border-border-medium bg-surface-base px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-primary font-mono"
                             disabled={isSaving}
                             {...register('start_date')}
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-text-secondary mb-1">
+                          <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
                             Vencimiento Calculado
                           </label>
-                          <div className="flex h-10 w-full items-center rounded-xl border border-border-light bg-bg-elevated/50 px-3 text-sm font-medium text-text-primary">
+                          <div className="flex h-10 w-full items-center rounded-xl border border-border-subtle bg-surface-raised px-3 text-sm font-medium font-mono text-text-primary">
                             {calculatedEndDate ? (
-                              <span className="text-brand-primary">{calculatedEndDate.short} ({selectedPlan?.duration_days} días)</span>
+                              <span className="text-brand-primary font-semibold">{calculatedEndDate.short} ({selectedPlan?.duration_days} días)</span>
                             ) : (
                               <span className="text-text-muted">Elige un plan</span>
                             )}
@@ -608,18 +623,21 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
 
                       {/* Entrenador */}
                       <Input
-                        label="Entrenador a Cargo (Opcional)"
-                        placeholder="Ej. Carlos G."
+                        label="Entrenador Responsable (Opcional)"
+                        placeholder="Ej. Carlos Gómez"
                         disabled={isSaving}
+                        className="rounded-xl border-border-medium bg-surface-base"
                         {...register('trainer_name')}
                       />
 
                       {/* Descuento Especial */}
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center justify-between">
-                          <label className="text-sm font-medium text-text-secondary">Descuento Especial ($ COP)</label>
+                          <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                            Descuento Especial ($ COP)
+                          </label>
                           {discount > 0 && selectedPlan && (
-                            <span className="text-xs text-brand-primary font-medium">
+                            <span className="text-xs text-brand-primary font-mono font-medium">
                               Neto: {formatCurrency(planTotal)}
                             </span>
                           )}
@@ -641,21 +659,23 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
                       </div>
 
                       {/* Cobro Inicial */}
-                      <div className="pt-2 border-t border-border-light space-y-3">
+                      <div className="pt-2 border-t border-border-subtle space-y-3">
                         <div className="flex items-center justify-between">
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <label className="flex items-center gap-2.5 cursor-pointer select-none">
                             <input
                               type="checkbox"
-                              className="w-4 h-4 rounded text-brand-primary focus:ring-brand-primary bg-bg-surface border-border-medium"
+                              className="w-4 h-4 rounded text-brand-primary focus:ring-brand-primary bg-surface-base border-border-medium cursor-pointer"
                               {...register('register_payment')}
                             />
-                            <span className="text-sm font-semibold text-text-primary">Registrar Pago Inmediato</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-text-primary">
+                              Registrar Pago Inmediato
+                            </span>
                           </label>
                           {registerPayment && selectedPlan && (
                             <button
                               type="button"
                               onClick={() => setValue('amount_paid', planTotal, { shouldValidate: true })}
-                              className="text-xs text-brand-primary hover:underline font-medium"
+                              className="text-xs text-brand-primary hover:underline font-mono font-semibold"
                             >
                               Pagar Total ({formatCurrency(planTotal)})
                             </button>
@@ -673,7 +693,7 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
                                 onChange={(e) => setValue('payment_method', e.target.value, { shouldValidate: true })}
                               />
                               <div>
-                                <label className="block text-sm font-medium text-text-secondary mb-1">
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
                                   Monto Recibido
                                 </label>
                                 <NumericInput
@@ -693,6 +713,7 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
                               label="Referencia / Comprobante (Opcional)"
                               placeholder="Ej. Transf #1234..."
                               disabled={isSaving}
+                              className="rounded-xl border-border-medium bg-surface-base font-mono"
                               {...register('reference')}
                             />
                           </div>
@@ -700,9 +721,9 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
 
                         {/* Resumen Financiero */}
                         {selectedPlan && (
-                          <div className="p-3 bg-bg-elevated/60 rounded-lg border border-border-light space-y-1.5 text-xs">
+                          <div className="p-3.5 bg-surface-base rounded-xl border border-border-subtle space-y-1.5 text-xs font-mono">
                             <div className="flex justify-between">
-                              <span className="text-text-secondary">Precio Base Plan:</span>
+                              <span className="text-text-muted">Precio Base Plan:</span>
                               <span className="font-semibold text-text-primary">{formatCurrency(basePrice)}</span>
                             </div>
                             {discount > 0 && (
@@ -712,16 +733,16 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
                               </div>
                             )}
                             <div className="flex justify-between">
-                              <span className="text-text-secondary">Total a Pagar:</span>
-                              <span className="font-semibold text-text-primary">{formatCurrency(planTotal)}</span>
+                              <span className="text-text-muted">Total a Pagar:</span>
+                              <span className="font-bold text-text-primary">{formatCurrency(planTotal)}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-text-secondary">Total Pagado:</span>
-                              <span className="font-semibold text-success">{formatCurrency(paidAmount)}</span>
+                              <span className="text-text-muted">Total Pagado:</span>
+                              <span className="font-bold text-emerald-400">{formatCurrency(paidAmount)}</span>
                             </div>
-                            <div className="flex justify-between pt-1 border-t border-border-light text-sm">
+                            <div className="flex justify-between pt-1.5 border-t border-border-subtle text-sm">
                               <span className="font-medium text-text-primary">Saldo Pendiente:</span>
-                              <span className={`font-bold ${pendingBalance > 0 ? 'text-danger' : 'text-success'}`}>
+                              <span className={`font-bold ${pendingBalance > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
                                 {formatCurrency(pendingBalance)}
                               </span>
                             </div>
@@ -735,17 +756,22 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
             )}
           </div>
 
-          <div className="pt-4 mt-auto border-t border-border-light flex justify-end gap-3">
+          <div className="pt-4 mt-auto border-t border-border-subtle flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50 cursor-pointer"
               disabled={isSaving}
             >
               Cancelar
             </button>
-            <ActionGlowButton type="submit" isLoading={isSaving} disabled={!isDirty && !photoFile && isEditing}>
-              {isEditing ? 'Guardar Cambios' : 'Registrar Cliente'}
+            <ActionGlowButton
+              type="submit"
+              isLoading={isSaving}
+              disabled={!isDirty && !photoFile && isEditing}
+              className="rounded-xl text-xs font-semibold"
+            >
+              {isEditing ? 'Guardar Cambios' : 'Registrar Socio'}
             </ActionGlowButton>
           </div>
         </form>

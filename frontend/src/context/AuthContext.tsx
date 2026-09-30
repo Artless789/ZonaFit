@@ -11,15 +11,16 @@ interface AuthContextType {
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<User>;
   logout: () => void;
+  refreshProfile?: () => Promise<void>;
 }
 
 const USER_CACHE_KEY = 'zf_user_cache';
 const USER_CACHE_TS_KEY = 'zf_user_cache_ts';
 
-const getCachedUser = (): User | null => {
-  if (typeof window !== 'undefined' && window.sessionStorage) {
+export const getCachedUser = (): User | null => {
+  if (typeof window !== 'undefined') {
     try {
-      const data = window.sessionStorage.getItem(USER_CACHE_KEY);
+      const data = window.sessionStorage?.getItem(USER_CACHE_KEY) || window.localStorage?.getItem(USER_CACHE_KEY);
       return data ? JSON.parse(data) : null;
     } catch {
       return null;
@@ -28,10 +29,10 @@ const getCachedUser = (): User | null => {
   return null;
 };
 
-const getCachedUserTimestamp = (): number => {
-  if (typeof window !== 'undefined' && window.sessionStorage) {
+export const getCachedUserTimestamp = (): number => {
+  if (typeof window !== 'undefined') {
     try {
-      const ts = window.sessionStorage.getItem(USER_CACHE_TS_KEY);
+      const ts = window.sessionStorage?.getItem(USER_CACHE_TS_KEY) || window.localStorage?.getItem(USER_CACHE_TS_KEY);
       return ts ? Number(ts) : 0;
     } catch {
       return 0;
@@ -40,15 +41,21 @@ const getCachedUserTimestamp = (): number => {
   return 0;
 };
 
-const setCachedUser = (u: User | null): void => {
-  if (typeof window !== 'undefined' && window.sessionStorage) {
+export const setCachedUser = (u: User | null): void => {
+  if (typeof window !== 'undefined') {
     try {
       if (u) {
-        window.sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify(u));
-        window.sessionStorage.setItem(USER_CACHE_TS_KEY, String(Date.now()));
+        const str = JSON.stringify(u);
+        const ts = String(Date.now());
+        window.sessionStorage?.setItem(USER_CACHE_KEY, str);
+        window.sessionStorage?.setItem(USER_CACHE_TS_KEY, ts);
+        window.localStorage?.setItem(USER_CACHE_KEY, str);
+        window.localStorage?.setItem(USER_CACHE_TS_KEY, ts);
       } else {
-        window.sessionStorage.removeItem(USER_CACHE_KEY);
-        window.sessionStorage.removeItem(USER_CACHE_TS_KEY);
+        window.sessionStorage?.removeItem(USER_CACHE_KEY);
+        window.sessionStorage?.removeItem(USER_CACHE_TS_KEY);
+        window.localStorage?.removeItem(USER_CACHE_KEY);
+        window.localStorage?.removeItem(USER_CACHE_TS_KEY);
       }
     } catch {
       // Ignorar fallos de almacenamiento
@@ -181,8 +188,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
   };
 
+  const refreshProfile = async () => {
+    try {
+      const profile = await authService.getProfile();
+      setUser(profile);
+      setCachedUser(profile);
+    } catch (e) {
+      console.warn("Failed to refresh user profile:", e);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
