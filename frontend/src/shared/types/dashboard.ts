@@ -30,6 +30,8 @@ export interface DashboardReceivable {
 export interface DashboardData {
   sales_today: number;
   sales_today_amount: number;
+  collected_today_amount?: number;
+  credit_today_amount?: number;
   income_this_month: number;
   active_clients: number;
   expiring_memberships_count: number;

@@ -158,24 +158,30 @@ export function DashboardPage() {
 
   const activeRevenueHover = hoveredDay !== null ? revenueData[hoveredDay] : null;
 
-  // Real Cash register calculations
-  const openingBalance = activeRegister.data?.opening_balance ?? 0;
-  const cashCollected = activeSummary.data?.cash_incomes ?? 0;
+  // Real Cash register calculations (strictly current shift scope)
+  const openingBalance = Number(activeRegister.data?.opening_balance ?? 0);
+  const cashCollected = Number(activeSummary.data?.cash_incomes ?? 0);
   const inDrawer = isCajaOpen
-    ? (activeSummary.data?.expected_cash ?? (openingBalance + cashCollected))
+    ? Number(activeSummary.data?.expected_cash ?? (openingBalance + cashCollected))
     : 0;
 
-  const transferAmount =
-    activeSummary.data?.payment_methods?.find((pm) => pm.method === 'TRANSFER')?.registered_amount ?? 0;
-  const cardAmount =
-    activeSummary.data?.payment_methods?.find((pm) => pm.method === 'CARD')?.registered_amount ?? 0;
-  const receivablesAmount = data?.total_receivables ?? 0;
+  const transferAmount = Number(
+    activeSummary.data?.payment_methods?.find((pm) => pm.method === 'TRANSFER')?.registered_amount ?? 0
+  );
+  const cardAmount = Number(
+    activeSummary.data?.payment_methods?.find((pm) => pm.method === 'CARD')?.registered_amount ?? 0
+  );
+  const shiftCollectedTotal = cashCollected + transferAmount + cardAmount;
+  const preShiftPaymentsToday = Number(activeSummary.data?.pre_shift_payments_today ?? 0);
+  const receivablesAmount = Number(data?.total_receivables ?? 0);
+  const collectedTodayAmount = Number(data?.collected_today_amount ?? 0);
+  const creditTodayAmount = Number(data?.credit_today_amount ?? 0);
 
   const cashRows = [
     { label: 'Base de apertura', value: openingBalance },
-    { label: 'Efectivo', value: cashCollected },
-    { label: 'Transferencia', value: transferAmount },
-    { label: 'Tarjeta', value: cardAmount },
+    { label: 'Efectivo (este turno)', value: cashCollected },
+    { label: 'Transferencia (este turno)', value: transferAmount },
+    { label: 'Tarjeta (este turno)', value: cardAmount },
   ];
 
   // Expiring memberships filter (Queue)
@@ -207,44 +213,57 @@ export function DashboardPage() {
     });
   }, [data?.recent_activity]);
 
-  // Brutalist KPI Items (Reference 1:1)
+  // Brutalist KPI Items (Reference 1:1 with explicit financial semantics: Facturación vs Recaudo vs Cartera)
   const kpiItems = [
     {
       id: 'income',
       label: 'Ingresos del mes',
+      subtitle: 'Recaudo efectivo del mes',
       value: formatCurrency(data?.income_this_month),
       delta: 12.4,
-      hint: 'mes en curso',
+      hint: 'pagos recibidos este mes',
+      tooltip: 'Dinero efectivamente recaudado durante el mes en curso (efectivo, transferencia y tarjeta)',
       trend: [42, 48, 45, 52, 58, 55, 62, 60, 68, 72, 70, 78],
       onClick: () => setIsIncomeDetailsOpen(true),
     },
     {
       id: 'sales',
       label: 'Ventas de hoy',
+      subtitle: 'Facturación generada hoy',
       value: formatCurrency(data?.sales_today_amount),
       delta: data?.sales_today ? 5.2 : -2.1,
-      hint: `${data?.sales_today || 0} tickets hoy`,
+      hint:
+        creditTodayAmount > 0
+          ? `${data?.sales_today || 0} tickets · Recaudo hoy: ${formatCurrency(collectedTodayAmount)} · Crédito hoy: ${formatCurrency(creditTodayAmount)}`
+          : `${data?.sales_today || 0} tickets facturados hoy`,
+      tooltip: 'Facturación total generada hoy (POS + membresías nuevas/renovadas, tanto de contado como a crédito)',
       trend: [30, 45, 38, 52, 40, 48, 35, 42, 38, 30, 34, 46],
       onClick: () => navigate(getRoute('/sales')),
     },
     {
       id: 'active',
       label: 'Clientes activos',
+      subtitle: 'Socios registrados activos',
       value: String(data?.active_clients ?? 0),
       delta: 4.1,
       hint: 'vigentes',
+      tooltip: 'Total de clientes activos en el gimnasio',
       trend: [300, 305, 308, 312, 310, 318, 320, 322, 326, 328, 331, 334],
       onClick: () => navigate(getRoute('/clients')),
     },
     {
       id: 'receivables',
       label: 'Cartera por cobrar',
+      subtitle: 'Cartera pendiente total',
       value: formatCurrency(data?.total_receivables),
       delta: (data?.overdue_receivables || 0) > 0 ? -3.5 : 0,
       hint:
         (data?.overdue_receivables || 0) > 0
-          ? `${formatCurrency(data?.overdue_receivables)} en mora`
-          : 'Al día · Sin mora',
+          ? `${formatCurrency(data?.overdue_receivables)} en mora · Histórico total`
+          : creditTodayAmount > 0
+          ? `Histórico total · Crédito hoy: ${formatCurrency(creditTodayAmount)}`
+          : 'Cartera histórica total · Sin mora',
+      tooltip: 'Saldo pendiente acumulado de todas las cuentas por cobrar activas (histórico + hoy)',
       trend: [80, 75, 78, 65, 60, 58, 52, 48, 45, 42, 40, 38],
       onClick: () => navigate(getRoute('/credits')),
     },
@@ -348,17 +367,21 @@ export function DashboardPage() {
               <div
                 key={kpi.id}
                 onClick={kpi.onClick}
+                title={kpi.tooltip}
                 className={cn(
-                  'flex flex-col gap-4 py-6 pr-4 md:pr-8 cursor-pointer transition-colors hover:bg-white/[0.02]',
+                  'flex flex-col gap-3 py-6 pr-4 md:pr-8 cursor-pointer transition-colors hover:bg-white/[0.02]',
                   i % 2 === 1 && 'border-l border-white/10 pl-4 md:pl-8',
                   i >= 2 && 'border-t border-white/10 lg:border-t-0',
                   i === 2 && 'lg:border-l lg:pl-8',
                 )}
               >
-                <dt className="eyebrow flex items-center justify-between gap-2">
-                  <span>
-                    <span className="text-text-secondary">0{i + 1}</span> — {kpi.label}
+                <dt className="flex flex-col gap-0.5">
+                  <span className="eyebrow flex items-center justify-between gap-2">
+                    <span>
+                      <span className="text-text-secondary">0{i + 1}</span> — {kpi.label}
+                    </span>
                   </span>
+                  <span className="font-mono text-[10px] text-text-muted">{kpi.subtitle}</span>
                 </dt>
                 <dd className="flex flex-col gap-4">
                   <span className="text-3xl font-light tabular-nums tracking-[-0.03em] md:text-[44px] md:leading-none">
@@ -367,7 +390,7 @@ export function DashboardPage() {
                   <span className={cn(positive ? 'text-white/40' : 'text-brand-primary/70')}>
                     <Sparkline data={kpi.trend} />
                   </span>
-                  <span className="flex items-center gap-2 font-mono text-[11px] text-text-muted">
+                  <span className="flex flex-wrap items-center gap-2 font-mono text-[11px] text-text-muted">
                     <span
                       className={cn(
                         'inline-flex items-center gap-0.5',
@@ -377,7 +400,7 @@ export function DashboardPage() {
                       {positive ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
                       {Math.abs(kpi.delta).toFixed(1)}%
                     </span>
-                    {kpi.hint}
+                    <span>{kpi.hint}</span>
                   </span>
                 </dd>
               </div>
@@ -484,11 +507,11 @@ export function DashboardPage() {
           </GlassPanel>
         </div>
 
-        {/* Right 1 Col: Turno Actual de Caja (Reference 1:1) */}
+        {/* Right 1 Col: Turno Actual de Caja (Reference 1:1 with explicit scope separation) */}
         <GlassPanel
           id="cash"
           index="02"
-          eyebrow="Caja"
+          eyebrow="Caja · Recaudo recibido en este turno"
           title="Turno actual"
           className="h-full"
           action={
@@ -511,20 +534,44 @@ export function DashboardPage() {
             </span>
             <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">
               {isCajaOpen
-                ? `En gaveta · desde ${openedAtTime} · ${firstName}`
+                ? `Efectivo en gaveta · desde ${openedAtTime} · ${firstName}`
                 : 'Sin turno activo'}
             </span>
           </div>
 
           <dl className="flex flex-col border-t border-white/10">
             {cashRows.map((row) => (
-              <div key={row.label} className="flex items-center justify-between border-b border-white/10 py-3 text-sm">
+              <div key={row.label} className="flex items-center justify-between border-b border-white/10 py-2.5 text-sm">
                 <dt className="text-text-secondary">{row.label}</dt>
                 <dd className="font-mono tabular-nums">{formatCurrency(row.value)}</dd>
               </div>
             ))}
-            <div className="flex items-center justify-between py-3 text-sm">
-              <dt className="text-text-secondary">Por cobrar</dt>
+            <div
+              className="flex items-center justify-between border-b border-white/10 py-2.5 text-sm font-medium"
+              title="Suma de Efectivo + Transferencia + Tarjeta recaudados exclusivamente desde la apertura de este turno"
+            >
+              <dt className="text-text-primary">Recaudo total en este turno</dt>
+              <dd className="font-mono tabular-nums text-emerald-400">{formatCurrency(shiftCollectedTotal)}</dd>
+            </div>
+            {preShiftPaymentsToday > 0 && (
+              <div
+                className="flex items-center justify-between border-b border-white/10 py-2 text-xs"
+                title="Pagos del día de hoy registrados antes de abrir este turno de caja"
+              >
+                <dt className="text-text-muted">Recaudo hoy previo al turno</dt>
+                <dd className="font-mono tabular-nums text-text-secondary">{formatCurrency(preShiftPaymentsToday)}</dd>
+              </div>
+            )}
+            <div
+              className="flex items-center justify-between pt-3 pb-1 text-sm"
+              title="Cartera histórica total pendiente de cobro acumulada (no pertenece al recaudo del turno)"
+            >
+              <dt className="flex flex-col">
+                <span className="text-text-secondary">Por cobrar (Cartera total)</span>
+                <span className="font-mono text-[10px] text-text-muted">
+                  Histórico acumulado{creditTodayAmount > 0 ? ` · Hoy: ${formatCurrency(creditTodayAmount)}` : ''}
+                </span>
+              </dt>
               <dd className="font-mono tabular-nums text-brand-primary">{formatCurrency(receivablesAmount)}</dd>
             </div>
           </dl>

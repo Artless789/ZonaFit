@@ -34,6 +34,7 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
   const location = useLocation();
   const { query } = useGymSettings();
 
+  const isDemo = location.pathname.startsWith('/demo');
   const currentPath = location.pathname.replace(/\/demo/, '') || '/dashboard';
   const title = pageTitles[currentPath] ?? 'Dashboard';
   const isSuperadmin = user?.role?.toUpperCase() === 'SUPERADMIN';
@@ -50,22 +51,22 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
 
   return (
     <header
-      className="liquid-glass sticky top-4 z-30 flex h-16 items-center gap-3 rounded-full pl-3 pr-2 md:pl-6"
+      className={`liquid-glass sticky ${isDemo ? 'top-12' : 'top-3 sm:top-4'} z-30 flex h-14 sm:h-16 items-center gap-2 sm:gap-3 rounded-full pl-2.5 pr-2 md:pl-6`}
       style={{ backgroundColor: theme === 'light' ? 'rgba(255, 255, 255, 0.82)' : 'rgba(8, 8, 10, 0.62)' }}
     >
       <button
         type="button"
         onClick={onOpenMobileMenu}
-        className="rounded-full p-2 text-text-secondary hover:bg-white/10 hover:text-text-primary md:hidden cursor-pointer"
+        className="flex size-10 shrink-0 items-center justify-center rounded-full text-text-secondary hover:bg-white/10 hover:text-text-primary md:hidden cursor-pointer touch-manipulation"
         aria-label="Abrir menú"
       >
         <Menu className="size-5" />
       </button>
 
-      <nav aria-label="Ruta" className="hidden items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] sm:flex">
-        <span className="text-text-muted">{brandPrefix}</span>
-        <span className="text-text-muted">/</span>
-        <span className="text-text-primary">{title}</span>
+      <nav aria-label="Ruta" className="flex min-w-0 items-center gap-1.5 sm:gap-2 font-mono text-[11px] uppercase tracking-[0.14em] sm:tracking-[0.16em]">
+        <span className="hidden text-text-muted sm:inline">{brandPrefix}</span>
+        <span className="hidden text-text-muted sm:inline">/</span>
+        <span className="truncate text-text-primary">{title}</span>
       </nav>
 
       <div className="flex-1" />
@@ -74,7 +75,7 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
       <button
         type="button"
         onClick={toggleTheme}
-        className="rounded-full p-2.5 text-text-secondary transition-colors hover:bg-white/10 hover:text-text-primary cursor-pointer"
+        className="flex size-10 shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-white/10 hover:text-text-primary cursor-pointer touch-manipulation"
         aria-label="Alternar tema"
         title="Alternar tema visual"
       >
@@ -82,8 +83,8 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
       </button>
 
       {/* User profile pill */}
-      <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 py-1 pl-1 pr-1 sm:pr-4">
-        <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-white/25 to-white/5 text-xs font-semibold">
+      <div className="flex shrink-0 items-center gap-3 rounded-full border border-white/10 bg-white/5 py-1 pl-1 pr-1 sm:pr-4">
+        <span className="flex size-8 sm:size-9 items-center justify-center rounded-full bg-gradient-to-br from-white/25 to-white/5 text-xs font-semibold">
           {initials}
         </span>
         <span className="hidden flex-col gap-0.5 sm:flex">
@@ -96,7 +97,7 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
       <button
         type="button"
         onClick={logout}
-        className="hidden rounded-full p-2.5 text-text-secondary transition-colors hover:bg-white/10 hover:text-text-primary sm:block cursor-pointer"
+        className="hidden rounded-full p-2.5 text-text-secondary transition-colors hover:bg-white/10 hover:text-text-primary sm:block cursor-pointer touch-manipulation"
         aria-label="Cerrar sesión"
         title="Cerrar sesión"
       >

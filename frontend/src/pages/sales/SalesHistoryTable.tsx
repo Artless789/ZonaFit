@@ -29,6 +29,7 @@ interface SalesHistoryTableProps {
 export function SalesHistoryTable({ sales, clients, isLoading }: SalesHistoryTableProps) {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
+  const [originFilter, setOriginFilter] = useState<'ALL' | 'POS' | 'MEMBERSHIP'>('ALL');
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const { query: gymSettingsQuery } = useGymSettings();
   const gymSettings = gymSettingsQuery.data;
@@ -40,17 +41,29 @@ export function SalesHistoryTable({ sales, clients, isLoading }: SalesHistoryTab
     return map;
   }, [clients]);
 
+  const isMembershipRecord = (sale: Sale) =>
+    Boolean(
+      sale.is_membership_shadow ||
+      sale.origin_type === 'MEMBERSHIP_CREDIT' ||
+      (sale.notes && sale.notes.startsWith('Membresía #'))
+    );
+
   // Filtered sales
   const filteredSales = useMemo(() => {
     return sales.filter((sale) => {
+      const isMem = isMembershipRecord(sale);
+      if (originFilter === 'POS' && isMem) return false;
+      if (originFilter === 'MEMBERSHIP' && !isMem) return false;
+
       const client = sale.client_id ? clientMap.get(sale.client_id) : null;
       const clientName = client?.full_name?.toLowerCase() || 'consumidor final mostrador';
       const saleId = String(sale.id);
+      const notes = (sale.notes || '').toLowerCase();
       const search = searchTerm.toLowerCase();
 
-      return clientName.includes(search) || saleId.includes(search);
+      return clientName.includes(search) || saleId.includes(search) || notes.includes(search);
     });
-  }, [sales, clientMap, searchTerm]);
+  }, [sales, clientMap, searchTerm, originFilter]);
 
   const handleDownloadInvoice = async (sale: Sale) => {
     try {
@@ -112,21 +125,63 @@ export function SalesHistoryTable({ sales, clients, isLoading }: SalesHistoryTab
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Search Bar */}
+      {/* Search Bar & Origin Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
-          <input
-            type="text"
-            placeholder="Buscar por ID de venta o cliente..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-10 pl-9 pr-4 rounded-xl border border-border-light bg-surface-panel/70 text-xs font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary"
-          />
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+            <input
+              type="text"
+              placeholder="Buscar por ID, cliente o nota..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-10 pl-9 pr-4 rounded-xl border border-border-light bg-surface-panel/70 text-xs font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary"
+            />
+          </div>
+
+          <div
+            role="tablist"
+            aria-label="Filtrar por origen de registro"
+            className="inline-flex rounded-xl border border-border-light bg-surface-panel/70 p-1 text-[11px] font-mono"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={originFilter === 'ALL'}
+              onClick={() => setOriginFilter('ALL')}
+              className={`rounded-lg px-2.5 py-1 transition-colors cursor-pointer ${
+                originFilter === 'ALL' ? 'bg-white/15 text-text-primary font-semibold' : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              Todos
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={originFilter === 'POS'}
+              onClick={() => setOriginFilter('POS')}
+              className={`rounded-lg px-2.5 py-1 transition-colors cursor-pointer ${
+                originFilter === 'POS' ? 'bg-white/15 text-text-primary font-semibold' : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              Ventas POS
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={originFilter === 'MEMBERSHIP'}
+              onClick={() => setOriginFilter('MEMBERSHIP')}
+              className={`rounded-lg px-2.5 py-1 transition-colors cursor-pointer ${
+                originFilter === 'MEMBERSHIP' ? 'bg-white/15 text-text-primary font-semibold' : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              Crédito Membresía
+            </button>
+          </div>
         </div>
 
         <span className="font-mono text-xs text-text-muted">
-          Mostrando {filteredSales.length} de {sales.length} ventas registradas
+          Mostrando {filteredSales.length} de {sales.length} registros
         </span>
       </div>
 
@@ -143,6 +198,7 @@ export function SalesHistoryTable({ sales, clients, isLoading }: SalesHistoryTab
               <TableRow>
                 <TableHead className="font-mono text-2xs uppercase">ID Venta</TableHead>
                 <TableHead className="font-mono text-2xs uppercase">Fecha & Hora</TableHead>
+                <TableHead className="font-mono text-2xs uppercase">Origen / Concepto</TableHead>
                 <TableHead className="font-mono text-2xs uppercase">Cliente / Destino</TableHead>
                 <TableHead className="font-mono text-2xs uppercase">Estado</TableHead>
                 <TableHead className="text-right font-mono text-2xs uppercase">Total</TableHead>
@@ -154,6 +210,7 @@ export function SalesHistoryTable({ sales, clients, isLoading }: SalesHistoryTab
                 const client = sale.client_id ? clientMap.get(sale.client_id) : null;
                 const isCompleted = sale.status === 'COMPLETED';
                 const isDownloading = downloadingId === sale.id;
+                const isMem = isMembershipRecord(sale);
 
                 return (
                   <TableRow key={sale.id} className="hover:bg-white/[0.02] transition-colors">
@@ -162,6 +219,34 @@ export function SalesHistoryTable({ sales, clients, isLoading }: SalesHistoryTab
                     </TableCell>
                     <TableCell className="font-mono text-xs text-text-muted">
                       {formatDate(sale.created_at)}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {isMem ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span
+                            className="inline-flex w-fit items-center rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-amber-300"
+                            title="Registro interno contable asociado a una membresía con saldo a crédito"
+                          >
+                            Registro interno · Membresía
+                          </span>
+                          {sale.notes && (
+                            <span className="font-mono text-[10px] text-text-muted truncate max-w-[200px]">
+                              {sale.notes}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="inline-flex w-fit items-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-emerald-300">
+                            Venta POS
+                          </span>
+                          {sale.notes && (
+                            <span className="font-mono text-[10px] text-text-muted truncate max-w-[200px]">
+                              {sale.notes}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-xs">
                       {client ? (

@@ -54,6 +54,9 @@ class SaleResponse(BaseModel):
 
     notes: str | None
 
+    origin_type: str = "POS"
+    is_membership_shadow: bool = False
+
     is_active: bool
 
     created_at: datetime

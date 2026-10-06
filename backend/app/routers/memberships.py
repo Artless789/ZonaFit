@@ -174,4 +174,5 @@ def delete_membership(
     MembershipService.delete(
         db,
         membership,
+        current_user,
     )

@@ -404,7 +404,7 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
         title={isEditing ? 'Editar Socio' : 'Nuevo Socio'}
         size="md"
       >
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col min-h-full">
           <div className="flex flex-col gap-5 flex-1 pb-4">
 
             {/* Photo Upload Section */}
@@ -756,11 +756,11 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
             )}
           </div>
 
-          <div className="pt-4 mt-auto border-t border-border-subtle flex justify-end gap-3">
+          <div className="sticky bottom-0 z-10 -mx-4 px-4 sm:-mx-6 sm:px-6 pt-3.5 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] mt-auto bg-surface-panel/95 backdrop-blur-md border-t border-border-subtle flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50 cursor-pointer"
+              className="min-h-[42px] px-4 py-2 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50 cursor-pointer touch-manipulation"
               disabled={isSaving}
             >
               Cancelar
@@ -769,7 +769,7 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
               type="submit"
               isLoading={isSaving}
               disabled={!isDirty && !photoFile && isEditing}
-              className="rounded-xl text-xs font-semibold"
+              className="min-h-[42px] rounded-xl text-xs font-semibold touch-manipulation"
             >
               {isEditing ? 'Guardar Cambios' : 'Registrar Socio'}
             </ActionGlowButton>

@@ -104,13 +104,13 @@ export function ProductDrawer({ isOpen, onClose, product, categories }: ProductD
       onClose={onClose} 
       title={isEditing ? 'Editar Producto' : 'Nuevo Producto'}
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full">
-        <div className="flex flex-col gap-6 flex-1">
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col min-h-full">
+        <div className="flex flex-col gap-5 sm:gap-6 flex-1 pb-4">
           
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Input
               label="Código SKU"
-              className="col-span-1"
+              className="sm:col-span-1"
               placeholder="Ej. AGUA-500"
               error={!!errors.sku}
               helperText={errors.sku?.message as string}
@@ -119,7 +119,7 @@ export function ProductDrawer({ isOpen, onClose, product, categories }: ProductD
             />
             <Input
               label="Nombre del Producto"
-              className="col-span-2"
+              className="sm:col-span-2"
               placeholder="Ej. Botella de Agua 500ml"
               error={!!errors.name}
               helperText={errors.name?.message as string}
@@ -137,7 +137,7 @@ export function ProductDrawer({ isOpen, onClose, product, categories }: ProductD
             {...register('category_id')}
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Controller
               name="purchase_price"
               control={control}
@@ -222,11 +222,11 @@ export function ProductDrawer({ isOpen, onClose, product, categories }: ProductD
 
         </div>
 
-        <div className="pt-6 mt-6 border-t border-border-light flex justify-end gap-3">
+        <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] mt-4 border-t border-border-light bg-surface-panel/95 backdrop-blur-md flex justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50"
+            className="min-h-[42px] px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50 cursor-pointer touch-manipulation"
             disabled={isSaving}
           >
             Cancelar

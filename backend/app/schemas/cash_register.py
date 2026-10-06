@@ -31,6 +31,7 @@ class CashRegisterSummaryResponse(BaseModel):
     expected_cash: Decimal
     payment_methods: list[PaymentMethodSummaryItem]
     total_registered_income: Decimal
+    pre_shift_payments_today: Decimal = Field(default=Decimal("0.00"))
 
 class CashRegisterClose(BaseModel):
     counted_balance: Decimal = Field(..., ge=0)

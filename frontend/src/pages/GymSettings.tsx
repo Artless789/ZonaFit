@@ -356,12 +356,12 @@ export function GymSettingsPage() {
 
         {/* Sticky Action Save Bar when Gym Settings are Dirty */}
         {isAdmin && isDirty && (activeTab === 'identity' || activeTab === 'billing') && (
-          <div className="fixed bottom-4 left-4 right-4 md:left-[calc(var(--app-sidebar-width)+2rem)] md:right-8 z-40 animate-in slide-in-from-bottom-3 duration-300 pointer-events-auto">
-            <div className="liquid-glass flex items-center justify-between gap-4 p-4 rounded-2xl border border-amber-500/40 shadow-glow bg-surface-raised/95 backdrop-blur-xl">
-              <div className="flex items-center gap-3">
+          <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-4 left-3 right-3 sm:left-4 sm:right-4 md:left-[calc(var(--app-sidebar-width)+2rem)] md:right-8 z-[var(--z-dropdown)] animate-in slide-in-from-bottom-3 duration-300 pointer-events-auto">
+            <div className="liquid-glass flex flex-wrap items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl border border-amber-500/40 shadow-glow bg-surface-raised/95 backdrop-blur-xl">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                 <span className="size-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-text-primary">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-bold text-text-primary truncate">
                     Tienes cambios pendientes de guardar
                   </span>
                   <span className="text-[11px] text-text-secondary hidden sm:inline">
@@ -370,13 +370,13 @@ export function GymSettingsPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center justify-end gap-2 sm:gap-3 shrink-0 ml-auto">
                 {!isNewRecord && (
                   <button
                     type="button"
                     onClick={handleDiscard}
                     disabled={isSaving}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-mono uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors cursor-pointer disabled:opacity-50"
+                    className="flex items-center gap-1.5 min-h-[40px] px-3 sm:px-3.5 py-2 rounded-xl text-xs font-mono uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors cursor-pointer disabled:opacity-50 touch-manipulation"
                   >
                     <X size={14} />
                     <span>Descartar</span>
@@ -386,7 +386,7 @@ export function GymSettingsPage() {
                 <ActionGlowButton
                   type="submit"
                   isLoading={isSaving}
-                  className="gap-2 cursor-pointer shadow-glow"
+                  className="gap-2 cursor-pointer shadow-glow touch-manipulation"
                 >
                   <Check size={16} />
                   <span>{isNewRecord ? 'Crear Configuración' : 'Guardar Cambios'}</span>

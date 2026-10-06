@@ -117,7 +117,7 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
       noPadding
     >
       <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-6">
           
           {/* Notificación si intenta editar a alguien superior */}
           {isEditing && user && (user.role === 'OWNER' || user.role === 'SUPERADMIN') && (
@@ -218,7 +218,7 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
           
         </div>
 
-        <div className="flex-shrink-0 border-t border-border-light px-4 py-5 sm:px-6 flex justify-end gap-3 bg-bg-surface/60">
+        <div className="flex-shrink-0 border-t border-border-light px-4 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:px-6 flex justify-end gap-3 bg-bg-surface/60">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>

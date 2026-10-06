@@ -382,7 +382,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
         {/* ========================================================================= */}
         {/* LEFT COLUMN: PRODUCT CATALOG & FAST LOOKUP */}
         {/* ========================================================================= */}
-        <div className="lg:col-span-7 xl:col-span-8 flex flex-col h-[640px] lg:h-[720px] rounded-[24px] border border-border-subtle bg-surface-panel/90 shadow-subtle backdrop-blur-md overflow-hidden">
+        <div className="lg:col-span-7 xl:col-span-8 flex flex-col h-[480px] sm:h-[580px] lg:h-[720px] rounded-[24px] border border-border-subtle bg-surface-panel/90 shadow-subtle backdrop-blur-md overflow-hidden">
           {/* Top Search & Filter Bar */}
           <div className="p-4 sm:p-5 border-b border-border-subtle bg-surface-panel/80 flex flex-col gap-3.5 shrink-0">
             {/* Search Input with Shortcut */}
@@ -732,10 +732,10 @@ export function POSView({ products, categories, clients }: POSViewProps) {
                               type="button"
                               onClick={() => updateQuantity(item.product.id, -1)}
                               disabled={item.quantity <= 1 || isCheckingOut}
-                              className="w-6 h-6 rounded flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-base disabled:opacity-30 cursor-pointer transition-colors"
+                              className="w-7 h-7 sm:w-8 sm:h-8 rounded flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-base disabled:opacity-30 cursor-pointer transition-colors touch-manipulation"
                               title="Disminuir unidad"
                             >
-                              <Minus size={11} />
+                              <Minus size={12} />
                             </button>
                             <span className="text-xs font-bold font-mono w-5 text-center text-text-primary">
                               {item.quantity}
@@ -746,10 +746,10 @@ export function POSView({ products, categories, clients }: POSViewProps) {
                               disabled={
                                 item.quantity >= item.product.stock || isCheckingOut
                               }
-                              className="w-6 h-6 rounded flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-base disabled:opacity-30 cursor-pointer transition-colors"
+                              className="w-7 h-7 sm:w-8 sm:h-8 rounded flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-base disabled:opacity-30 cursor-pointer transition-colors touch-manipulation"
                               title="Aumentar unidad"
                             >
-                              <Plus size={11} />
+                              <Plus size={12} />
                             </button>
                           </div>
 
@@ -763,7 +763,7 @@ export function POSView({ products, categories, clients }: POSViewProps) {
                             type="button"
                             onClick={() => removeFromCart(item.product.id)}
                             disabled={isCheckingOut}
-                            className="text-text-muted hover:text-rose-400 p-1 rounded hover:bg-rose-500/10 transition-colors cursor-pointer"
+                            className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-text-muted hover:text-rose-400 rounded hover:bg-rose-500/10 transition-colors cursor-pointer touch-manipulation"
                             title="Remover producto"
                           >
                             <X size={14} />

@@ -22,6 +22,7 @@ export interface CashRegisterSummaryResponse {
   expected_cash: number;
   payment_methods: PaymentMethodSummaryItem[];
   total_registered_income: number;
+  pre_shift_payments_today?: number;
 }
 
 export interface CashRegister {

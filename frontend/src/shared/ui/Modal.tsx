@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
@@ -29,13 +30,20 @@ export function Modal({
 }: ModalProps) {
   // Prevent body scroll when modal is open
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
+    if (!isOpen) return;
+    const prevCount = Number(document.body.dataset.scrollLockCount || '0');
+    document.body.dataset.scrollLockCount = String(prevCount + 1);
+    document.body.style.overflow = 'hidden';
+
     return () => {
-      document.body.style.overflow = 'unset';
+      const currentCount = Number(document.body.dataset.scrollLockCount || '1');
+      const nextCount = Math.max(0, currentCount - 1);
+      if (nextCount === 0) {
+        delete document.body.dataset.scrollLockCount;
+        document.body.style.overflow = '';
+      } else {
+        document.body.dataset.scrollLockCount = String(nextCount);
+      }
     };
   }, [isOpen]);
 
@@ -48,17 +56,19 @@ export function Modal({
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-(--z-modal) flex items-center justify-center p-4 sm:p-6">
+        <div className="fixed inset-0 z-(--z-modal) flex items-center justify-center p-3.5 sm:p-6">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            className="absolute inset-0 bg-black/60 backdrop-blur-md touch-manipulation"
             aria-hidden="true"
           />
           
@@ -73,26 +83,27 @@ export function Modal({
             aria-labelledby={title ? "modal-title" : undefined}
             aria-describedby={description ? "modal-description" : undefined}
           >
-            <div className={cn("w-full flex flex-col max-h-[90vh] shadow-modal overflow-hidden material-glass-strong rounded-[var(--radius-2xl)] border border-border-medium", className)}>
+            <div className={cn("w-full flex flex-col max-h-[90dvh] shadow-modal overflow-hidden material-glass-strong rounded-[var(--radius-2xl)] border border-border-medium", className)}>
               {/* Header */}
               {(title || !hideCloseButton) && (
-                <div className="shrink-0 flex items-start justify-between px-6 py-5 border-b border-border-light">
-                  <div className="flex flex-col gap-1 pr-4">
+                <div className="shrink-0 flex items-start justify-between px-4 py-4 sm:px-6 sm:py-5 border-b border-border-light">
+                  <div className="flex flex-col gap-1 pr-3 min-w-0">
                     {title && (
-                      <h2 id="modal-title" className="text-lg font-semibold tracking-tight text-text-primary">
+                      <h2 id="modal-title" className="text-base sm:text-lg font-semibold tracking-tight text-text-primary">
                         {title}
                       </h2>
                     )}
                     {description && (
-                      <div id="modal-description" className="text-sm text-text-secondary">
+                      <div id="modal-description" className="text-xs sm:text-sm text-text-secondary">
                         {description}
                       </div>
                     )}
                   </div>
                   {!hideCloseButton && (
                     <button
+                      type="button"
                       onClick={onClose}
-                      className="shrink-0 rounded-full p-1.5 text-text-muted hover:bg-white/[0.06] hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      className="flex size-10 shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-white/[0.06] hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary cursor-pointer touch-manipulation"
                       aria-label="Cerrar modal"
                     >
                       <X size={18} />
@@ -102,13 +113,13 @@ export function Modal({
               )}
               
               {/* Body */}
-              <div className="flex-1 overflow-y-auto px-6 py-5 text-text-secondary">
+              <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5 text-text-secondary">
                 {children}
               </div>
 
               {/* Footer */}
               {footer && (
-                <div className="shrink-0 px-6 py-4 border-t border-border-light bg-surface-base/40 flex items-center justify-end gap-3">
+                <div className="shrink-0 px-4 py-3.5 sm:px-6 sm:py-4 border-t border-border-light bg-surface-base/40 flex flex-wrap items-center justify-end gap-2.5 sm:gap-3">
                   {footer}
                 </div>
               )}
@@ -116,6 +127,7 @@ export function Modal({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

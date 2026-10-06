@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from '@shared/utils/cn';
@@ -27,13 +28,20 @@ export function Drawer({
   noPadding = false
 }: DrawerProps) {
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
+    if (!isOpen) return;
+    const prevCount = Number(document.body.dataset.scrollLockCount || '0');
+    document.body.dataset.scrollLockCount = String(prevCount + 1);
+    document.body.style.overflow = 'hidden';
+
     return () => {
-      document.body.style.overflow = 'unset';
+      const currentCount = Number(document.body.dataset.scrollLockCount || '1');
+      const nextCount = Math.max(0, currentCount - 1);
+      if (nextCount === 0) {
+        delete document.body.dataset.scrollLockCount;
+        document.body.style.overflow = '';
+      } else {
+        document.body.dataset.scrollLockCount = String(nextCount);
+      }
     };
   }, [isOpen]);
 
@@ -56,7 +64,9 @@ export function Drawer({
     'xl': 'max-w-4xl'
   }[size];
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[var(--z-drawer)] flex">
@@ -66,7 +76,7 @@ export function Drawer({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            className="absolute inset-0 bg-black/60 backdrop-blur-md touch-manipulation"
             aria-hidden="true"
           />
           
@@ -77,7 +87,7 @@ export function Drawer({
             variants={slideVariants}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className={cn(
-              "material-glass-strong relative flex h-full w-full flex-col shadow-modal",
+              "material-glass-strong relative flex h-dvh max-h-dvh w-full flex-col shadow-modal",
               position === 'right' ? "ml-auto border-l border-border-medium" : "mr-auto border-r border-border-medium",
               sizeClass,
               className
@@ -87,15 +97,16 @@ export function Drawer({
             aria-labelledby={title ? "drawer-title" : undefined}
           >
             {!hideHeader && (
-              <div className="flex items-center justify-between px-6 py-5 border-b border-border-light shrink-0">
+              <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5 border-b border-border-light shrink-0">
                 {title && (
-                  <h2 id="drawer-title" className="text-lg font-semibold tracking-tight text-text-primary">
+                  <h2 id="drawer-title" className="text-base sm:text-lg font-semibold tracking-tight text-text-primary truncate">
                     {title}
                   </h2>
                 )}
                 <button
+                  type="button"
                   onClick={onClose}
-                  className="rounded-full p-1.5 text-text-muted hover:bg-white/[0.06] hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  className="flex size-10 shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-white/[0.06] hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary cursor-pointer touch-manipulation"
                   aria-label="Cerrar cajón"
                 >
                   <X size={18} />
@@ -104,19 +115,28 @@ export function Drawer({
             )}
             {hideHeader && (
                <button
+                 type="button"
                  onClick={onClose}
-                 className="absolute top-4 right-4 z-50 rounded-full p-1.5 bg-black/20 text-white hover:bg-black/40 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                 className="
+                   absolute top-3 right-3 sm:top-4 sm:right-4 z-50 flex size-10 items-center justify-center rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary cursor-pointer touch-manipulation
+                 "
                  aria-label="Cerrar cajón"
                >
                  <X size={20} />
                </button>
             )}
-            <div className={cn("flex-1 overflow-y-auto text-text-secondary", !noPadding && "p-6")}>
+            <div
+              className={cn(
+                "flex-1 overflow-y-auto overscroll-contain text-text-secondary",
+                !noPadding && "p-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:p-6 [&>form]:h-auto [&>form]:min-h-full"
+              )}
+            >
               {children}
             </div>
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

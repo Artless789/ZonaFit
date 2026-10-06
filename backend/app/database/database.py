@@ -18,9 +18,20 @@ if not DATABASE_URL:
     DB_PASSWORD = os.getenv("DB_PASSWORD") or ""
     DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
+# Configuración conservadora del pool para VPS (1 vCPU / 2 GB RAM):
+# - pool_pre_ping=True: valida que la conexión esté viva antes de entregarla al request
+# - pool_recycle=1800: recicla conexiones cada 30 min antes de cortes por idle en red/VPS
+# - pool_size=5 / max_overflow=5: acota conexiones concurrentes por worker sin saturar PostgreSQL
+# - pool_timeout=10: espera máxima de 10s por una conexión libre en el pool
+# - connect_timeout=5: espera máxima de 5s del driver psycopg2 al abrir conexión TCP con PostgreSQL
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
+    pool_size=5,
+    max_overflow=5,
+    pool_timeout=10,
+    pool_recycle=1800,
+    connect_args={"connect_timeout": 5},
     echo=os.getenv("SQL_ECHO", "False").lower() == "true",
 )
 

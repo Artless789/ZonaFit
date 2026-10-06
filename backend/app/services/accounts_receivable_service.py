@@ -73,10 +73,34 @@ class AccountsReceivableService:
 
     @staticmethod
     def get_payments(db: Session, ar_id: int):
+        import re
+        from sqlalchemy import or_
+
+        ar = (
+            db.query(AccountsReceivable)
+            .options(joinedload(AccountsReceivable.sale))
+            .filter(AccountsReceivable.id == ar_id)
+            .first()
+        )
+        if not ar:
+            return []
+
+        mem_id = None
+        if ar.sale and ar.sale.notes:
+            match = re.match(r"^Membresía #(\d+)(?:\s-\s.*)?$", ar.sale.notes)
+            if match:
+                mem_id = int(match.group(1))
+
+        conds = [Payment.accounts_receivable_id == ar_id]
+        if mem_id is not None:
+            conds.append(Payment.membership_id == mem_id)
+
         return (
             db.query(Payment)
             .filter(
-                Payment.accounts_receivable_id == ar_id,
+                Payment.gym_id == ar.gym_id,
+                Payment.is_active == True,
+                or_(*conds),
             )
             .order_by(Payment.created_at.desc())
             .all()
@@ -104,9 +128,11 @@ class AccountsReceivableService:
                 f"Payment amount ({amount}) cannot exceed the balance due ({ar.balance_due})."
             )
 
+        method_upper = payment_method.upper().strip()
+
         # Check cash register if CASH
         active_register = None
-        if payment_method.upper() == "CASH":
+        if method_upper == "CASH":
             active_register = CashRegisterService.get_active(db, current_user.gym_id)
             if not active_register:
                 raise ValueError("No se puede registrar abono en efectivo sin una caja abierta.")
@@ -116,7 +142,7 @@ class AccountsReceivableService:
                 gym_id=current_user.gym_id,
                 accounts_receivable_id=ar.id,
                 amount=amount,
-                payment_method=payment_method,
+                payment_method=method_upper,
                 status="PAID"
             )
             db.add(payment)

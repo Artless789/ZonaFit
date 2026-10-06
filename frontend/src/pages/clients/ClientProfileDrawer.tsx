@@ -125,9 +125,9 @@ export function ClientProfileDrawer({ isOpen, onClose, clientId, onEditClick }: 
     const { client, current_membership, financial } = profile;
 
     return (
-      <div className="flex flex-col h-full bg-surface-base text-text-primary">
+      <div className="flex flex-col min-h-full bg-surface-base text-text-primary">
         {/* Header 360 - Hero Section */}
-        <div className="p-6 bg-surface-panel/90 border-b border-border-subtle backdrop-blur-md">
+        <div className="p-4 pr-12 sm:p-6 sm:pr-14 bg-surface-panel/90 border-b border-border-subtle backdrop-blur-md">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-5">
             <div className="flex gap-4 items-center">
               {/* Photo Avatar */}
@@ -564,6 +564,7 @@ export function ClientProfileDrawer({ isOpen, onClose, clientId, onEditClick }: 
       onClose={onClose}
       title=""
       hideHeader={true}
+      noPadding={true}
       size="lg"
     >
       {renderContent()}

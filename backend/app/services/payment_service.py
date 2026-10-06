@@ -1,11 +1,17 @@
+import json
 from decimal import Decimal
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.core.database_transaction import DatabaseTransaction
 from app.exceptions.not_found_exception import NotFoundException
+from app.models.accounts_receivable import AccountsReceivable
+from app.models.audit_log import AuditLog
+from app.models.cash_movement import CashMovement
+from app.models.cash_register import CashRegister
 from app.models.membership import Membership
 from app.models.payment import Payment
+from app.models.sale import Sale
 from app.models.user import User
 from app.schemas.payment import (
     PaymentCreate,
@@ -20,6 +26,86 @@ from app.schemas.sort import SortParams
 from app.utils.query import paginate, apply_filters, apply_sort
 
 class PaymentService:
+
+    @staticmethod
+    def find_membership_receivable(
+        db: Session,
+        gym_id: int,
+        membership_id: int,
+    ) -> AccountsReceivable | None:
+        return (
+            db.query(AccountsReceivable)
+            .join(Sale, AccountsReceivable.sale_id == Sale.id)
+            .filter(
+                AccountsReceivable.gym_id == gym_id,
+                AccountsReceivable.is_active == True,
+                Sale.gym_id == gym_id,
+                Sale.is_active == True,
+                or_(
+                    Sale.notes == f"Membresía #{membership_id}",
+                    Sale.notes.like(f"Membresía #{membership_id} - %"),
+                ),
+            )
+            .first()
+        )
+
+    @staticmethod
+    def reverse_payment_in_tx(
+        db: Session,
+        payment: Payment,
+        current_user: User | None = None,
+        reason: str | None = None,
+    ) -> None:
+        if payment.is_active and payment.status == PaymentStatus.PAID:
+            orig_mov = (
+                db.query(CashMovement)
+                .filter(
+                    CashMovement.payment_id == payment.id,
+                    CashMovement.gym_id == payment.gym_id,
+                    CashMovement.type == "IN",
+                )
+                .first()
+            )
+            if orig_mov:
+                existing_rev = (
+                    db.query(CashMovement)
+                    .filter(
+                        CashMovement.payment_id == payment.id,
+                        CashMovement.gym_id == payment.gym_id,
+                        CashMovement.type == "OUT",
+                        CashMovement.category == "REVERSAL",
+                    )
+                    .first()
+                )
+                if not existing_rev:
+                    target_reg = (
+                        db.query(CashRegister)
+                        .filter(
+                            CashRegister.id == orig_mov.cash_register_id,
+                            CashRegister.gym_id == payment.gym_id,
+                            CashRegister.status == "OPEN",
+                        )
+                        .first()
+                    )
+                    if not target_reg:
+                        target_reg = CashRegisterService.get_active(db, payment.gym_id)
+
+                    if target_reg:
+                        user_id = current_user.id if current_user else orig_mov.created_by
+                        rev_mov = CashMovement(
+                            gym_id=payment.gym_id,
+                            cash_register_id=target_reg.id,
+                            payment_id=payment.id,
+                            amount=orig_mov.amount,
+                            type="OUT",
+                            category="REVERSAL",
+                            description=reason or f"Reversión contable de pago #{payment.id}",
+                            created_by=user_id,
+                        )
+                        db.add(rev_mov)
+
+        payment.status = PaymentStatus.CANCELLED
+        payment.is_active = False
 
     @staticmethod
     def create(
@@ -43,8 +129,12 @@ class PaymentService:
         if not membership:
             raise NotFoundException("Membership not found.")
 
-        # Calculate already paid amount
-        already_paid = (
+        linked_ar = PaymentService.find_membership_receivable(
+            db, current_user.gym_id, membership.id
+        )
+
+        # Calculate already paid amount (both direct membership payments and AR abonos)
+        direct_paid = (
             db.query(func.coalesce(func.sum(Payment.amount), Decimal("0.00")))
             .filter(
                 Payment.membership_id == membership.id,
@@ -55,7 +145,21 @@ class PaymentService:
             .scalar()
         ) or Decimal("0.00")
 
-        remaining_balance = membership.price - Decimal(str(already_paid))
+        ar_paid = Decimal("0.00")
+        if linked_ar:
+            ar_paid = (
+                db.query(func.coalesce(func.sum(Payment.amount), Decimal("0.00")))
+                .filter(
+                    Payment.accounts_receivable_id == linked_ar.id,
+                    Payment.gym_id == current_user.gym_id,
+                    Payment.status == PaymentStatus.PAID,
+                    Payment.is_active == True,
+                )
+                .scalar()
+            ) or Decimal("0.00")
+
+        already_paid = Decimal(str(direct_paid)) + Decimal(str(ar_paid))
+        remaining_balance = Decimal(str(membership.price)) - already_paid
 
         if payment_data.amount is not None:
             pay_amount = Decimal(str(payment_data.amount))
@@ -70,9 +174,11 @@ class PaymentService:
                 f"El monto a pagar ({pay_amount}) no puede superar el saldo pendiente ({remaining_balance})."
             )
 
+        method_upper = payment_data.payment_method.upper().strip()
+
         # Verify Cash Register if payment is CASH
         active_register = None
-        if payment_data.payment_method.upper() == "CASH":
+        if method_upper == "CASH":
             active_register = CashRegisterService.get_active(db, current_user.gym_id)
             if not active_register:
                 raise ValueError("No se puede registrar pago de membresía en efectivo sin una caja abierta.")
@@ -81,7 +187,7 @@ class PaymentService:
             gym_id=current_user.gym_id,
             membership_id=membership.id,
             amount=pay_amount,
-            payment_method=payment_data.payment_method,
+            payment_method=method_upper,
             reference=payment_data.reference,
             status=PaymentStatus.PAID,
         )
@@ -102,6 +208,40 @@ class PaymentService:
                     payment_id=payment.id
                 )
 
+            if linked_ar and linked_ar.is_active:
+                old_balance = Decimal(str(linked_ar.balance_due))
+                old_paid = Decimal(str(linked_ar.paid_amount))
+
+                linked_ar.paid_amount = old_paid + pay_amount
+                linked_ar.balance_due = max(
+                    Decimal("0.00"),
+                    Decimal(str(linked_ar.original_amount)) - linked_ar.paid_amount,
+                )
+                linked_ar.status = (
+                    "PAID" if linked_ar.balance_due <= Decimal("0.00") else "PARTIAL"
+                )
+
+                audit = AuditLog(
+                    gym_id=current_user.gym_id,
+                    user_id=current_user.id,
+                    action="CREDIT_PAYMENT_REGISTERED",
+                    entity_type="AccountsReceivable",
+                    entity_id=linked_ar.id,
+                    old_values=json.dumps({
+                        "balance_due": str(old_balance),
+                        "paid_amount": str(old_paid),
+                    }),
+                    new_values=json.dumps({
+                        "balance_due": str(linked_ar.balance_due),
+                        "paid_amount": str(linked_ar.paid_amount),
+                        "payment_amount": str(pay_amount),
+                        "source": "POST /payments/",
+                    }),
+                    ip_address="system",
+                )
+                db.add(audit)
+
+            db.flush()
             db.refresh(payment)
 
         # --- NOTIFICATION HOOK: PAYMENT_RECEIVED ---
@@ -229,6 +369,67 @@ class PaymentService:
     def delete(
         db: Session,
         payment: Payment,
+        current_user: User | None = None,
     ):
+        was_paid = bool(payment.is_active and payment.status == PaymentStatus.PAID)
+        pay_amount = Decimal(str(payment.amount or "0.00"))
+
         with DatabaseTransaction(db):
-            payment.is_active = False
+            PaymentService.reverse_payment_in_tx(
+                db=db,
+                payment=payment,
+                current_user=current_user,
+                reason=f"Anulación contable de pago #{payment.id}",
+            )
+
+            if was_paid and pay_amount > Decimal("0.00"):
+                target_ar = None
+                if payment.accounts_receivable_id:
+                    target_ar = (
+                        db.query(AccountsReceivable)
+                        .filter(
+                            AccountsReceivable.id == payment.accounts_receivable_id,
+                            AccountsReceivable.gym_id == payment.gym_id,
+                        )
+                        .first()
+                    )
+                elif payment.membership_id:
+                    target_ar = PaymentService.find_membership_receivable(
+                        db, payment.gym_id, payment.membership_id
+                    )
+
+                if target_ar and target_ar.is_active and target_ar.status != "CANCELLED":
+                    target_ar.paid_amount = max(
+                        Decimal("0.00"),
+                        Decimal(str(target_ar.paid_amount)) - pay_amount,
+                    )
+                    target_ar.balance_due = max(
+                        Decimal("0.00"),
+                        Decimal(str(target_ar.original_amount)) - target_ar.paid_amount,
+                    )
+                    if target_ar.paid_amount == Decimal("0.00"):
+                        target_ar.status = "PENDING"
+                    elif target_ar.balance_due == Decimal("0.00"):
+                        target_ar.status = "PAID"
+                    else:
+                        target_ar.status = "PARTIAL"
+
+            if current_user:
+                audit = AuditLog(
+                    gym_id=payment.gym_id,
+                    user_id=current_user.id,
+                    action="PAYMENT_CANCELLED",
+                    entity_type="Payment",
+                    entity_id=payment.id,
+                    old_values=json.dumps({
+                        "amount": str(pay_amount),
+                        "status": "PAID" if was_paid else payment.status,
+                    }),
+                    new_values=json.dumps({
+                        "status": PaymentStatus.CANCELLED,
+                        "is_active": False,
+                    }),
+                    ip_address="system",
+                )
+                db.add(audit)
+            db.flush()

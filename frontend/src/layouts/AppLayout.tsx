@@ -49,13 +49,20 @@ export function AppLayout() {
 
   // Scroll locking: Prevent body background scrolling when mobile sidebar is open
   useEffect(() => {
-    if (isMobileSidebarOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    if (!isMobileSidebarOpen) return;
+    const prevCount = Number(document.body.dataset.scrollLockCount || '0');
+    document.body.dataset.scrollLockCount = String(prevCount + 1);
+    document.body.style.overflow = 'hidden';
+
     return () => {
-      document.body.style.overflow = '';
+      const currentCount = Number(document.body.dataset.scrollLockCount || '1');
+      const nextCount = Math.max(0, currentCount - 1);
+      if (nextCount === 0) {
+        delete document.body.dataset.scrollLockCount;
+        document.body.style.overflow = '';
+      } else {
+        document.body.dataset.scrollLockCount = String(nextCount);
+      }
     };
   }, [isMobileSidebarOpen]);
 
@@ -168,9 +175,9 @@ export function AppLayout() {
           '--app-sidebar-offset': `${sidebarOffset}px`,
         } as CSSProperties}
       >
-        <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 pb-16 pt-4 md:px-8">
+        <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 sm:gap-6 px-3.5 sm:px-4 pb-24 md:pb-16 pt-3 sm:pt-4 md:px-8">
           <Navbar onOpenMobileMenu={() => setIsMobileSidebarOpen(true)} />
-          <main>
+          <main className="min-w-0">
             <Suspense
               fallback={
                 <div className="flex items-center justify-center min-h-[50vh]">
@@ -187,14 +194,15 @@ export function AppLayout() {
       {/* 4. Floating Spatial Mobile Quick Navigation Bar */}
       <nav
         aria-label="Navegación móvil rápida"
-        className="fixed bottom-3 inset-x-3 z-[var(--z-navbar)] md:hidden liquid-glass rounded-full flex items-center justify-around py-1.5 px-2 shadow-floating border border-border-light select-none"
+        className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] inset-x-3 z-[var(--z-navbar)] md:hidden liquid-glass rounded-full flex items-center justify-around py-1.5 px-2 shadow-floating border border-border-light select-none"
       >
         {mobileNavItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
+            onClick={() => setIsMobileSidebarOpen(false)}
             className={({ isActive }) => cn(
-              'flex flex-col items-center justify-center py-1 px-2.5 rounded-full transition-all duration-150 min-w-[54px]',
+              'flex flex-col items-center justify-center py-1 px-2.5 rounded-full transition-all duration-150 min-w-[54px] min-h-[44px] touch-manipulation',
               isActive
                 ? 'text-brand-primary font-semibold'
                 : 'text-text-muted hover:text-text-primary'
@@ -216,8 +224,9 @@ export function AppLayout() {
         ))}
         <button
           type="button"
-          onClick={() => setIsMobileSidebarOpen(true)}
-          className="flex flex-col items-center justify-center py-1 px-2.5 text-text-muted hover:text-text-primary transition-colors cursor-pointer min-w-[54px]"
+          onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
+          aria-expanded={isMobileSidebarOpen}
+          className="flex flex-col items-center justify-center py-1 px-2.5 text-text-muted hover:text-text-primary transition-colors cursor-pointer min-w-[54px] min-h-[44px] touch-manipulation"
           aria-label="Abrir menú completo"
         >
           <Menu size={19} />

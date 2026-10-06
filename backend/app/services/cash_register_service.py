@@ -14,7 +14,7 @@ from app.schemas.cash_register import (
 )
 from app.core.database_transaction import DatabaseTransaction
 from app.exceptions.business_exception import BusinessException
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone, time
 from zoneinfo import ZoneInfo
 
 class CashRegisterService:
@@ -101,6 +101,7 @@ class CashRegisterService:
         register_id: int | None = None
     ) -> CashRegisterSummaryResponse:
         from app.models.payment import Payment
+        from app.services.dashboard_service import DashboardService
 
         if register_id:
             register = db.query(CashRegister).filter(
@@ -113,23 +114,29 @@ class CashRegisterService:
         if not register:
             raise ValueError("Caja no encontrada.")
 
-        # 1. Cash Movements
+        # 1. Cash Movements belonging strictly to this register.id
         movements = db.query(CashMovement).filter(
             CashMovement.cash_register_id == register.id,
             CashMovement.gym_id == current_user.gym_id
         ).all()
         
-        cash_incomes = sum((m.amount for m in movements if m.type == "IN"), Decimal("0.00"))
-        cash_outcomes = sum((m.amount for m in movements if m.type == "OUT"), Decimal("0.00"))
-        expected_cash = register.opening_balance + cash_incomes - cash_outcomes
+        raw_incomes = sum((m.amount for m in movements if m.type == "IN"), Decimal("0.00"))
+        reversal_outcomes = sum((m.amount for m in movements if m.type == "OUT" and m.category == "REVERSAL"), Decimal("0.00"))
+        cash_incomes = max(Decimal("0.00"), raw_incomes - reversal_outcomes)
+        cash_outcomes = sum((m.amount for m in movements if m.type == "OUT" and m.category != "REVERSAL"), Decimal("0.00"))
+        expected_cash = register.opening_balance + raw_incomes - (reversal_outcomes + cash_outcomes)
 
-        # 2. Query Payments in the shift window for multi-tenant gym
+        # 2. Query Payments strictly within the shift window [opened_at, closed_at]
         start_time = register.opened_at
-        if start_time:
-            try:
-                start_time = start_time.replace(microsecond=0) - timedelta(minutes=1)
-            except Exception:
-                start_time = register.opened_at
+
+        other_register_payment_ids = (
+            db.query(CashMovement.payment_id)
+            .filter(
+                CashMovement.gym_id == current_user.gym_id,
+                CashMovement.payment_id.isnot(None),
+                CashMovement.cash_register_id != register.id,
+            )
+        )
 
         payments_query = db.query(
             Payment.payment_method,
@@ -138,16 +145,13 @@ class CashRegisterService:
             Payment.gym_id == current_user.gym_id,
             Payment.status == "PAID",
             Payment.is_active == True,
+            ~Payment.id.in_(other_register_payment_ids),
         )
 
         if start_time:
             payments_query = payments_query.filter(Payment.created_at >= start_time)
         if register.status == "CLOSED" and register.closed_at:
-            try:
-                end_time = register.closed_at.replace(microsecond=0) + timedelta(minutes=1)
-                payments_query = payments_query.filter(Payment.created_at <= end_time)
-            except Exception:
-                payments_query = payments_query.filter(Payment.created_at <= register.closed_at)
+            payments_query = payments_query.filter(Payment.created_at <= register.closed_at)
 
         payments_grouped = payments_query.group_by(Payment.payment_method).all()
         
@@ -177,9 +181,12 @@ class CashRegisterService:
 
         # Ensure CASH is represented
         if "CASH" not in methods_dict:
-            cash_sales_income = sum(
-                (m.amount for m in movements if m.type == "IN" and m.category in ["SALE", "MEMBERSHIP_PAYMENT", "CREDIT_PAYMENT"]),
-                Decimal("0.00")
+            cash_sales_income = max(
+                Decimal("0.00"),
+                sum(
+                    (m.amount for m in movements if m.type == "IN" and m.category in ["SALE", "MEMBERSHIP_PAYMENT", "CREDIT_PAYMENT"]),
+                    Decimal("0.00")
+                ) - reversal_outcomes
             )
             methods_dict["CASH"] = {
                 "method": "CASH",
@@ -195,6 +202,25 @@ class CashRegisterService:
 
         total_registered_income = sum((item.registered_amount for item in sorted_methods), Decimal("0.00"))
 
+        # 3. Calculate payments collected today BEFORE this shift opened (e.g. pre-shift electronic or earlier closed shift)
+        pre_shift_payments_today = Decimal("0.00")
+        if start_time:
+            gym_tz = DashboardService._get_gym_timezone(db, current_user.gym_id)
+            now_local = datetime.now(gym_tz)
+            today_start = datetime.combine(now_local.date(), time.min, tzinfo=gym_tz)
+            pre_shift_payments_today = (
+                db.query(func.coalesce(func.sum(Payment.amount), Decimal("0.00")))
+                .filter(
+                    Payment.gym_id == current_user.gym_id,
+                    Payment.status == "PAID",
+                    Payment.is_active == True,
+                    Payment.created_at >= today_start,
+                    Payment.created_at < start_time,
+                )
+                .scalar()
+                or Decimal("0.00")
+            )
+
         return CashRegisterSummaryResponse(
             register_id=register.id,
             status=register.status,
@@ -204,7 +230,8 @@ class CashRegisterService:
             cash_outcomes=cash_outcomes,
             expected_cash=expected_cash,
             payment_methods=sorted_methods,
-            total_registered_income=total_registered_income
+            total_registered_income=total_registered_income,
+            pre_shift_payments_today=pre_shift_payments_today,
         )
 
     @staticmethod
@@ -248,7 +275,7 @@ class CashRegisterService:
         with DatabaseTransaction(db):
             register.status = "CLOSED"
             register.closed_by = current_user.id
-            register.closed_at = func.now()
+            register.closed_at = datetime.now(timezone.utc)
             register.expected_balance = expected
             register.counted_balance = data.counted_balance
             register.difference = difference

@@ -99,4 +99,12 @@ class Sale(Base):
         "Payment",
         back_populates="sale",
         cascade="all, delete-orphan",
-    )       
+    )
+
+    @property
+    def is_membership_shadow(self) -> bool:
+        return bool(self.notes and self.notes.startswith("Membresía #"))
+
+    @property
+    def origin_type(self) -> str:
+        return "MEMBERSHIP_CREDIT" if self.is_membership_shadow else "POS"

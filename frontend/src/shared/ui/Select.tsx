@@ -96,13 +96,13 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     
     const containerRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
-      const handleClickOutside = (e: MouseEvent) => {
+      const handleClickOutside = (e: PointerEvent) => {
         if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
           setIsOpen(false);
         }
       };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener('pointerdown', handleClickOutside);
+      return () => document.removeEventListener('pointerdown', handleClickOutside);
     }, []);
 
     const handleSelect = (val: string | number) => {
@@ -143,7 +143,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           <div
             onClick={() => !props.disabled && setIsOpen(!isOpen)}
             className={cn(
-              "flex min-h-[44px] h-11 w-full items-center justify-between rounded-[var(--radius-md)] border border-border-medium bg-bg-surface px-4 py-2 text-sm text-text-primary",
+              "flex min-h-[44px] h-11 w-full items-center justify-between rounded-[var(--radius-md)] border border-border-medium bg-bg-surface px-4 py-2 text-sm text-text-primary touch-manipulation",
               "transition-all duration-200 cursor-pointer shadow-xs hover:border-border-strong hover:bg-bg-surface-hover",
               isOpen && "ring-2 ring-brand-primary/20 border-brand-primary bg-bg-surface",
               props.disabled && "cursor-not-allowed opacity-50 bg-bg-page hover:shadow-none hover:bg-bg-page hover:border-border-medium",

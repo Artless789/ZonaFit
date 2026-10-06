@@ -34,6 +34,8 @@ class DashboardResponse(BaseModel):
     # KPI Superiores
     sales_today: int
     sales_today_amount: Decimal
+    collected_today_amount: Decimal = Decimal("0.00")
+    credit_today_amount: Decimal = Decimal("0.00")
     income_this_month: Decimal
     active_clients: int
     expiring_memberships_count: int # in next 7 days

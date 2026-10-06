@@ -5,6 +5,8 @@ export interface Sale {
   total: number;
   status: string;
   notes?: string | null;
+  origin_type?: 'POS' | 'MEMBERSHIP_CREDIT';
+  is_membership_shadow?: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;

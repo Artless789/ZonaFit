@@ -107,8 +107,8 @@ export function MembershipPlanDrawer({
       onClose={onClose}
       title={isEditing ? 'Editar Plan de Membresía' : 'Nuevo Plan de Membresía'}
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full">
-        <div className="flex flex-col gap-5 flex-1">
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col min-h-full">
+        <div className="flex flex-col gap-5 flex-1 pb-4">
           {/* Header pill */}
           <div className="p-3.5 rounded-[var(--radius-lg)] bg-surface-raised border border-border-subtle flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
@@ -192,11 +192,11 @@ export function MembershipPlanDrawer({
           </div>
         </div>
 
-        <div className="pt-4 mt-6 border-t border-border-subtle flex items-center justify-end gap-3">
+        <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] mt-4 border-t border-border-subtle bg-surface-panel/95 backdrop-blur-md flex items-center justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50 cursor-pointer"
+            className="min-h-[42px] px-4 py-2 text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50 cursor-pointer touch-manipulation"
             disabled={isSaving}
           >
             Cancelar

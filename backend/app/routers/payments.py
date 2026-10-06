@@ -145,4 +145,5 @@ def delete_payment(
     PaymentService.delete(
         db,
         payment,
+        current_user,
     )

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePWAInstall } from '../hooks/usePWAInstall';
@@ -28,6 +28,12 @@ export function Landing() {
   const [selectedPwaPlatform, setSelectedPwaPlatform] = useState<'desktop' | 'android' | 'ios'>(
     platform === 'ios' ? 'ios' : platform === 'android' ? 'android' : 'desktop'
   );
+
+  useEffect(() => {
+    if (platform === 'ios' || platform === 'android') {
+      setSelectedPwaPlatform(platform);
+    }
+  }, [platform]);
 
   const defaultPlans = useMemo(() => {
     return [
@@ -97,38 +103,47 @@ export function Landing() {
     } else if (isInstalled) {
       window.location.assign('/app/dashboard');
     } else {
-      document.getElementById('pwa-section')?.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('pwa')?.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#020202] text-[#F3F4F6] font-sans selection:bg-[#DC2626] selection:text-white">
-      {/* Background Subtle Ambience */}
+    <div className="min-h-screen overflow-x-clip bg-[#020202] text-[#F3F4F6] font-sans selection:bg-[#DC2626] selection:text-white">
+      {/* Background Subtle Ambience (Lightweight radial gradient on mobile to avoid GPU blur thrashing) */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-gradient-to-b from-[#DC2626]/12 to-transparent blur-[140px] opacity-70" />
-        <div className="absolute top-[35%] -right-40 w-[600px] h-[600px] bg-[#32292F]/20 blur-[160px] opacity-50" />
+        <div className="md:hidden absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.14),transparent_65%)]" />
+        <div className="hidden md:block absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-gradient-to-b from-[#DC2626]/12 to-transparent blur-[140px] opacity-70" />
+        <div className="hidden md:block absolute top-[35%] -right-40 w-[600px] h-[600px] bg-[#32292F]/20 blur-[160px] opacity-50" />
         <div className="absolute inset-0 bg-[radial-gradient(#ffffff08_1px,transparent_1px)] [background-size:24px_24px] opacity-35" />
       </div>
 
       {/* ========================================================
           01 — NAVBAR EDITORIAL
          ======================================================== */}
-      <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-[#020202]/80 border-b border-white/[0.08]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between">
+      <header className="sticky top-0 z-50 w-full backdrop-blur-md md:backdrop-blur-xl bg-[#020202]/90 md:bg-[#020202]/80 border-b border-white/[0.08]">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 h-16 sm:h-18 flex items-center justify-between gap-2">
           {/* Brand */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="relative">
+          <div
+            className="flex items-center gap-2.5 sm:gap-3 min-w-0 cursor-pointer touch-manipulation"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          >
+            <div className="relative shrink-0">
               <img
                 src="/logo.png"
                 alt="Merwil ZonaFit"
-                className="w-9 h-9 object-contain drop-shadow-[0_0_12px_rgba(220,38,38,0.5)]"
+                width={36}
+                height={36}
+                decoding="async"
+                className="w-8 h-8 sm:w-9 sm:h-9 object-contain drop-shadow-[0_0_12px_rgba(220,38,38,0.5)]"
               />
             </div>
-            <div className="flex flex-col">
-              <span className="font-mono text-sm font-extrabold tracking-widest text-white uppercase flex items-center gap-2">
+            <div className="flex flex-col min-w-0">
+              <span className="font-mono text-xs sm:text-sm font-extrabold tracking-widest text-white uppercase truncate">
                 MERWIL ZONAFIT
               </span>
-              <span className="text-[10px] font-mono text-neutral-400 tracking-wider">SISTEMA DE GESTIÓN OPERATIVA</span>
+              <span className="hidden min-[380px]:block text-[9px] sm:text-[10px] font-mono text-neutral-400 tracking-wider truncate">
+                SISTEMA DE GESTIÓN OPERATIVA
+              </span>
             </div>
           </div>
 
@@ -141,134 +156,176 @@ export function Landing() {
             <a href="#pwa" className="hover:text-white transition-colors">App PWA</a>
           </nav>
 
-          {/* Desktop CTAs */}
-          <div className="hidden sm:flex items-center gap-3">
+          {/* Actions & Mobile/Tablet Hamburger */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
+              type="button"
               onClick={() => navigate('/demo')}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-neutral-300 hover:text-white hover:bg-white/[0.05] rounded-full transition-colors cursor-pointer border border-transparent hover:border-white/10"
+              className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-neutral-300 hover:text-white hover:bg-white/[0.05] rounded-full transition-colors cursor-pointer border border-transparent hover:border-white/10 touch-manipulation"
             >
               <Play size={13} className="text-[#DC2626]" />
               <span>Ver Demo</span>
             </button>
             <button
+              type="button"
               onClick={() => navigate('/login')}
-              className="px-4 py-2 text-xs font-semibold text-neutral-200 hover:text-white bg-[#171717] hover:bg-[#1D1D1D] border border-white/10 rounded-full transition-colors cursor-pointer"
+              className="hidden sm:inline-flex px-4 py-2 text-xs font-semibold text-neutral-200 hover:text-white bg-[#171717] hover:bg-[#1D1D1D] border border-white/10 rounded-full transition-colors cursor-pointer touch-manipulation"
             >
               Iniciar Sesión
             </button>
             <button
+              type="button"
               onClick={() => handleSelectPlan()}
-              className="px-5 py-2 text-xs font-bold text-white bg-[#DC2626] hover:bg-[#EF4444] rounded-full transition-all shadow-md shadow-[#DC2626]/30 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              className="px-3.5 sm:px-5 py-2 min-h-[38px] sm:min-h-[40px] text-xs font-bold text-white bg-[#DC2626] hover:bg-[#EF4444] rounded-full transition-all shadow-md shadow-[#DC2626]/30 sm:hover:scale-[1.02] active:scale-[0.98] cursor-pointer touch-manipulation whitespace-nowrap"
             >
-              Probar Gratis 14 Días
-            </button>
-          </div>
-
-          {/* Mobile Hamburger */}
-          <div className="flex sm:hidden items-center gap-2">
-            <button
-              onClick={() => handleSelectPlan()}
-              className="px-3.5 py-1.5 text-xs font-bold text-white bg-[#DC2626] rounded-full shadow-sm"
-            >
-              Probar Gratis
+              <span className="sm:hidden">Probar Gratis</span>
+              <span className="hidden sm:inline">Probar Gratis 14 Días</span>
             </button>
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-neutral-300 hover:text-white bg-[#171717] rounded-xl border border-white/10"
-              aria-label="Abrir menú"
+              type="button"
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="landing-mobile-menu"
+              className="flex lg:hidden size-11 items-center justify-center text-neutral-200 hover:text-white bg-[#171717] active:bg-[#262626] rounded-xl border border-white/10 cursor-pointer touch-manipulation"
+              aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
             >
-              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Dropdown */}
+        {/* Mobile / Tablet Dropdown Overlay */}
         {mobileMenuOpen && (
-          <div className="sm:hidden px-4 py-5 bg-[#020202] border-b border-white/10 flex flex-col gap-3 text-xs font-semibold">
-            <a href="#features" onClick={() => setMobileMenuOpen(false)} className="py-2 text-neutral-300 hover:text-white">Funcionalidades</a>
-            <a href="#metrics" onClick={() => setMobileMenuOpen(false)} className="py-2 text-neutral-300 hover:text-white">Rendimiento</a>
-            <a href="#comparativa" onClick={() => setMobileMenuOpen(false)} className="py-2 text-neutral-300 hover:text-white">Comparativa</a>
-            <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="py-2 text-neutral-300 hover:text-white">Precios</a>
-            <a href="#pwa" onClick={() => setMobileMenuOpen(false)} className="py-2 text-neutral-300 hover:text-white">App Móvil (PWA)</a>
-            <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
-              <button
-                onClick={() => { setMobileMenuOpen(false); navigate('/demo'); }}
-                className="w-full py-2.5 rounded-xl bg-[#171717] text-white flex items-center justify-center gap-2"
+          <>
+            <div
+              className="fixed inset-0 top-16 sm:top-18 z-40 bg-black/60 lg:hidden"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-hidden="true"
+            />
+            <nav
+              id="landing-mobile-menu"
+              aria-label="Menú móvil de página de inicio"
+              className="lg:hidden absolute top-full left-0 right-0 z-50 px-4 py-5 bg-[#020202]/98 backdrop-blur-xl border-b border-white/15 shadow-2xl flex flex-col gap-1.5 text-sm font-semibold"
+            >
+              <a
+                href="#features"
+                onClick={() => setMobileMenuOpen(false)}
+                className="min-h-[44px] px-3 rounded-xl flex items-center text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 touch-manipulation"
               >
-                <Play size={14} className="text-[#DC2626]" />
-                <span>Explorar Demo</span>
-              </button>
-              <button
-                onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
-                className="w-full py-2.5 rounded-xl bg-[#171717] text-white flex items-center justify-center gap-2"
+                Funcionalidades
+              </a>
+              <a
+                href="#metrics"
+                onClick={() => setMobileMenuOpen(false)}
+                className="min-h-[44px] px-3 rounded-xl flex items-center text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 touch-manipulation"
               >
-                <LogIn size={14} />
-                <span>Iniciar Sesión</span>
-              </button>
-            </div>
-          </div>
+                Rendimiento
+              </a>
+              <a
+                href="#comparativa"
+                onClick={() => setMobileMenuOpen(false)}
+                className="min-h-[44px] px-3 rounded-xl flex items-center text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 touch-manipulation"
+              >
+                Comparativa
+              </a>
+              <a
+                href="#pricing"
+                onClick={() => setMobileMenuOpen(false)}
+                className="min-h-[44px] px-3 rounded-xl flex items-center text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 touch-manipulation"
+              >
+                Precios
+              </a>
+              <a
+                href="#pwa"
+                onClick={() => setMobileMenuOpen(false)}
+                className="min-h-[44px] px-3 rounded-xl flex items-center text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 touch-manipulation"
+              >
+                App Móvil (PWA)
+              </a>
+              <div className="pt-3 mt-1 border-t border-white/10 flex flex-col sm:flex-row gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => { setMobileMenuOpen(false); navigate('/demo'); }}
+                  className="w-full min-h-[44px] py-2.5 rounded-xl bg-[#171717] hover:bg-[#222222] border border-white/10 text-white flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
+                >
+                  <Play size={15} className="text-[#DC2626]" />
+                  <span>Explorar Demo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
+                  className="w-full min-h-[44px] py-2.5 rounded-xl bg-[#171717] hover:bg-[#222222] border border-white/10 text-white flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
+                >
+                  <LogIn size={15} />
+                  <span>Iniciar Sesión</span>
+                </button>
+              </div>
+            </nav>
+          </>
         )}
       </header>
 
       {/* ========================================================
           02 — HERO SECTION (BRUTALIST EDITORIAL)
          ======================================================== */}
-      <section className="relative pt-12 pb-20 md:pt-20 md:pb-28 overflow-hidden">
+      <section className="relative pt-10 pb-16 sm:pt-12 sm:pb-20 md:pt-20 md:pb-28 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col items-center text-center">
           {/* Eyebrow Pill */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#171717] border border-white/10 text-neutral-300 font-mono text-[11px] uppercase tracking-wider mb-6">
-            <span className="size-2 rounded-full bg-[#DC2626] animate-pulse" />
-            <span>SOFTWARE DE GESTIÓN PARA GIMNASIOS DE ALTO RENDIMIENTO</span>
+          <div className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full bg-[#171717] border border-white/10 text-neutral-300 font-mono text-[10px] sm:text-[11px] uppercase tracking-wider mb-6 max-w-full">
+            <span className="size-2 shrink-0 rounded-full bg-[#DC2626] animate-pulse" />
+            <span className="truncate">SOFTWARE DE GESTIÓN PARA GIMNASIOS DE ALTO RENDIMIENTO</span>
           </div>
 
           {/* Brutal Impact H1 */}
-          <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-[-0.04em] uppercase text-white leading-[0.96] max-w-5xl">
+          <h1 className="text-3xl min-[380px]:text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-[-0.04em] uppercase text-white leading-[0.98] sm:leading-[0.96] max-w-5xl">
             EL CONTROL DE TU GIMNASIO,{' '}
-            <span className="inline-block bg-[#DC2626] text-white px-3 sm:px-5 py-0.5 sm:py-1 rounded-sm shadow-[0_0_30px_rgba(220,38,38,0.35)] align-baseline">
+            <span className="inline-block bg-[#DC2626] text-white px-3 sm:px-5 py-0.5 sm:py-1 rounded-sm shadow-[0_0_30px_rgba(220,38,38,0.35)] align-baseline mt-1 sm:mt-0">
               SIN EL CAOS.
             </span>
           </h1>
 
           {/* Subtitle */}
-          <p className="mt-7 text-base sm:text-lg md:text-xl text-neutral-300 max-w-3xl leading-relaxed">
+          <p className="mt-6 sm:mt-7 text-sm sm:text-lg md:text-xl text-neutral-300 max-w-3xl leading-relaxed">
             Controla membresías con renovación continua, POS en mostrador en tiempo real, corte de caja al centavo y retención directa por WhatsApp. Diseñado para dueños de gimnasios que exigen precisión absoluta.
           </p>
 
           {/* Trust Badges */}
           <div className="mt-6 flex flex-wrap justify-center items-center gap-3 sm:gap-6 text-xs text-neutral-400 font-mono">
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 size={14} className="text-[#DC2626]" />
+              <CheckCircle2 size={14} className="text-[#DC2626] shrink-0" />
               14 Días Gratis
             </span>
             <span className="text-white/20 hidden sm:inline">·</span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 size={14} className="text-[#DC2626]" />
+              <CheckCircle2 size={14} className="text-[#DC2626] shrink-0" />
               Sin Tarjeta Requerida
             </span>
             <span className="text-white/20 hidden sm:inline">·</span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 size={14} className="text-[#DC2626]" />
+              <CheckCircle2 size={14} className="text-[#DC2626] shrink-0" />
               Cero Contratos Forzosos
             </span>
             <span className="text-white/20 hidden sm:inline">·</span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 size={14} className="text-[#DC2626]" />
+              <CheckCircle2 size={14} className="text-[#DC2626] shrink-0" />
               Offline-Ready & PWA
             </span>
           </div>
 
           {/* CTAs */}
-          <div className="mt-9 flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+          <div className="mt-8 sm:mt-9 flex flex-col sm:flex-row items-center gap-3.5 sm:gap-4 w-full sm:w-auto">
             <button
+              type="button"
               onClick={() => handleSelectPlan()}
-              className="w-full sm:w-auto px-8 py-4 text-sm font-extrabold uppercase tracking-wider text-white bg-[#DC2626] hover:bg-[#EF4444] rounded-full transition-all shadow-[0_0_35px_rgba(220,38,38,0.45)] hover:scale-105 active:scale-95 flex items-center justify-center gap-3 cursor-pointer"
+              className="w-full sm:w-auto min-h-[48px] px-8 py-4 text-sm font-extrabold uppercase tracking-wider text-white bg-[#DC2626] hover:bg-[#EF4444] rounded-full transition-all shadow-[0_0_35px_rgba(220,38,38,0.45)] sm:hover:scale-105 active:scale-95 flex items-center justify-center gap-3 cursor-pointer touch-manipulation"
             >
               <span>Iniciar Prueba Gratuita</span>
               <ArrowRight size={17} />
             </button>
             <button
+              type="button"
               onClick={() => navigate('/demo')}
-              className="w-full sm:w-auto px-7 py-4 text-sm font-semibold text-white bg-[#171717] hover:bg-[#1D1D1D] border border-white/15 rounded-full transition-colors flex items-center justify-center gap-2.5 cursor-pointer"
+              className="w-full sm:w-auto min-h-[48px] px-7 py-4 text-sm font-semibold text-white bg-[#171717] hover:bg-[#1D1D1D] border border-white/15 rounded-full transition-colors flex items-center justify-center gap-2.5 cursor-pointer touch-manipulation"
             >
               <Play size={15} className="text-[#DC2626]" />
               <span>Ver Demostración Operativa</span>
@@ -276,23 +333,28 @@ export function Landing() {
           </div>
 
           {/* Cinematic Showcase Container */}
-          <div className="mt-14 w-full max-w-6xl relative">
+          <div className="mt-12 sm:mt-14 w-full max-w-6xl relative">
             <div className="relative rounded-3xl overflow-hidden border border-white/15 shadow-[0_25px_80px_-15px_rgba(0,0,0,0.9)] bg-[#171717]">
               {/* Cinematic Gym Background Image */}
-              <div className="relative h-[320px] sm:h-[480px] lg:h-[580px] w-full overflow-hidden">
-                <img
-                  src="/images/cinematic-gym.png"
-                  alt="Merwil ZonaFit Cinematic Environment"
-                  className="w-full h-full object-cover opacity-75 scale-105 transition-transform duration-700 hover:scale-100"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#020202] via-[#020202]/50 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#020202]/70 via-transparent to-[#020202]/70" />
+              <div className="relative flex flex-col sm:block sm:h-[480px] lg:h-[580px] w-full overflow-hidden">
+                <div className="relative h-[220px] sm:h-full w-full overflow-hidden shrink-0">
+                  <img
+                    src="/images/cinematic-gym.png"
+                    alt="Merwil ZonaFit Cinematic Environment"
+                    width={1376}
+                    height={768}
+                    decoding="async"
+                    className="w-full h-full object-cover opacity-75 md:scale-105 transition-transform duration-700 md:hover:scale-100"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#020202] via-[#020202]/50 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#020202]/70 via-transparent to-[#020202]/70" />
+                </div>
 
                 {/* Live Mockup Overlay Card */}
-                <div className="absolute inset-x-4 bottom-4 sm:inset-x-8 sm:bottom-8 lg:inset-x-12 lg:bottom-12 p-5 sm:p-7 rounded-2xl bg-[#020202]/90 backdrop-blur-2xl border border-white/15 shadow-2xl">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+                <div className="relative z-10 mx-3 mb-3 -mt-12 sm:mt-0 sm:mx-0 sm:mb-0 sm:absolute sm:inset-x-8 sm:bottom-8 lg:inset-x-12 lg:bottom-12 p-4 sm:p-7 rounded-2xl bg-[#020202]/95 sm:bg-[#020202]/90 backdrop-blur-md md:backdrop-blur-2xl border border-white/15 shadow-2xl text-left">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-4 border-b border-white/10">
                     <div className="flex items-center gap-3">
-                      <span className="size-2.5 rounded-full bg-[#22C55E] animate-pulse" />
+                      <span className="size-2.5 shrink-0 rounded-full bg-[#22C55E] animate-pulse" />
                       <div>
                         <div className="font-mono text-xs font-bold text-white uppercase tracking-wider">
                           CENTRO DE OPERACIONES EN VIVO
@@ -302,7 +364,7 @@ export function Landing() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-[#22C55E]/10 border border-[#22C55E]/30 text-[#22C55E] font-bold">
                         Caja Abierta
                       </span>
@@ -313,7 +375,7 @@ export function Landing() {
                   </div>
 
                   {/* 3 Metric Previews */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-4">
                     <div className="p-3.5 rounded-xl bg-[#171717] border border-white/5 flex flex-col gap-1">
                       <span className="text-[10px] font-mono uppercase text-neutral-400">Ingresos del Mes</span>
                       <span className="text-xl sm:text-2xl font-light font-mono text-white">$2.503.000 COP</span>
@@ -559,19 +621,19 @@ export function Landing() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-stretch">
           {defaultPlans.map((plan) => (
             <div
               key={plan.id}
               className={cn(
-                'rounded-3xl p-8 flex flex-col justify-between transition-all relative',
+                'rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all relative',
                 plan.popular
-                  ? 'bg-[#171717] border-2 border-[#DC2626] shadow-[0_0_40px_rgba(220,38,38,0.25)] scale-105 z-10'
+                  ? 'bg-[#171717] border-2 border-[#DC2626] shadow-[0_0_40px_rgba(220,38,38,0.25)] md:scale-105 z-10'
                   : 'bg-[#171717]/60 border border-white/10 hover:border-white/20'
               )}
             >
               {plan.popular && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[#DC2626] text-white text-[11px] font-mono uppercase tracking-wider font-extrabold shadow-md">
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[#DC2626] text-white text-[11px] font-mono uppercase tracking-wider font-extrabold shadow-md whitespace-nowrap">
                   {plan.badge}
                 </div>
               )}
@@ -585,7 +647,7 @@ export function Landing() {
                 </div>
 
                 <div className="my-6">
-                  <span className="text-4xl font-extrabold font-mono text-white">
+                  <span className="text-3xl sm:text-4xl font-extrabold font-mono text-white">
                     {formatCurrency(plan.price)}
                   </span>
                   <span className="text-xs text-neutral-400 ml-2 font-mono">COP</span>
@@ -603,11 +665,12 @@ export function Landing() {
 
               <div className="mt-8 pt-6 border-t border-white/10">
                 <button
+                  type="button"
                   onClick={() => handleSelectPlan(plan.id)}
                   className={cn(
-                    'w-full py-3.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2',
+                    'w-full min-h-[44px] py-3.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 touch-manipulation',
                     plan.popular
-                      ? 'bg-[#DC2626] hover:bg-[#EF4444] text-white shadow-lg shadow-[#DC2626]/40 hover:scale-[1.02]'
+                      ? 'bg-[#DC2626] hover:bg-[#EF4444] text-white shadow-lg shadow-[#DC2626]/40 sm:hover:scale-[1.02]'
                       : 'bg-[#020202] hover:bg-[#1D1D1D] text-white border border-white/15'
                   )}
                 >
@@ -637,29 +700,32 @@ export function Landing() {
           </p>
 
           {/* Platform Switcher */}
-          <div className="mt-8 flex justify-center gap-2 p-1 rounded-full bg-[#020202] border border-white/10 w-fit mx-auto">
+          <div className="mt-8 flex flex-wrap justify-center gap-1.5 sm:gap-2 p-1.5 sm:p-1 rounded-2xl sm:rounded-full bg-[#020202] border border-white/10 max-w-full w-fit mx-auto">
             <button
+              type="button"
               onClick={() => setSelectedPwaPlatform('desktop')}
               className={cn(
-                'px-4 py-2 rounded-full text-xs font-semibold transition-colors cursor-pointer',
+                'px-3.5 sm:px-4 py-2 min-h-[38px] rounded-full text-xs font-semibold transition-colors cursor-pointer touch-manipulation',
                 selectedPwaPlatform === 'desktop' ? 'bg-[#171717] text-white border border-white/10' : 'text-neutral-400 hover:text-white'
               )}
             >
               PC / Mac (Chrome/Edge)
             </button>
             <button
+              type="button"
               onClick={() => setSelectedPwaPlatform('android')}
               className={cn(
-                'px-4 py-2 rounded-full text-xs font-semibold transition-colors cursor-pointer',
+                'px-3.5 sm:px-4 py-2 min-h-[38px] rounded-full text-xs font-semibold transition-colors cursor-pointer touch-manipulation',
                 selectedPwaPlatform === 'android' ? 'bg-[#171717] text-white border border-white/10' : 'text-neutral-400 hover:text-white'
               )}
             >
               Android
             </button>
             <button
+              type="button"
               onClick={() => setSelectedPwaPlatform('ios')}
               className={cn(
-                'px-4 py-2 rounded-full text-xs font-semibold transition-colors cursor-pointer',
+                'px-3.5 sm:px-4 py-2 min-h-[38px] rounded-full text-xs font-semibold transition-colors cursor-pointer touch-manipulation',
                 selectedPwaPlatform === 'ios' ? 'bg-[#171717] text-white border border-white/10' : 'text-neutral-400 hover:text-white'
               )}
             >
@@ -694,8 +760,9 @@ export function Landing() {
 
           <div className="mt-8">
             <button
+              type="button"
               onClick={handleInstallClick}
-              className="px-7 py-3 text-xs font-bold uppercase tracking-wider text-white bg-[#171717] hover:bg-[#1D1D1D] border border-white/20 rounded-full transition-all inline-flex items-center gap-2 cursor-pointer shadow-md"
+              className="min-h-[44px] px-7 py-3 text-xs font-bold uppercase tracking-wider text-white bg-[#171717] hover:bg-[#1D1D1D] border border-white/20 rounded-full transition-all inline-flex items-center gap-2 cursor-pointer shadow-md touch-manipulation"
             >
               <Download size={14} className="text-[#DC2626]" />
               <span>{isInstalled ? 'App ya instalada (Abrir)' : 'Instalar Merwil ZonaFit PWA'}</span>
@@ -717,8 +784,9 @@ export function Landing() {
           </p>
           <div>
             <button
+              type="button"
               onClick={() => handleSelectPlan()}
-              className="px-9 py-4 text-sm font-extrabold uppercase tracking-wider text-white bg-[#DC2626] hover:bg-[#EF4444] rounded-full transition-all shadow-[0_0_40px_rgba(220,38,38,0.5)] hover:scale-105 active:scale-95 cursor-pointer"
+              className="w-full sm:w-auto min-h-[48px] px-6 sm:px-9 py-4 text-xs sm:text-sm font-extrabold uppercase tracking-wider text-white bg-[#DC2626] hover:bg-[#EF4444] rounded-full transition-all shadow-[0_0_40px_rgba(220,38,38,0.5)] sm:hover:scale-105 active:scale-95 cursor-pointer touch-manipulation"
             >
               Comenzar Prueba Gratuita de 14 Días
             </button>
@@ -733,7 +801,7 @@ export function Landing() {
             {/* Col 1: Brand */}
             <div className="md:col-span-1 flex flex-col gap-3">
               <div className="flex items-center gap-3">
-                <img src="/logo.png" alt="Merwil ZonaFit" className="w-7 h-7 object-contain" />
+                <img src="/logo.png" alt="Merwil ZonaFit" width={28} height={28} loading="lazy" decoding="async" className="w-7 h-7 object-contain" />
                 <span className="font-mono font-bold text-white tracking-wider">MERWIL ZONAFIT</span>
               </div>
               <p className="text-xs text-neutral-400 leading-relaxed">

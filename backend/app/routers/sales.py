@@ -197,4 +197,5 @@ def delete_sale(
     SaleService.delete(
         db,
         sale,
+        current_user,
     )

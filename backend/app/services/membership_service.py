@@ -405,6 +405,7 @@ class MembershipService:
             ]
 
             # Also check if there are AR payments for this membership's sale
+            from sqlalchemy import or_
             from app.models.sale import Sale
             from app.models.accounts_receivable import AccountsReceivable
             from app.models.payment import Payment
@@ -417,7 +418,10 @@ class MembershipService:
                 .filter(
                     Sale.gym_id == current_user.gym_id,
                     Sale.client_id == membership.client_id,
-                    Sale.notes.like(f"Membresía #{membership.id}%"),
+                    or_(
+                        Sale.notes == f"Membresía #{membership.id}",
+                        Sale.notes.like(f"Membresía #{membership.id} - %"),
+                    ),
                     Sale.is_active == True,
                 )
                 .all()
@@ -463,6 +467,102 @@ class MembershipService:
     def delete(
         db: Session,
         membership: Membership,
+        current_user: User | None = None,
     ):
+        import json
+        from decimal import Decimal
+        from sqlalchemy import or_
+        from app.constants.sale_status import SaleStatus
+        from app.models.accounts_receivable import AccountsReceivable
+        from app.models.audit_log import AuditLog
+        from app.models.payment import Payment
+        from app.models.sale import Sale
+        from app.services.payment_service import PaymentService
+
         with DatabaseTransaction(db):
+            old_status = membership.status
             membership.is_active = False
+            membership.status = MembershipStatus.CANCELLED
+
+            # 1. Reverse all active direct membership payments (non-destructively)
+            direct_payments = (
+                db.query(Payment)
+                .filter(
+                    Payment.membership_id == membership.id,
+                    Payment.gym_id == membership.gym_id,
+                    Payment.is_active == True,
+                )
+                .all()
+            )
+            for pmt in direct_payments:
+                PaymentService.reverse_payment_in_tx(
+                    db=db,
+                    payment=pmt,
+                    current_user=current_user,
+                    reason=f"Cancelación de membresía #{membership.id}",
+                )
+
+            # 2. Cancel linked shadow sales and their AccountsReceivable + AR payments
+            shadow_sales = (
+                db.query(Sale)
+                .filter(
+                    Sale.gym_id == membership.gym_id,
+                    or_(
+                        Sale.notes == f"Membresía #{membership.id}",
+                        Sale.notes.like(f"Membresía #{membership.id} - %"),
+                    ),
+                )
+                .all()
+            )
+            for shadow_sale in shadow_sales:
+                shadow_sale.is_active = False
+                shadow_sale.status = SaleStatus.CANCELLED
+
+                ar = (
+                    db.query(AccountsReceivable)
+                    .filter(
+                        AccountsReceivable.sale_id == shadow_sale.id,
+                        AccountsReceivable.gym_id == membership.gym_id,
+                    )
+                    .first()
+                )
+                if ar:
+                    ar_payments = (
+                        db.query(Payment)
+                        .filter(
+                            Payment.accounts_receivable_id == ar.id,
+                            Payment.gym_id == membership.gym_id,
+                            Payment.is_active == True,
+                        )
+                        .all()
+                    )
+                    for ar_pmt in ar_payments:
+                        PaymentService.reverse_payment_in_tx(
+                            db=db,
+                            payment=ar_pmt,
+                            current_user=current_user,
+                            reason=f"Cancelación de crédito membresía #{membership.id}",
+                        )
+                    ar.status = "CANCELLED"
+                    ar.balance_due = Decimal("0.00")
+                    ar.is_active = False
+
+            if current_user:
+                audit = AuditLog(
+                    gym_id=membership.gym_id,
+                    user_id=current_user.id,
+                    action="MEMBERSHIP_CANCELLED",
+                    entity_type="Membership",
+                    entity_id=membership.id,
+                    old_values=json.dumps({
+                        "status": old_status,
+                        "price": str(membership.price),
+                    }),
+                    new_values=json.dumps({
+                        "status": MembershipStatus.CANCELLED,
+                        "is_active": False,
+                    }),
+                    ip_address="system",
+                )
+                db.add(audit)
+            db.flush()

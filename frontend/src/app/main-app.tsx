@@ -7,7 +7,13 @@ import { ToastProvider } from '@shared/ui/Toast'
 import { registerSW } from 'virtual:pwa-register'
 import { OfflineBanner } from '../shared/network/OfflineBanner';
 import { SyncIndicator } from '../shared/offline/SyncIndicator';
-import { queryClient, persister, dehydrateQueryFilter } from '@shared/queryClient'
+import {
+  queryClient,
+  persister,
+  dehydrateQueryFilter,
+  PERSIST_CACHE_BUSTER,
+  PERSIST_MAX_AGE,
+} from '@shared/queryClient'
 
 // Auto-reload on vite dynamic import preload error (ChunkLoadError after new deployment)
 window.addEventListener('vite:preloadError', (event) => {
@@ -40,7 +46,8 @@ createRoot(document.getElementById('root')!).render(
       client={queryClient}
       persistOptions={{
         persister,
-        maxAge: 1000 * 60 * 60 * 24, // 24 hours
+        buster: PERSIST_CACHE_BUSTER,
+        maxAge: PERSIST_MAX_AGE,
         dehydrateOptions: {
           shouldDehydrateQuery: dehydrateQueryFilter
         }

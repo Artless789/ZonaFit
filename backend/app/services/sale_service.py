@@ -514,6 +514,112 @@ class SaleService:
     def delete(
         db: Session,
         sale: Sale,
+        current_user: User | None = None,
     ):
+        import json
+        from app.models.accounts_receivable import AccountsReceivable
+        from app.models.audit_log import AuditLog
+        from app.models.payment import Payment
+        from app.models.product import Product
+        from app.services.inventory_movement_service import InventoryMovementService
+        from app.services.payment_service import PaymentService
+
+        was_completed = bool(sale.is_active and sale.status == SaleStatus.COMPLETED)
+        old_status = sale.status
+
         with DatabaseTransaction(db):
             sale.is_active = False
+            sale.status = SaleStatus.CANCELLED
+
+            # 1. Restore product stock if this was an active completed POS sale
+            if was_completed:
+                details = (
+                    db.query(SaleDetail)
+                    .filter(SaleDetail.sale_id == sale.id)
+                    .all()
+                )
+                for detail in details:
+                    product = (
+                        db.query(Product)
+                        .filter(
+                            Product.id == detail.product_id,
+                            Product.gym_id == sale.gym_id,
+                        )
+                        .first()
+                    )
+                    if product:
+                        InventoryMovementService.reverse_sale_output(
+                            db=db,
+                            current_user=current_user,
+                            product=product,
+                            quantity=detail.quantity,
+                            reason=f"Cancelación Sale #{sale.id}",
+                        )
+
+            # 2. Reverse all active direct sale payments (non-destructively)
+            sale_payments = (
+                db.query(Payment)
+                .filter(
+                    Payment.sale_id == sale.id,
+                    Payment.gym_id == sale.gym_id,
+                    Payment.is_active == True,
+                )
+                .all()
+            )
+            for pmt in sale_payments:
+                PaymentService.reverse_payment_in_tx(
+                    db=db,
+                    payment=pmt,
+                    current_user=current_user,
+                    reason=f"Cancelación de venta #{sale.id}",
+                )
+
+            # 3. Cancel linked AccountsReceivable and reverse its payments
+            ar = (
+                db.query(AccountsReceivable)
+                .filter(
+                    AccountsReceivable.sale_id == sale.id,
+                    AccountsReceivable.gym_id == sale.gym_id,
+                )
+                .first()
+            )
+            if ar:
+                ar_payments = (
+                    db.query(Payment)
+                    .filter(
+                        Payment.accounts_receivable_id == ar.id,
+                        Payment.gym_id == sale.gym_id,
+                        Payment.is_active == True,
+                    )
+                    .all()
+                )
+                for ar_pmt in ar_payments:
+                    PaymentService.reverse_payment_in_tx(
+                        db=db,
+                        payment=ar_pmt,
+                        current_user=current_user,
+                        reason=f"Cancelación de venta a crédito #{sale.id}",
+                    )
+                ar.status = "CANCELLED"
+                ar.balance_due = Decimal("0.00")
+                ar.is_active = False
+
+            if current_user:
+                audit = AuditLog(
+                    gym_id=sale.gym_id,
+                    user_id=current_user.id,
+                    action="SALE_CANCELLED",
+                    entity_type="Sale",
+                    entity_id=sale.id,
+                    old_values=json.dumps({
+                        "status": old_status,
+                        "total": str(sale.total),
+                    }),
+                    new_values=json.dumps({
+                        "status": SaleStatus.CANCELLED,
+                        "is_active": False,
+                    }),
+                    ip_address="system",
+                )
+                db.add(audit)
+            db.flush()

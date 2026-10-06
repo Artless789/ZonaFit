@@ -37,9 +37,9 @@ export function ClientSearchCombobox({
     }
   }, [selectedClient, isOpen]);
 
-  // Click outside to close
+  // Click/tap outside to close
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    function handleClickOutside(event: PointerEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
         if (selectedClient) {
@@ -49,8 +49,8 @@ export function ClientSearchCombobox({
         }
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("pointerdown", handleClickOutside);
+    return () => document.removeEventListener("pointerdown", handleClickOutside);
   }, [selectedClient]);
 
   const filteredClients = activeClients;
@@ -63,7 +63,7 @@ export function ClientSearchCombobox({
         </div>
         <input
           type="text"
-          className="w-full pl-10 pr-10 py-2 bg-bg-surface/50 border border-border-medium rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary transition-all text-text-primary placeholder:text-text-muted"
+          className="w-full min-h-[44px] pl-10 pr-10 py-2 bg-bg-surface/50 border border-border-medium rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary transition-all text-text-primary placeholder:text-text-muted touch-manipulation"
           placeholder={placeholder}
           value={isOpen ? query : (selectedClient ? selectedClient.full_name : query)}
           onChange={(e) => {
@@ -78,7 +78,8 @@ export function ClientSearchCombobox({
         {selectedClient && allowClear && (
           <button
             type="button"
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-text-muted hover:text-text-primary"
+            aria-label="Limpiar cliente seleccionado"
+            className="absolute inset-y-0 right-0 px-3 min-w-[40px] flex items-center justify-center text-text-muted hover:text-text-primary cursor-pointer touch-manipulation"
             onClick={(e) => {
               e.stopPropagation();
               onSelect(null);
@@ -86,19 +87,19 @@ export function ClientSearchCombobox({
               setIsOpen(true);
             }}
           >
-            <span className="text-xs font-semibold">×</span>
+            <span className="text-sm font-semibold">×</span>
           </button>
         )}
       </div>
 
       {isOpen && (
-        <ul className="absolute z-[var(--z-dropdown)] mt-1 max-h-60 w-full overflow-auto rounded-xl bg-bg-elevated border border-border-light shadow-glass py-1 text-sm ring-1 ring-black/5 focus:outline-none">
+        <ul className="absolute z-[var(--z-dropdown)] mt-1 max-h-60 w-full overflow-auto overscroll-contain rounded-xl bg-bg-elevated border border-border-light shadow-glass py-1 text-sm ring-1 ring-black/5 focus:outline-none">
           {clientsQuery.isLoading ? (
-            <li className="relative cursor-default select-none py-2 px-4 text-text-muted text-center">
+            <li className="relative cursor-default select-none py-2.5 px-4 text-text-muted text-center">
                Buscando...
              </li>
           ) : filteredClients.length === 0 ? (
-            <li className="relative cursor-default select-none py-2 px-4 text-text-muted text-center">
+            <li className="relative cursor-default select-none py-2.5 px-4 text-text-muted text-center">
               No se encontraron clientes.
             </li>
           ) : (
@@ -106,7 +107,7 @@ export function ClientSearchCombobox({
               <li
                 key={client.id}
                 className={cn(
-                  "relative cursor-pointer select-none py-2 px-4 transition-colors",
+                  "relative cursor-pointer select-none min-h-[44px] py-2.5 px-4 transition-colors flex items-center touch-manipulation",
                   selectedClientId === client.id ? "bg-brand-primary/10 text-brand-primary" : "hover:bg-bg-surface text-text-primary"
                 )}
                 onClick={() => {
@@ -115,12 +116,12 @@ export function ClientSearchCombobox({
                   setIsOpen(false);
                 }}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <UserIcon size={14} className="opacity-50" />
+                <div className="flex w-full items-center justify-between gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <UserIcon size={14} className="opacity-50 shrink-0" />
                     <span className="font-medium truncate block">{client.full_name}</span>
                   </div>
-                  <span className="text-xs text-text-muted bg-bg-surface/80 px-2 py-0.5 rounded-md border border-border-light">{client.document_type} {client.document}</span>
+                  <span className="text-xs text-text-muted bg-bg-surface/80 px-2 py-0.5 rounded-md border border-border-light shrink-0">{client.document_type} {client.document}</span>
                 </div>
               </li>
             ))

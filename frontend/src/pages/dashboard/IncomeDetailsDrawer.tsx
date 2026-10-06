@@ -66,15 +66,15 @@ export function IncomeDetailsDrawer({ isOpen, onClose }: IncomeDetailsDrawerProp
   };
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | PointerEvent) => {
       if (monthDropdownRef.current && !monthDropdownRef.current.contains(e.target as Node)) {
         setIsMonthDropdownOpen(false);
       }
     };
     if (isMonthDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('pointerdown', handleClickOutside);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
   }, [isMonthDropdownOpen]);
 
   const isCurrentMonth = selectedMonth === currentMonth && selectedYear === currentYear;

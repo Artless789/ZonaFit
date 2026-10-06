@@ -83,6 +83,21 @@ class DashboardService:
         sales_today = pos_sales_count + memberships_today_count
         sales_today_amount = pos_sales_amount + memberships_today_amount
 
+        # 1b. Recaudo del día (Payments efectivamente recibidos hoy) y Crédito generado hoy
+        collected_today_amount = db.query(func.sum(Payment.amount)).filter(
+            Payment.gym_id == current_user.gym_id,
+            Payment.status == "PAID",
+            Payment.is_active == True,
+            Payment.created_at >= today_start
+        ).scalar() or Decimal("0.00")
+
+        credit_today_amount = db.query(func.sum(AccountsReceivable.balance_due)).filter(
+            AccountsReceivable.gym_id == current_user.gym_id,
+            AccountsReceivable.balance_due > Decimal("0.00"),
+            AccountsReceivable.is_active == True,
+            AccountsReceivable.created_at >= today_start
+        ).scalar() or Decimal("0.00")
+
         # 2. Ingresos del mes (Payments reales efectivamente cobrados)
         income_this_month = db.query(func.sum(Payment.amount)).filter(
             Payment.gym_id == current_user.gym_id,
@@ -203,6 +218,7 @@ class DashboardService:
             joinedload(Membership.membership_plan)
         ).filter(
             Membership.gym_id == current_user.gym_id,
+            Membership.is_active == True,
             Membership.created_at >= today_start
         ).order_by(Membership.created_at.desc()).limit(10).all()
         for m in today_memberships:
@@ -220,6 +236,7 @@ class DashboardService:
         # Clients today
         today_clients = db.query(Client).filter(
             Client.gym_id == current_user.gym_id,
+            Client.is_active == True,
             Client.created_at >= today_start
         ).order_by(Client.created_at.desc()).limit(10).all()
         for c in today_clients:
@@ -235,6 +252,8 @@ class DashboardService:
         # Payments today
         today_payments = db.query(Payment).filter(
             Payment.gym_id == current_user.gym_id,
+            Payment.status == "PAID",
+            Payment.is_active == True,
             Payment.created_at >= today_start
         ).order_by(Payment.created_at.desc()).limit(10).all()
         for p in today_payments:
@@ -259,6 +278,8 @@ class DashboardService:
         return DashboardResponse(
             sales_today=sales_today,
             sales_today_amount=sales_today_amount,
+            collected_today_amount=collected_today_amount,
+            credit_today_amount=credit_today_amount,
             income_this_month=income_this_month,
             active_clients=active_clients,
             expiring_memberships_count=expiring_memberships_count,

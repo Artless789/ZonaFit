@@ -155,7 +155,7 @@ export function TemplateDrawer({ isOpen, onClose, editingTemplate }: TemplateDra
       onClose={onClose}
       title={isEditing ? 'Editar Plantilla' : 'Nueva Plantilla'}
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full gap-5">
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col min-h-full gap-5">
         {!isEditing ? (
           <>
             <Select
@@ -316,11 +316,11 @@ export function TemplateDrawer({ isOpen, onClose, editingTemplate }: TemplateDra
           </label>
         )}
 
-        <div className="pt-4 mt-auto border-t border-border-light flex justify-end gap-3">
+        <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] mt-auto border-t border-border-light bg-surface-panel/95 backdrop-blur-md flex justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50 cursor-pointer"
+            className="min-h-[42px] px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50 cursor-pointer touch-manipulation"
             disabled={isPending}
           >
             Cancelar
