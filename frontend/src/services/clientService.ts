@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Client, ClientCreate, ClientUpdate, Client360Response } from '@shared/types/client';
+import type { Client, ClientCreate, ClientUpdate, Client360Response, ClientMetrics } from '@shared/types/client';
 import type { PaginationResponse } from '@shared/types/pagination';
 import type { 
   ClientImportPreviewResponse, 
@@ -22,6 +22,11 @@ export const clientService = {
       }
     });
     return data;
+  },
+
+  async getClientMetrics(): Promise<ClientMetrics> {
+    const res = await api.get<ClientMetrics>('/clients/metrics');
+    return res.data;
   },
 
   async getClient(id: number): Promise<Client> {

@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { clientService } from '../services/clientService';
-import { ClientCreate, ClientUpdate, Client, Client360Response } from '@shared/types/client';
+import { ClientCreate, ClientUpdate, Client, Client360Response, ClientMetrics } from '@shared/types/client';
 import { PaginationResponse } from '@shared/types/pagination';
 
 export const useClients = (
@@ -60,3 +60,12 @@ export const useClient360 = (clientId?: number) => {
     enabled: !!clientId,
   });
 };
+
+export const useClientMetrics = () => {
+  return useQuery<ClientMetrics, Error>({
+    queryKey: ['clients', 'metrics'],
+    queryFn: clientService.getClientMetrics,
+    staleTime: 1000 * 60 * 2,
+  });
+};
+

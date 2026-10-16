@@ -1,15 +1,17 @@
 import { useState, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Tag, UserCheck, Plus, Clock, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { useMembershipPlans } from '../../hooks/useMembershipPlans';
 import { useMemberships } from '../../hooks/useMemberships';
-import { useClients } from '../../hooks/useClients';
 import { MembershipPlansTable } from './MembershipPlansTable';
 import { MembershipPlanDrawer } from './MembershipPlanDrawer';
 import { MembershipsTable, EnrichedMembership } from './MembershipsTable';
 import { MembershipDrawer } from './MembershipDrawer';
 import { MembershipDetailDrawer } from './MembershipDetailDrawer';
+import { ExpiredMembershipsModal, ExpiredMembershipCardItem } from './ExpiredMembershipsModal';
 import type { Membership } from '@shared/types/membership';
 import type { MembershipPlan } from '@shared/types/membershipPlan';
+import type { Client } from '@shared/types/client';
 import { ActionGlowButton } from '@shared/ui/ActionGlowButton';
 import { SectionEyebrow } from '@shared/ui/SectionEyebrow';
 import { StatusBadge } from '@shared/ui/StatusBadge';
@@ -20,12 +22,12 @@ import { parseISO } from 'date-fns';
 
 export function MembershipsPage() {
   const { toast } = useToast();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<'subscriptions' | 'plans'>('subscriptions');
 
-  // Queries
+  // Queries (clients are embedded in memberships response)
   const plansQuery = useMembershipPlans();
   const membershipsQuery = useMemberships();
-  const clientsQuery = useClients(1, 100);
 
   const plans = useMemo(
     () => (Array.isArray(plansQuery.query.data) ? plansQuery.query.data : plansQuery.query.data?.items) || [],
@@ -35,23 +37,41 @@ export function MembershipsPage() {
     () => (Array.isArray(membershipsQuery.query.data) ? membershipsQuery.query.data : membershipsQuery.query.data?.items) || [],
     [membershipsQuery.query.data]
   );
-  const clients = useMemo(
-    () => (Array.isArray(clientsQuery.query.data) ? clientsQuery.query.data : clientsQuery.query.data?.items) || [],
-    [clientsQuery.query.data]
-  );
 
-  // Enriched Memberships (Prioritizes server-embedded client/plan with client list fallback)
+  // Extract client summaries from joined membership records for drawer selection fallback
+  const clientsFromMemberships: Client[] = useMemo(() => {
+    const map = new Map<number, Client>();
+    for (const m of memberships) {
+      if (m.client && !map.has(m.client.id)) {
+        map.set(m.client.id, {
+          id: m.client.id,
+          gym_id: m.gym_id || 1,
+          full_name: m.client.full_name,
+          document_type: m.client.document_type || 'CC',
+          document: m.client.document || '',
+          phone: m.client.phone || '',
+          email: m.client.email,
+          photo_url: m.client.photo_url,
+          is_active: true,
+          created_at: '',
+          updated_at: '',
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [memberships]);
+
+  // Enriched Memberships (uses server-embedded client and membership_plan)
   const enrichedMemberships: EnrichedMembership[] = useMemo(() => {
     return memberships.map((m) => {
-      const client = m.client || clients.find((c) => c.id === m.client_id);
       const plan = m.membership_plan || plans.find((p) => p.id === m.membership_plan_id);
       return {
         ...m,
-        clientName: m.client?.full_name || m.client_name || client?.full_name || 'Desconocido',
+        clientName: m.client?.full_name || m.client_name || 'Desconocido',
         planName: m.membership_plan?.name || m.plan_name || plan?.name || 'Plan Eliminado',
       };
     });
-  }, [memberships, clients, plans]);
+  }, [memberships, plans]);
 
   // Derived Summary KPIs
   const summaryKPIs = useMemo(() => {
@@ -90,15 +110,43 @@ export function MembershipsPage() {
     };
   }, [enrichedMemberships, plans]);
 
-  // Drawer States
+  // Drawer and Modal States
+  const locationState = location.state as {
+    openExpiredModal?: boolean;
+    renewClientId?: number;
+    renewPlanId?: number;
+  } | null;
+
   const [isPlanDrawerOpen, setIsPlanDrawerOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<MembershipPlan | null>(null);
-  const [isSubscriptionDrawerOpen, setIsSubscriptionDrawerOpen] = useState(false);
+  const [isSubscriptionDrawerOpen, setIsSubscriptionDrawerOpen] = useState(
+    Boolean(locationState?.renewClientId)
+  );
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
   const [selectedMembershipForDetail, setSelectedMembershipForDetail] = useState<Membership | null>(null);
+  const [isExpiredModalOpen, setIsExpiredModalOpen] = useState(
+    Boolean(locationState?.openExpiredModal)
+  );
 
   // Renewal target state
-  const [renewalTarget, setRenewalTarget] = useState<Membership | null>(null);
+  const [renewalTarget, setRenewalTarget] = useState<Membership | null>(() => {
+    if (locationState?.renewClientId) {
+      return {
+        id: 0,
+        gym_id: 1,
+        client_id: locationState.renewClientId,
+        membership_plan_id: locationState.renewPlanId || 0,
+        start_date: '',
+        end_date: '',
+        price: 0,
+        status: 'ACTIVE',
+        is_active: true,
+        created_at: '',
+        updated_at: '',
+      };
+    }
+    return null;
+  });
 
   // Handlers for Details & Renewals
   const handleViewDetails = (membership: Membership) => {
@@ -108,6 +156,25 @@ export function MembershipsPage() {
 
   const handleOpenRenew = (membership: Membership) => {
     setRenewalTarget(membership);
+    setIsSubscriptionDrawerOpen(true);
+  };
+
+  const handleRenewFromExpiredModal = (item: ExpiredMembershipCardItem) => {
+    setRenewalTarget({
+      id: item.id,
+      gym_id: 1,
+      client_id: item.clientId,
+      membership_plan_id: item.planId || 0,
+      start_date: '',
+      end_date: item.endDate,
+      price: item.price,
+      status: 'EXPIRED',
+      is_active: false,
+      created_at: '',
+      updated_at: '',
+      client_name: item.clientName,
+      plan_name: item.planName,
+    });
     setIsSubscriptionDrawerOpen(true);
   };
 
@@ -188,8 +255,7 @@ export function MembershipsPage() {
 
   const isLoading =
     plansQuery.query.isLoading ||
-    membershipsQuery.query.isLoading ||
-    clientsQuery.query.isLoading;
+    membershipsQuery.query.isLoading;
 
   if (isLoading) {
     return (
@@ -270,16 +336,20 @@ export function MembershipsPage() {
           <Clock size={18} className="text-amber-400 opacity-80" />
         </div>
 
-        <div className="p-3.5 rounded-[18px] border border-border-subtle bg-surface-panel/80 flex items-center justify-between shadow-subtle backdrop-blur-md">
+        <div
+          onClick={() => setIsExpiredModalOpen(true)}
+          className="p-3.5 rounded-[18px] border border-border-subtle bg-surface-panel/80 flex items-center justify-between shadow-subtle backdrop-blur-md cursor-pointer hover:border-rose-500/40 hover:bg-rose-500/[0.04] transition-all group"
+          title="Abrir panel de Membresías Vencidas"
+        >
           <div className="flex flex-col">
-            <span className="text-[10px] font-mono uppercase text-text-muted">
+            <span className="text-[10px] font-mono uppercase text-text-muted group-hover:text-rose-300 transition-colors">
               Vencidas / Por Renovar
             </span>
             <span className="text-xl font-black font-mono text-rose-400">
               {summaryKPIs.expired}
             </span>
           </div>
-          <ShieldAlert size={18} className="text-rose-400 opacity-80" />
+          <ShieldAlert size={18} className="text-rose-400 opacity-80 group-hover:scale-110 transition-transform" />
         </div>
 
         <div className="p-3.5 rounded-[18px] border border-border-subtle bg-surface-panel/80 flex items-center justify-between shadow-subtle backdrop-blur-md">
@@ -295,39 +365,50 @@ export function MembershipsPage() {
         </div>
       </div>
 
-      {/* Segmented Control / Tabs */}
-      <div className="bg-surface-panel border border-border-subtle p-1 rounded-[var(--radius-xl)] shadow-subtle w-full max-w-sm flex relative">
-        <div
-          className="absolute inset-y-1 rounded-[var(--radius-lg)] bg-surface-raised border border-border-medium shadow-elevated transition-all duration-300 ease-out z-0"
-          style={{
-            width: 'calc(50% - 4px)',
-            left: activeTab === 'subscriptions' ? '4px' : 'calc(50%)',
-          }}
-        />
+      {/* Segmented Control / Tabs & Quick Action */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="bg-surface-panel border border-border-subtle p-1 rounded-[var(--radius-xl)] shadow-subtle w-full max-w-sm flex relative">
+          <div
+            className="absolute inset-y-1 rounded-[var(--radius-lg)] bg-surface-raised border border-border-medium shadow-elevated transition-all duration-300 ease-out z-0"
+            style={{
+              width: 'calc(50% - 4px)',
+              left: activeTab === 'subscriptions' ? '4px' : 'calc(50%)',
+            }}
+          />
+
+          <button
+            onClick={() => setActiveTab('subscriptions')}
+            className={cn(
+              'relative z-10 flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold transition-colors cursor-pointer',
+              activeTab === 'subscriptions'
+                ? 'text-text-primary'
+                : 'text-text-muted hover:text-text-secondary'
+            )}
+          >
+            <UserCheck size={15} />
+            <span>Suscripciones ({summaryKPIs.total})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('plans')}
+            className={cn(
+              'relative z-10 flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold transition-colors cursor-pointer',
+              activeTab === 'plans'
+                ? 'text-text-primary'
+                : 'text-text-muted hover:text-text-secondary'
+            )}
+          >
+            <Tag size={15} />
+            <span>Catálogo ({plans.length})</span>
+          </button>
+        </div>
 
         <button
-          onClick={() => setActiveTab('subscriptions')}
-          className={cn(
-            'relative z-10 flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold transition-colors cursor-pointer',
-            activeTab === 'subscriptions'
-              ? 'text-text-primary'
-              : 'text-text-muted hover:text-text-secondary'
-          )}
+          type="button"
+          onClick={() => setIsExpiredModalOpen(true)}
+          className="liquid-glass-soft flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold text-rose-300 hover:text-white border border-rose-500/30 hover:bg-rose-500/15 transition-all cursor-pointer self-start sm:self-auto"
         >
-          <UserCheck size={15} />
-          <span>Suscripciones ({summaryKPIs.total})</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('plans')}
-          className={cn(
-            'relative z-10 flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold transition-colors cursor-pointer',
-            activeTab === 'plans'
-              ? 'text-text-primary'
-              : 'text-text-muted hover:text-text-secondary'
-          )}
-        >
-          <Tag size={15} />
-          <span>Catálogo ({plans.length})</span>
+          <ShieldAlert size={14} className="text-rose-400" />
+          <span>Membresías Vencidas ({summaryKPIs.expired})</span>
         </button>
       </div>
 
@@ -353,7 +434,7 @@ export function MembershipsPage() {
         )}
       </div>
 
-      {/* Drawers */}
+      {/* Drawers & Modals */}
       <MembershipPlanDrawer
         isOpen={isPlanDrawerOpen}
         onClose={() => setIsPlanDrawerOpen(false)}
@@ -365,7 +446,7 @@ export function MembershipsPage() {
           setIsSubscriptionDrawerOpen(false);
           setRenewalTarget(null);
         }}
-        clients={clients}
+        clients={clientsFromMemberships}
         plans={plans}
         initialClientId={renewalTarget?.client_id || null}
         initialPlanId={renewalTarget?.membership_plan_id || null}
@@ -375,12 +456,17 @@ export function MembershipsPage() {
         isOpen={isDetailDrawerOpen}
         onClose={() => setIsDetailDrawerOpen(false)}
         membership={selectedMembershipForDetail}
-        clients={clients}
+        clients={clientsFromMemberships}
         plans={plans}
         onRenew={(m) => {
           setIsDetailDrawerOpen(false);
           handleOpenRenew(m);
         }}
+      />
+      <ExpiredMembershipsModal
+        isOpen={isExpiredModalOpen}
+        onClose={() => setIsExpiredModalOpen(false)}
+        onRenew={handleRenewFromExpiredModal}
       />
     </div>
   );

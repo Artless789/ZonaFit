@@ -17,6 +17,10 @@ class DashboardExpiringMembership(BaseModel):
     client_id: Optional[int] = None
     client_name: str
     client_phone: Optional[str] = None
+    price: Optional[Decimal] = None
+    plan_id: Optional[int] = None
+    client_photo_url: Optional[str] = None
+    client_document: Optional[str] = None
     plan_name: str
     end_date: datetime
     days_left: int
@@ -30,6 +34,16 @@ class DashboardReceivable(BaseModel):
     due_date: Optional[datetime] = None
     days_overdue: int
 
+class DailyIncome(BaseModel):
+    date: str
+    day: int
+    amount: Decimal
+    transaction_count: int
+    membership_amount: Decimal = Decimal("0.00")
+    pos_amount: Decimal = Decimal("0.00")
+    receivable_amount: Decimal = Decimal("0.00")
+    day_label: Optional[str] = None
+
 class DashboardResponse(BaseModel):
     # KPI Superiores
     sales_today: int
@@ -38,6 +52,7 @@ class DashboardResponse(BaseModel):
     credit_today_amount: Decimal = Decimal("0.00")
     income_this_month: Decimal
     active_clients: int
+    active_membership_clients: int = 0
     expiring_memberships_count: int # in next 7 days
     total_receivables: Decimal
     overdue_receivables: Decimal
@@ -51,11 +66,8 @@ class DashboardResponse(BaseModel):
     # Cartera pendiente
     receivables: List[DashboardReceivable]
 
-class DailyIncome(BaseModel):
-    date: str
-    day: int
-    amount: Decimal
-    transaction_count: int
+    # Tendencia de ingresos
+    daily_revenue_trend: List[DailyIncome] = []
 
 class ConceptIncome(BaseModel):
     concept: str

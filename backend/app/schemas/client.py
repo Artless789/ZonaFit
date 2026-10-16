@@ -79,3 +79,11 @@ class Client360Response(BaseModel):
     client: ClientResponse
     current_membership: Optional[ClientMembershipSummary] = None
     financial: ClientFinancialSummary
+
+
+class ClientMetricsResponse(BaseModel):
+    total_clients: int
+    active_accounts: int
+    inactive_accounts: int
+    active_memberships: int
+    expired_memberships: int

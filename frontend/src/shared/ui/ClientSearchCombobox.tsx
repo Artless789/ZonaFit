@@ -11,6 +11,7 @@ interface ClientSearchComboboxProps {
   onSelect: (clientId: number | null) => void;
   placeholder?: string;
   allowClear?: boolean;
+  includeInactive?: boolean;
 }
 
 export function ClientSearchCombobox({
@@ -19,39 +20,30 @@ export function ClientSearchCombobox({
   onSelect,
   placeholder = "Buscar cliente (Nombre o Documento)...",
   allowClear = true,
+  includeInactive,
 }: ClientSearchComboboxProps) {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const debouncedQuery = useDebounce(query, 300);
-  const { query: clientsQuery } = useClients(1, 10, isOpen ? debouncedQuery : '', true);
+  const isActiveParam = includeInactive === false ? true : undefined;
+  const { query: clientsQuery } = useClients(1, 30, isOpen ? debouncedQuery : '', isActiveParam);
   const activeClients = clientsQuery.data?.items || [];
 
   // Determine selected client by either passing it down, or looking up in the fetched list
   const selectedClient = clients.find(c => c.id === selectedClientId) || activeClients.find(c => c.id === selectedClientId) || null;
-
-  useEffect(() => {
-    if (selectedClient && !isOpen) {
-      setQuery(selectedClient.full_name);
-    }
-  }, [selectedClient, isOpen]);
 
   // Click/tap outside to close
   useEffect(() => {
     function handleClickOutside(event: PointerEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
-        if (selectedClient) {
-          setQuery(selectedClient.full_name);
-        } else {
-          setQuery('');
-        }
       }
     }
     document.addEventListener("pointerdown", handleClickOutside);
     return () => document.removeEventListener("pointerdown", handleClickOutside);
-  }, [selectedClient]);
+  }, []);
 
   const filteredClients = activeClients;
 
@@ -73,7 +65,12 @@ export function ClientSearchCombobox({
               onSelect(null);
             }
           }}
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            if (selectedClient && !isOpen) {
+              setQuery(selectedClient.full_name);
+            }
+            setIsOpen(true);
+          }}
         />
         {selectedClient && allowClear && (
           <button
@@ -120,6 +117,11 @@ export function ClientSearchCombobox({
                   <div className="flex items-center gap-2 min-w-0">
                     <UserIcon size={14} className="opacity-50 shrink-0" />
                     <span className="font-medium truncate block">{client.full_name}</span>
+                    {!client.is_active && (
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30 shrink-0">
+                        (Inactivo)
+                      </span>
+                    )}
                   </div>
                   <span className="text-xs text-text-muted bg-bg-surface/80 px-2 py-0.5 rounded-md border border-border-light shrink-0">{client.document_type} {client.document}</span>
                 </div>

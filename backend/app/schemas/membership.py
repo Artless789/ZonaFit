@@ -91,3 +91,19 @@ class MembershipResponse(BaseModel):
 
     created_at: datetime
     updated_at: datetime
+
+
+class ExpiredMembershipItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    client_id: int
+    client_name: str
+    client_document: str | None = None
+    client_phone: str | None = None
+    client_photo_url: str | None = None
+    plan_id: int | None = None
+    plan_name: str
+    price: Decimal
+    end_date: datetime
+    days_expired: int

@@ -15,6 +15,10 @@ export interface DashboardExpiringMembership {
   plan_name: string;
   end_date: string;
   days_left: number;
+  price?: number;
+  plan_id?: number;
+  client_photo_url?: string | null;
+  client_document?: string | null;
 }
 
 export interface DashboardReceivable {
@@ -34,12 +38,14 @@ export interface DashboardData {
   credit_today_amount?: number;
   income_this_month: number;
   active_clients: number;
+  active_membership_clients?: number;
   expiring_memberships_count: number;
   total_receivables: number;
   overdue_receivables: number;
   recent_activity: DashboardActivity[];
   expiring_memberships: DashboardExpiringMembership[];
   receivables: DashboardReceivable[];
+  daily_revenue_trend?: DailyIncome[];
 }
 
 export interface DailyIncome {
@@ -47,6 +53,10 @@ export interface DailyIncome {
   day: number;
   amount: number;
   transaction_count: number;
+  membership_amount?: number;
+  pos_amount?: number;
+  receivable_amount?: number;
+  day_label?: string;
 }
 
 export interface ConceptIncome {

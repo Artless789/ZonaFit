@@ -10,6 +10,7 @@ import {
   MessageCircle,
   Receipt,
   ShoppingCart,
+  ShieldAlert,
   UserPlus,
   Users,
   Wallet,
@@ -18,6 +19,7 @@ import {
 import { Skeleton } from '@shared/ui/Skeleton';
 import { ErrorState } from '@shared/ui/ErrorState';
 import { SubscriptionStatusBanner } from '@shared/ui/SubscriptionStatusBanner';
+import { AuthorizedImage } from '@shared/ui/AuthorizedImage';
 import { useDashboard } from '../../hooks/useDashboard';
 import { useCashRegisters } from '../../hooks/useCashRegisters';
 import { useAuth } from '../../context/AuthContext';
@@ -25,6 +27,7 @@ import { useWhatsAppWeb } from '@/hooks/useWhatsAppWeb';
 import { formatCurrency, formatDate } from '@shared/utils/formatters';
 import { GlassPanel } from '@shared/ui/GlassPanel';
 import { IncomeDetailsDrawer } from './IncomeDetailsDrawer';
+import { ExpiredMembershipsModal } from '../memberships/ExpiredMembershipsModal';
 import { cn } from '@shared/utils/cn';
 
 function Sparkline({ data }: { data: number[] }) {
@@ -75,6 +78,7 @@ export function DashboardPage() {
   const getRoute = (path: string) => (isDemo ? `/demo${path}` : path);
 
   const [isIncomeDetailsOpen, setIsIncomeDetailsOpen] = useState(false);
+  const [isExpiredModalOpen, setIsExpiredModalOpen] = useState(false);
   const [range, setRange] = useState<(typeof ranges)[number]['id']>('30d');
   const [hoveredDay, setHoveredDay] = useState<number | null>(null);
   const [renewalFilter, setRenewalFilter] = useState<(typeof renewalFilters)[number]['id']>('today');
@@ -120,28 +124,27 @@ export function DashboardPage() {
     });
   }, []);
 
-  // Daily revenue series calculated from actual monthly income
+  // Daily revenue series from real trend data
   const days = ranges.find((r) => r.id === range)!.days;
   const revenueData = useMemo(() => {
-    const baseDailyIncome = (data?.income_this_month || 1_850_000) / 30;
-    const result = [];
-    const now = new Date();
-
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const dayLabel = `${d.getDate()} ${d.toLocaleDateString('es-CO', { month: 'short' })}`;
-      const seed = Math.sin((d.getDate() + 1) * 12.9898) * 43758.5453;
-      const r = seed - Math.floor(seed);
-      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-
-      const membership = Math.max(0, Math.round((baseDailyIncome * (isWeekend ? 0.6 : 1.1) * (0.7 + r * 0.6)) / 1000) * 1000);
-      const pos = Math.max(0, Math.round((baseDailyIncome * 0.25 * (0.5 + r * 0.8)) / 1000) * 1000);
-
-      result.push({ day: dayLabel, membership, pos, total: membership + pos });
+    const trend = data?.daily_revenue_trend || [];
+    const slice = trend.slice(-days);
+    if (slice.length === 0) {
+      return [];
     }
-    return result;
-  }, [days, data?.income_this_month]);
+    return slice.map((item) => {
+      const mem = Number(item.membership_amount || 0);
+      const pos = Number(item.pos_amount || 0);
+      const rec = Number(item.receivable_amount || 0);
+      const total = Number(item.amount || 0);
+      return {
+        day: item.day_label || item.date,
+        membership: mem,
+        pos: pos + rec,
+        total: total,
+      };
+    });
+  }, [days, data?.daily_revenue_trend]);
 
   const maxRevenue = useMemo(() => {
     const m = Math.max(...revenueData.map((d) => d.membership + d.pos));
@@ -246,7 +249,7 @@ export function DashboardPage() {
       subtitle: 'Socios registrados activos',
       value: String(data?.active_clients ?? 0),
       delta: 4.1,
-      hint: 'vigentes',
+      hint: data?.active_membership_clients ? `${data.active_membership_clients} con plan vigente` : 'cuentas activas',
       tooltip: 'Total de clientes activos en el gimnasio',
       trend: [300, 305, 308, 312, 310, 318, 320, 322, 326, 328, 331, 334],
       onClick: () => navigate(getRoute('/clients')),
@@ -599,13 +602,24 @@ export function DashboardPage() {
             eyebrow="Atención prioritaria"
             title="Cola de renovaciones"
             action={
-              <button
-                type="button"
-                onClick={() => navigate(getRoute('/memberships'))}
-                className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-text-secondary hover:text-text-primary cursor-pointer"
-              >
-                Ver todas <ArrowRight className="size-3" />
-              </button>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsExpiredModalOpen(true)}
+                  className="flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-rose-300 hover:bg-rose-500/20 transition-colors cursor-pointer"
+                  title="Abrir modal de membresías vencidas"
+                >
+                  <ShieldAlert className="size-3 text-rose-400" />
+                  Membresías Vencidas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate(getRoute('/memberships'))}
+                  className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-text-secondary hover:text-text-primary cursor-pointer"
+                >
+                  Ver todas <ArrowRight className="size-3" />
+                </button>
+              </div>
             }
           >
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -648,17 +662,37 @@ export function DashboardPage() {
                     key={m.id}
                     className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-white/10 py-4 last:border-b-0 md:grid-cols-[auto_1.4fr_1fr_auto_auto]"
                   >
-                    <span className="flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-medium text-text-secondary">
-                      {initials(m.client_name)}
-                    </span>
+                    {m.client_photo_url ? (
+                      <AuthorizedImage
+                        src={m.client_photo_url}
+                        alt={m.client_name}
+                        className="size-10 rounded-full object-cover border border-white/10 shrink-0"
+                        fallback={
+                          <span className="flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-medium text-text-secondary shrink-0">
+                            {initials(m.client_name)}
+                          </span>
+                        }
+                      />
+                    ) : (
+                      <span className="flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-medium text-text-secondary shrink-0">
+                        {initials(m.client_name)}
+                      </span>
+                    )}
                     <div className="flex min-w-0 flex-col gap-1">
                       <span className="truncate text-sm font-medium">{m.client_name}</span>
                       <span className="font-mono text-[11px] text-text-muted">{m.client_phone || 'Sin teléfono'}</span>
                     </div>
                     <div className="hidden flex-col gap-1 md:flex">
-                      <span className="text-sm text-text-secondary">{m.plan_name}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm text-text-secondary">{m.plan_name}</span>
+                        {m.price !== undefined && m.price !== null && (
+                          <span className="font-mono text-xs font-semibold text-text-primary">
+                            · {formatCurrency(m.price)}
+                          </span>
+                        )}
+                      </div>
                       <span className="font-mono text-[11px] text-text-muted">
-                        Vence: {formatDate(m.end_date)}
+                        {m.days_left < 0 ? 'Venció' : 'Vence'}: {formatDate(m.end_date)}
                       </span>
                     </div>
                     <span
@@ -698,7 +732,11 @@ export function DashboardPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => navigate(getRoute('/memberships'))}
+                        onClick={() =>
+                          navigate(getRoute('/memberships'), {
+                            state: { renewClientId: m.client_id || m.id, renewPlanId: m.plan_id },
+                          })
+                        }
                         className="rounded-full bg-white/10 px-4 py-2 text-xs font-medium transition-colors hover:bg-brand-primary hover:text-white cursor-pointer"
                       >
                         Renovar
@@ -707,6 +745,19 @@ export function DashboardPage() {
                   </li>
                 ))}
               </ul>
+            )}
+            {renewalFilter === 'expired' && (
+              <div className="mt-4 pt-3 border-t border-white/10 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsExpiredModalOpen(true)}
+                  className="flex items-center gap-2 text-xs font-semibold text-rose-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <ShieldAlert size={14} className="text-rose-400" />
+                  <span>Ver cuadrícula de recuperación de vencidas</span>
+                  <ArrowRight size={13} />
+                </button>
+              </div>
             )}
           </GlassPanel>
         </div>
@@ -773,6 +824,17 @@ export function DashboardPage() {
       <IncomeDetailsDrawer
         isOpen={isIncomeDetailsOpen}
         onClose={() => setIsIncomeDetailsOpen(false)}
+      />
+
+      {/* Expired Memberships Recovery Modal */}
+      <ExpiredMembershipsModal
+        isOpen={isExpiredModalOpen}
+        onClose={() => setIsExpiredModalOpen(false)}
+        onRenew={(item) =>
+          navigate(getRoute('/memberships'), {
+            state: { renewClientId: item.clientId, renewPlanId: item.planId },
+          })
+        }
       />
 
       <WhatsAppModalComponent />

@@ -14,7 +14,7 @@ import {
   CreditCard
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useClients } from '../../hooks/useClients';
+import { useClients, useClientMetrics } from '../../hooks/useClients';
 import { ClientsTable } from './ClientsTable';
 import { ClientDrawer } from './ClientDrawer';
 import { ClientProfileDrawer } from './ClientProfileDrawer';
@@ -52,6 +52,7 @@ export function ClientsPage() {
     undefined,
     filterTypeParam
   );
+  const metricsQuery = useClientMetrics();
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false); // For Edit/Create
   const [isProfileOpen, setIsProfileOpen] = useState(false); // For 360 View
@@ -119,9 +120,6 @@ export function ClientsPage() {
   const data = query.data;
   const clients = data?.items || [];
   const total = data?.total || 0;
-
-  const activeCountInPage = clients.filter(c => c.is_active).length;
-  const inactiveCountInPage = clients.length - activeCountInPage;
 
   const handleOpenCreate = () => {
     setSelectedClient(null);
@@ -237,15 +235,24 @@ export function ClientsPage() {
           <div className="w-11 h-11 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary shrink-0">
             <Users size={20} />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-text-muted text-xs font-mono uppercase tracking-wider">Padrón Total</p>
             <h3 className="text-2xl font-bold tracking-tight text-text-primary font-mono mt-0.5">
-              {query.isLoading ? <Skeleton className="h-7 w-16" /> : total}
+              {metricsQuery.isLoading && query.isLoading ? (
+                <Skeleton className="h-7 w-16" />
+              ) : (
+                metricsQuery.data?.total_clients ?? total
+              )}
             </h3>
+            <div className="flex items-center gap-2 mt-1 font-mono text-[11px]">
+              <span className="text-emerald-400">Vigentes: {metricsQuery.data?.active_memberships || 0}</span>
+              <span className="text-border-medium">·</span>
+              <span className="text-rose-400">Vencidos: {metricsQuery.data?.expired_memberships || 0}</span>
+            </div>
           </div>
         </div>
 
-        {/* Activos en Página */}
+        {/* Activos */}
         <div className="rounded-2xl border border-border-subtle bg-surface-panel/80 p-4.5 flex items-center gap-4 shadow-subtle backdrop-blur-sm">
           <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
             <Activity size={20} />
@@ -253,12 +260,12 @@ export function ClientsPage() {
           <div className="min-w-0">
             <p className="text-text-muted text-xs font-mono uppercase tracking-wider">Cuentas Activas</p>
             <h3 className="text-2xl font-bold tracking-tight text-emerald-400 font-mono mt-0.5">
-              {query.isLoading ? <Skeleton className="h-7 w-16" /> : activeCountInPage}
+              {metricsQuery.isLoading ? <Skeleton className="h-7 w-16" /> : (metricsQuery.data?.active_accounts ?? '—')}
             </h3>
           </div>
         </div>
 
-        {/* Inactivos en Página */}
+        {/* Inactivos */}
         <div className="rounded-2xl border border-border-subtle bg-surface-panel/80 p-4.5 flex items-center gap-4 shadow-subtle backdrop-blur-sm">
           <div className="w-11 h-11 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shrink-0">
             <UserMinus size={20} />
@@ -266,7 +273,7 @@ export function ClientsPage() {
           <div className="min-w-0">
             <p className="text-text-muted text-xs font-mono uppercase tracking-wider">Suspendidos</p>
             <h3 className="text-2xl font-bold tracking-tight text-rose-400 font-mono mt-0.5">
-              {query.isLoading ? <Skeleton className="h-7 w-16" /> : inactiveCountInPage}
+              {metricsQuery.isLoading ? <Skeleton className="h-7 w-16" /> : (metricsQuery.data?.inactive_accounts ?? '—')}
             </h3>
           </div>
         </div>

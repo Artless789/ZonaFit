@@ -59,3 +59,12 @@ export type ClientCreate = Omit<Client, 'id' | 'gym_id' | 'is_active' | 'created
   initial_membership?: ClientInitialMembership;
 };
 export type ClientUpdate = Partial<ClientCreate> & { is_active?: boolean };
+
+export interface ClientMetrics {
+  total_clients: number;
+  active_accounts: number;
+  inactive_accounts: number;
+  active_memberships: number;
+  expired_memberships: number;
+}
+

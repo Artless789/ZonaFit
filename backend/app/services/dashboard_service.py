@@ -112,6 +112,21 @@ class DashboardService:
             Client.is_active == True
         ).count()
 
+        # 3b. Clientes con membresía activa hoy
+        active_membership_clients = (
+            db.query(func.count(func.distinct(Client.id)))
+            .join(Membership, Membership.client_id == Client.id)
+            .filter(
+                Client.gym_id == current_user.gym_id,
+                Client.is_active == True,
+                Membership.gym_id == current_user.gym_id,
+                Membership.is_active == True,
+                Membership.status == MembershipStatus.ACTIVE,
+                Membership.end_date >= today_start,
+            )
+            .scalar()
+        ) or 0
+
         # 4. Total por cobrar y vencidos (Cubre PENDING y PARTIAL con balance_due > 0)
         ar_stats = db.query(
             func.coalesce(func.sum(AccountsReceivable.balance_due), Decimal("0.00")),
@@ -132,24 +147,58 @@ class DashboardService:
         total_receivables = ar_stats[0] if ar_stats else Decimal("0.00")
         overdue_receivables = ar_stats[1] if ar_stats else Decimal("0.00")
 
-        # 5. Membresías por vencer (próximos 7 días)
-        expiring_memberships_query = db.query(Membership).options(
+        # 5. Membresías por vencer y vencidas (últimos 30 días y próximos 7 días)
+        candidate_memberships = db.query(Membership).options(
             joinedload(Membership.client),
             joinedload(Membership.membership_plan)
         ).filter(
             Membership.gym_id == current_user.gym_id,
-            Membership.status == MembershipStatus.ACTIVE,
             Membership.is_active == True,
-            Membership.end_date >= today_start,
+            Membership.status.in_([MembershipStatus.ACTIVE, MembershipStatus.EXPIRED]),
+            Membership.end_date >= today_start - timedelta(days=30),
             Membership.end_date <= next_week
-        ).order_by(Membership.end_date.asc())
-        
-        expiring_memberships_count = expiring_memberships_query.count()
-        
-        # Limitar para la lista
-        expiring_memberships_db = expiring_memberships_query.limit(10).all()
-        expiring_memberships = []
-        for m in expiring_memberships_db:
+        ).order_by(Membership.end_date.desc()).all()
+
+        candidate_client_ids = list({m.client_id for m in candidate_memberships if m.client_id})
+
+        active_future_memberships = []
+        if candidate_client_ids:
+            active_future_memberships = db.query(
+                Membership.client_id,
+                Membership.id,
+                Membership.end_date
+            ).filter(
+                Membership.gym_id == current_user.gym_id,
+                Membership.is_active == True,
+                Membership.status == MembershipStatus.ACTIVE,
+                Membership.client_id.in_(candidate_client_ids),
+                Membership.end_date > today_start
+            ).all()
+
+        newer_active_map = {}
+        for c_id, m_id, m_end in active_future_memberships:
+            newer_active_map.setdefault(c_id, []).append((m_id, m_end))
+
+        seen_clients = set()
+        queue_items = []
+        for m in candidate_memberships:
+            if not m.client_id:
+                continue
+
+            # Excluir membresías de clientes que ya cuentan con una membresía activa posterior
+            has_newer = False
+            for (m2_id, m2_end) in newer_active_map.get(m.client_id, []):
+                if m2_id != m.id and m2_end > m.end_date:
+                    has_newer = True
+                    break
+            if has_newer:
+                continue
+
+            # Deduplicar por cliente (quedarse con la de end_date más reciente)
+            if m.client_id in seen_clients:
+                continue
+            seen_clients.add(m.client_id)
+
             days_left = 0
             if m.end_date:
                 if isinstance(m.end_date, datetime):
@@ -157,16 +206,27 @@ class DashboardService:
                     days_left = (end_local.date() - now_local.date()).days
                 else:
                     days_left = (m.end_date - now_local.date()).days
-            if days_left < 0: days_left = 0
-            expiring_memberships.append(DashboardExpiringMembership(
+
+            queue_items.append(DashboardExpiringMembership(
                 id=m.id,
                 client_id=m.client_id,
                 client_name=m.client.full_name if m.client else "Desconocido",
                 client_phone=m.client.phone if m.client else None,
+                client_photo_url=m.client.photo_url if m.client else None,
+                client_document=m.client.document if m.client else None,
                 plan_name=m.membership_plan.name if m.membership_plan else "Desconocido",
+                plan_id=m.membership_plan_id,
+                price=m.price,
                 end_date=m.end_date,
                 days_left=days_left
             ))
+
+        # KPI: Membresías por vencer en los próximos 7 días (excluyendo ya renovadas)
+        expiring_memberships_count = sum(1 for item in queue_items if 0 <= item.days_left <= 7)
+
+        # Ordenar por days_left ascendente (vencidas primero, luego hoy, luego próximos días) y limitar a 25
+        queue_items.sort(key=lambda x: x.days_left)
+        expiring_memberships = queue_items[:25]
 
         # 6. Cartera pendiente (Lista con saldo adeudado > 0)
         receivables_db = db.query(AccountsReceivable).options(joinedload(AccountsReceivable.client)).filter(
@@ -275,6 +335,54 @@ class DashboardService:
         # Limit to 15 items total
         recent_activity = recent_activity[:15]
 
+        # 8. Tendencia de ingresos de los últimos 30 días
+        window_start = datetime.combine(now_local.date() - timedelta(days=29), time.min, tzinfo=gym_tz)
+        spanish_months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+
+        trend_days = {}
+        for i in range(30):
+            d = (now_local.date() - timedelta(days=29)) + timedelta(days=i)
+            d_str = d.strftime("%Y-%m-%d")
+            d_label = f"{d.day} {spanish_months[d.month - 1]}"
+            trend_days[d_str] = {
+                "date": d_str,
+                "day": d.day,
+                "amount": Decimal("0.00"),
+                "transaction_count": 0,
+                "membership_amount": Decimal("0.00"),
+                "pos_amount": Decimal("0.00"),
+                "receivable_amount": Decimal("0.00"),
+                "day_label": d_label,
+            }
+
+        trend_payments = db.query(Payment).filter(
+            Payment.gym_id == current_user.gym_id,
+            Payment.status == "PAID",
+            Payment.is_active == True,
+            Payment.created_at >= window_start,
+        ).all()
+
+        for p in trend_payments:
+            if not p.created_at:
+                continue
+            if p.created_at.tzinfo:
+                p_local = p.created_at.astimezone(gym_tz)
+            else:
+                p_local = p.created_at.replace(tzinfo=timezone.utc).astimezone(gym_tz)
+            p_date_str = p_local.strftime("%Y-%m-%d")
+            if p_date_str in trend_days:
+                amt = p.amount or Decimal("0.00")
+                trend_days[p_date_str]["amount"] += amt
+                trend_days[p_date_str]["transaction_count"] += 1
+                if p.membership_id:
+                    trend_days[p_date_str]["membership_amount"] += amt
+                elif p.sale_id:
+                    trend_days[p_date_str]["pos_amount"] += amt
+                elif p.accounts_receivable_id:
+                    trend_days[p_date_str]["receivable_amount"] += amt
+
+        daily_revenue_trend = [DailyIncome(**item) for item in trend_days.values()]
+
         return DashboardResponse(
             sales_today=sales_today,
             sales_today_amount=sales_today_amount,
@@ -282,12 +390,14 @@ class DashboardService:
             credit_today_amount=credit_today_amount,
             income_this_month=income_this_month,
             active_clients=active_clients,
+            active_membership_clients=active_membership_clients,
             expiring_memberships_count=expiring_memberships_count,
             total_receivables=total_receivables,
             overdue_receivables=overdue_receivables,
             recent_activity=recent_activity,
             expiring_memberships=expiring_memberships,
-            receivables=receivables
+            receivables=receivables,
+            daily_revenue_trend=daily_revenue_trend,
         )
 
     @staticmethod

@@ -25,7 +25,8 @@ from app.schemas.client import (
     ClientResponse,
     Client360Response,
     ClientMembershipSummary,
-    ClientFinancialSummary
+    ClientFinancialSummary,
+    ClientMetricsResponse,
 )
 from app.models.membership import Membership
 from app.models.payment import Payment
@@ -220,20 +221,22 @@ def get_clients(
             )
             query = query.filter(Client.id.in_(subq))
         elif ft == "expired_membership":
-            subq = (
-                db.query(Membership.client_id)
-                .filter(
-                    Membership.gym_id == current_user.gym_id,
-                    or_(
-                        Membership.status == MembershipStatus.EXPIRED,
-                        and_(
-                            Membership.status == MembershipStatus.ACTIVE,
-                            Membership.end_date < now,
-                        ),
-                    ),
-                )
+            active_mem_subq = db.query(Membership.client_id).filter(
+                Membership.gym_id == current_user.gym_id,
+                Membership.is_active == True,
+                Membership.status == MembershipStatus.ACTIVE,
+                Membership.end_date >= now,
             )
-            query = query.filter(Client.id.in_(subq))
+            expired_mem_subq = db.query(Membership.client_id).filter(
+                Membership.gym_id == current_user.gym_id,
+                Membership.is_active == True,
+                Membership.status.in_([MembershipStatus.ACTIVE, MembershipStatus.EXPIRED]),
+                Membership.end_date < now,
+            )
+            query = query.filter(
+                Client.id.in_(expired_mem_subq),
+                Client.id.not_in(active_mem_subq),
+            )
         elif ft == "pending_balance":
             subq = (
                 db.query(AccountsReceivable.client_id)
@@ -367,6 +370,58 @@ def apply_client_import(
         db=db,
         current_user=current_user,
         payload=payload,
+    )
+
+
+# ==========================
+# Métricas de clientes
+# ==========================
+
+@router.get(
+    "/metrics",
+    response_model=ClientMetricsResponse,
+)
+def get_client_metrics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    total_clients = db.query(Client).filter(Client.gym_id == current_user.gym_id).count()
+    active_accounts = db.query(Client).filter(
+        Client.gym_id == current_user.gym_id,
+        Client.is_active == True,
+    ).count()
+    inactive_accounts = total_clients - active_accounts
+
+    now = datetime.now(timezone.utc)
+    active_mem_subq = db.query(Membership.client_id).filter(
+        Membership.gym_id == current_user.gym_id,
+        Membership.is_active == True,
+        Membership.status == MembershipStatus.ACTIVE,
+        Membership.end_date >= now,
+    )
+    active_memberships = db.query(Client.id).filter(
+        Client.gym_id == current_user.gym_id,
+        Client.id.in_(active_mem_subq),
+    ).distinct().count()
+
+    expired_mem_subq = db.query(Membership.client_id).filter(
+        Membership.gym_id == current_user.gym_id,
+        Membership.is_active == True,
+        Membership.status.in_([MembershipStatus.ACTIVE, MembershipStatus.EXPIRED]),
+        Membership.end_date < now,
+    )
+    expired_memberships = db.query(Client.id).filter(
+        Client.gym_id == current_user.gym_id,
+        Client.id.in_(expired_mem_subq),
+        Client.id.not_in(active_mem_subq),
+    ).distinct().count()
+
+    return ClientMetricsResponse(
+        total_clients=total_clients,
+        active_accounts=active_accounts,
+        inactive_accounts=inactive_accounts,
+        active_memberships=active_memberships,
+        expired_memberships=expired_memberships,
     )
 
 
