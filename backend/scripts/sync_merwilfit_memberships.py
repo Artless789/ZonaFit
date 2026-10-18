@@ -629,13 +629,16 @@ def run_sync(
                 membresias_nuevas_crear.append((r, new_m))
 
         elif status == "VENCIDO":
-            # Si el cliente existe en el sistema y tiene membresía activa en DB que en el Excel aparece VENCIDO
+            # Si el cliente existe en el sistema y tiene membresía en DB que en el Excel aparece VENCIDO
+            # Solo expirar si la fecha de fin ya transcurrió en tiempo real (no pisar renovaciones ni membresías futuras)
+            now_utc = datetime.now(timezone.utc)
             if target_client:
                 existing_ms = memberships_by_client_id.get(target_client.id, [])
                 for m in existing_ms:
-                    if m.status == MembershipStatus.ACTIVE or m.is_active:
-                        # La membresía en DB está activa pero en la fuente está vencida
-                        membresias_a_expirar.append((m, r))
+                    if m.status == MembershipStatus.ACTIVE and m.end_date:
+                        end_utc = m.end_date.replace(tzinfo=timezone.utc) if m.end_date.tzinfo is None else m.end_date.astimezone(timezone.utc)
+                        if end_utc <= now_utc:
+                            membresias_a_expirar.append((m, r))
 
     # Resumen de cómputos
     summary = {
@@ -705,10 +708,10 @@ def run_sync(
         for r, m_obj in membresias_renovadas:
             db.add(m_obj)
 
-        # 5. Actualizar membresías a vencidas (sólo la membresía, NO el cliente)
+        # 5. Actualizar membresías a vencidas (sólo la membresía, NO el cliente; mantener is_active=True para histórico)
         for m_obj, r in membresias_a_expirar:
             m_obj.status = MembershipStatus.EXPIRED
-            m_obj.is_active = False
+            m_obj.is_active = True
 
         db.commit()
         logger.info("Transacción confirmada exitosamente.")

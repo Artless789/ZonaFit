@@ -46,17 +46,6 @@ class ClientUpdate(BaseModel):
     whatsapp_group_id: Optional[int] = None
 
 
-class ClientResponse(ClientBase):
-    id: int
-    gym_id: int
-    is_active: bool
-    initial_membership: Optional[MembershipResponse] = None
-    whatsapp_group_name: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
 class ClientMembershipSummary(BaseModel):
     id: int
     plan_name: str
@@ -65,6 +54,26 @@ class ClientMembershipSummary(BaseModel):
     end_date: datetime
     days_left: int
     trainer_name: Optional[str] = None
+    price: Optional[Decimal] = None
+    is_active: Optional[bool] = True
+    membership_plan_id: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ClientResponse(ClientBase):
+    id: int
+    gym_id: int
+    is_active: bool
+    initial_membership: Optional[MembershipResponse] = None
+    current_membership: Optional[ClientMembershipSummary] = None
+    has_membership_history: bool = False
+    whatsapp_group_name: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 class ClientFinancialSummary(BaseModel):
     last_payment_date: Optional[datetime] = None
@@ -75,9 +84,12 @@ class ClientFinancialSummary(BaseModel):
     active_credits_count: int
     last_purchase_date: Optional[datetime] = None
 
+
 class Client360Response(BaseModel):
     client: ClientResponse
     current_membership: Optional[ClientMembershipSummary] = None
+    membership_history: List[ClientMembershipSummary] = []
+    has_membership_history: bool = False
     financial: ClientFinancialSummary
 
 

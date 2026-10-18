@@ -263,6 +263,7 @@ export function MembershipDrawer({
 
     try {
       queryClient.invalidateQueries({ queryKey: ['memberships'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['client360'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['accounts-receivables'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['cash-registers'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['cash-movements'], refetchType: 'all' });

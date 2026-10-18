@@ -26,6 +26,8 @@ export interface Client {
   whatsapp_group_id?: number | null;
   whatsapp_group_name?: string | null;
   initial_membership?: Membership | null;
+  current_membership?: ClientMembershipSummary | null;
+  has_membership_history?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -38,6 +40,9 @@ export interface ClientMembershipSummary {
   end_date: string;
   days_left: number;
   trainer_name?: string | null;
+  price?: number | null;
+  is_active?: boolean;
+  membership_plan_id?: number | null;
 }
 
 export interface ClientFinancialSummary {
@@ -53,6 +58,8 @@ export interface ClientFinancialSummary {
 export interface Client360Response {
   client: Client;
   current_membership?: ClientMembershipSummary | null;
+  membership_history?: ClientMembershipSummary[];
+  has_membership_history?: boolean;
   financial: ClientFinancialSummary;
 }
 export type ClientCreate = Omit<Client, 'id' | 'gym_id' | 'is_active' | 'created_at' | 'updated_at' | 'initial_membership'> & {

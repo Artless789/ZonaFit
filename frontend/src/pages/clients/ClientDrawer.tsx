@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Drawer } from '@shared/ui/Drawer';
@@ -34,6 +35,7 @@ import {
   generateMembershipPaymentReceiptPDF,
   type GenerateMembershipReceiptProps
 } from '@shared/utils/pdfGenerator';
+import { cn } from '@shared/utils/cn';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface ClientDrawerProps {
@@ -48,7 +50,17 @@ const PAYMENT_METHODS = [
   { value: 'CARD', label: 'Tarjeta' },
 ];
 
+const formatDateSafe = (dateStr?: string | null) => {
+  if (!dateStr) return 'N/A';
+  try {
+    return format(new Date(dateStr), 'dd MMM yyyy', { locale: es });
+  } catch {
+    return dateStr;
+  }
+};
+
 export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { createMutation, updateMutation } = useClients();
@@ -542,6 +554,124 @@ export function ClientDrawer({ isOpen, onClose, client }: ClientDrawerProps) {
                 {...register('notes')}
               />
             </div>
+
+            {/* RESUMEN INFORMATIVO DE MEMBRESÍA AL EDITAR */}
+            {isEditing && client && (
+              <div className="rounded-2xl border border-border-subtle bg-surface-panel/80 p-4 shadow-subtle space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono uppercase tracking-wider text-text-muted flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-brand-primary" />
+                    Membresía del Socio
+                  </span>
+                  {client.current_membership ? (
+                    <span className={cn(
+                      "px-2 py-0.5 rounded text-[11px] font-semibold border",
+                      client.current_membership.status === 'ACTIVE'
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                        : client.current_membership.status === 'EXPIRED'
+                        ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                        : client.current_membership.status === 'FUTURE'
+                        ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                        : "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"
+                    )}>
+                      {client.current_membership.status === 'ACTIVE'
+                        ? 'Vigente'
+                        : client.current_membership.status === 'EXPIRED'
+                        ? 'Vencida'
+                        : client.current_membership.status === 'FUTURE'
+                        ? 'Programada'
+                        : 'Cancelada'}
+                    </span>
+                  ) : client.has_membership_history ? (
+                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      Sin plan actual
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-raised text-text-muted border border-border-subtle">
+                      Sin membresías
+                    </span>
+                  )}
+                </div>
+
+                {client.current_membership ? (
+                  <div className="p-3 rounded-xl bg-surface-base border border-border-subtle space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-sm text-text-primary">
+                        {client.current_membership.plan_name}
+                      </span>
+                      {client.current_membership.price != null && (
+                        <span className="font-mono text-xs text-brand-primary font-bold">
+                          {formatCurrency(Number(client.current_membership.price))}
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs font-mono text-text-muted">
+                      <div>
+                        <span className="block text-[10px] text-text-muted">Inicio</span>
+                        <span className="text-text-secondary">{formatDateSafe(client.current_membership.start_date)}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] text-text-muted">Vencimiento</span>
+                        <span className={cn(
+                          "font-medium",
+                          client.current_membership.status === 'EXPIRED' ? "text-rose-400" : "text-text-secondary"
+                        )}>
+                          {formatDateSafe(client.current_membership.end_date)}
+                        </span>
+                      </div>
+                    </div>
+                    {client.current_membership.status === 'EXPIRED' && (
+                      <p className="text-[11px] text-rose-400/90 font-medium pt-1">
+                        Venció hace {Math.abs(client.current_membership.days_left)} días
+                      </p>
+                    )}
+                    {client.current_membership.status === 'ACTIVE' && (
+                      <p className="text-[11px] text-emerald-400/90 font-medium pt-1">
+                        {client.current_membership.days_left} días restantes de vigencia
+                      </p>
+                    )}
+                    {client.current_membership.status === 'FUTURE' && (
+                      <p className="text-[11px] text-amber-400/90 font-medium pt-1">
+                        Inicia en {client.current_membership.days_left} días
+                      </p>
+                    )}
+                  </div>
+                ) : client.has_membership_history ? (
+                  <p className="text-xs text-text-muted">
+                    El socio cuenta con membresías históricas anteriores pero actualmente no tiene un plan vigente.
+                  </p>
+                ) : (
+                  <p className="text-xs text-text-muted">
+                    Este socio nunca ha tenido una membresía asignada.
+                  </p>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      onClose();
+                      navigate('/memberships', {
+                        state: {
+                          renewClientId: client.id,
+                          renewPlanId: client.current_membership?.membership_plan_id,
+                        },
+                      });
+                    }}
+                    className="rounded-xl text-xs gap-1.5 border-border-medium hover:border-brand-primary/50 text-text-secondary hover:text-brand-primary cursor-pointer"
+                  >
+                    <Sparkles size={13} />
+                    {client.current_membership?.status === 'EXPIRED'
+                      ? 'Renovar Membresía'
+                      : client.current_membership
+                      ? 'Gestionar Membresías'
+                      : 'Asignar Membresía'}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* SECCIÓN OPCIONAL: ASIGNAR MEMBRESÍA INICIAL AL CREAR */}
             {!isEditing && (

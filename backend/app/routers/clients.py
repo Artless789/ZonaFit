@@ -11,7 +11,7 @@ from app.schemas.client_excel import (
 import os
 import uuid
 import shutil
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.auth import get_current_user
 from app.database.database import get_db
@@ -43,6 +43,89 @@ router = APIRouter(
     tags=["Clients"],
     route_class=IdempotentRoute
 )
+
+
+def summarize_membership_item(m: Membership, now: datetime) -> ClientMembershipSummary:
+    start_utc = m.start_date.replace(tzinfo=timezone.utc) if m.start_date.tzinfo is None else m.start_date.astimezone(timezone.utc)
+    end_utc = m.end_date.replace(tzinfo=timezone.utc) if m.end_date.tzinfo is None else m.end_date.astimezone(timezone.utc)
+
+    if not getattr(m, "is_active", True) or m.status == MembershipStatus.CANCELLED:
+        status_label = MembershipStatus.CANCELLED
+        days_left = (end_utc.date() - now.date()).days
+    elif start_utc > now:
+        status_label = "FUTURE"
+        days_left = (start_utc.date() - now.date()).days
+    elif end_utc < now:
+        status_label = MembershipStatus.EXPIRED
+        days_left = (end_utc.date() - now.date()).days
+    else:
+        status_label = MembershipStatus.ACTIVE
+        days_left = (end_utc.date() - now.date()).days
+
+    return ClientMembershipSummary(
+        id=m.id,
+        plan_name=m.membership_plan.name if m.membership_plan else "Desconocido",
+        status=status_label,
+        start_date=m.start_date,
+        end_date=m.end_date,
+        days_left=days_left,
+        trainer_name=m.trainer_name,
+        price=m.price,
+        is_active=bool(m.is_active),
+        membership_plan_id=m.membership_plan_id,
+    )
+
+
+def resolve_client_memberships(memberships: list[Membership], now: datetime):
+    if not memberships:
+        return None, [], False
+
+    summaries = [summarize_membership_item(m, now) for m in memberships]
+
+    # Priority 1: ACTIVE
+    active_items = [s for s in summaries if s.status == MembershipStatus.ACTIVE]
+    if active_items:
+        active_items.sort(key=lambda s: s.end_date, reverse=True)
+        return active_items[0], summaries, True
+
+    # Priority 2: FUTURE (closest start date)
+    future_items = [s for s in summaries if s.status == "FUTURE"]
+    if future_items:
+        future_items.sort(key=lambda s: s.start_date)
+        return future_items[0], summaries, True
+
+    # Priority 3: EXPIRED (most recently expired)
+    expired_items = [s for s in summaries if s.status == MembershipStatus.EXPIRED]
+    if expired_items:
+        expired_items.sort(key=lambda s: s.end_date, reverse=True)
+        return expired_items[0], summaries, True
+
+    # Priority 4: CANCELLED
+    cancelled_items = [s for s in summaries if s.status == MembershipStatus.CANCELLED]
+    if cancelled_items:
+        cancelled_items.sort(key=lambda s: s.end_date, reverse=True)
+        return cancelled_items[0], summaries, True
+
+    return None, summaries, True
+
+
+def populate_client_membership_info(client: Client, db: Session, gym_id: int) -> Client:
+    now = datetime.now(timezone.utc)
+    memberships = (
+        db.query(Membership)
+        .options(joinedload(Membership.membership_plan))
+        .filter(
+            Membership.client_id == client.id,
+            Membership.gym_id == gym_id,
+        )
+        .order_by(Membership.start_date.desc(), Membership.created_at.desc())
+        .all()
+    )
+    current_mem, _, has_history = resolve_client_memberships(memberships, now)
+    setattr(client, "current_membership", current_mem)
+    setattr(client, "has_membership_history", has_history)
+    return client
+
 
 
 # ==========================
@@ -155,6 +238,12 @@ def create_client(
 
     if created_membership:
         setattr(new_client, "initial_membership", created_membership)
+        curr = summarize_membership_item(created_membership, datetime.now(timezone.utc))
+        setattr(new_client, "current_membership", curr)
+        setattr(new_client, "has_membership_history", True)
+    else:
+        setattr(new_client, "current_membership", None)
+        setattr(new_client, "has_membership_history", False)
 
     return new_client
 
@@ -256,6 +345,29 @@ def get_clients(
 
     offset = (page - 1) * page_size
     items = query.offset(offset).limit(page_size).all()
+
+    if items:
+        client_ids = [c.id for c in items]
+        memberships = (
+            db.query(Membership)
+            .options(joinedload(Membership.membership_plan))
+            .filter(
+                Membership.client_id.in_(client_ids),
+                Membership.gym_id == current_user.gym_id,
+            )
+            .order_by(Membership.start_date.desc(), Membership.created_at.desc())
+            .all()
+        )
+        mems_by_client = {}
+        for m in memberships:
+            mems_by_client.setdefault(m.client_id, []).append(m)
+
+        now = datetime.now(timezone.utc)
+        for c in items:
+            client_mems = mems_by_client.get(c.id, [])
+            current_mem, _, has_history = resolve_client_memberships(client_mems, now)
+            setattr(c, "current_membership", current_mem)
+            setattr(c, "has_membership_history", has_history)
 
     return PaginationResponse(
         items=items,
@@ -453,6 +565,7 @@ def get_client(
             detail="Client not found.",
         )
 
+    populate_client_membership_info(client, db, current_user.gym_id)
     return client
 
 # ==========================
@@ -485,38 +598,20 @@ def get_client_360(
 
     now = datetime.now(timezone.utc)
 
-    # 1. Membership summary
-    # Get the latest membership (could be active or expired, but we prioritize ACTIVE or the one with latest end_date)
-    membership = (
+    # 1. Membership summary & history
+    all_memberships = (
         db.query(Membership)
+        .options(joinedload(Membership.membership_plan))
         .filter(
             Membership.client_id == client.id,
             Membership.gym_id == current_user.gym_id,
-            Membership.is_active == True
         )
-        .order_by(Membership.end_date.desc())
-        .first()
+        .order_by(Membership.start_date.desc(), Membership.created_at.desc())
+        .all()
     )
 
-    membership_summary = None
-    if membership:
-        days_left = (membership.end_date.replace(tzinfo=timezone.utc) - now).days
-        if days_left < 0: days_left = 0
-
-        # dynamic status update just for display if it's expired
-        display_status = membership.status
-        if membership.end_date.replace(tzinfo=timezone.utc) < now and display_status == MembershipStatus.ACTIVE:
-            display_status = MembershipStatus.EXPIRED
-
-        membership_summary = ClientMembershipSummary(
-            id=membership.id,
-            plan_name=membership.membership_plan.name if membership.membership_plan else "Desconocido",
-            status=display_status,
-            start_date=membership.start_date,
-            end_date=membership.end_date,
-            days_left=days_left,
-            trainer_name=membership.trainer_name
-        )
+    current_summary, history_summaries, has_history = resolve_client_memberships(all_memberships, now)
+    history_summaries.sort(key=lambda s: s.start_date, reverse=True)
 
     # 2. Financial Summary
     # Last payment
@@ -596,9 +691,13 @@ def get_client_360(
         last_purchase_date=last_purchase.created_at if last_purchase else None
     )
 
+    populate_client_membership_info(client, db, current_user.gym_id)
+
     return Client360Response(
         client=ClientResponse.model_validate(client),
-        current_membership=membership_summary,
+        current_membership=current_summary,
+        membership_history=history_summaries,
+        has_membership_history=has_history,
         financial=financial
     )
 
@@ -668,6 +767,7 @@ def update_client(
 
     db.commit()
     db.refresh(client)
+    populate_client_membership_info(client, db, current_user.gym_id)
 
     return client
 
@@ -870,6 +970,7 @@ def upload_client_photo(
                 except OSError:
                     pass
 
+    populate_client_membership_info(client, db, current_user.gym_id)
     return client
 
 
@@ -922,6 +1023,7 @@ def delete_client_photo(
                 except OSError:
                     pass
 
+    populate_client_membership_info(client, db, current_user.gym_id)
     return client
 
 

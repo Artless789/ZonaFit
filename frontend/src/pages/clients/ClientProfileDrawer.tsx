@@ -26,8 +26,12 @@ import {
   Users,
   Clock,
   Calendar,
-  DollarSign
+  DollarSign,
+  Sparkles,
+  History,
+  RotateCcw,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useWhatsAppWeb } from '@/hooks/useWhatsAppWeb';
 import { cn } from '@shared/utils/cn';
 
@@ -36,6 +40,7 @@ interface ClientProfileDrawerProps {
   onClose: () => void;
   clientId?: number;
   onEditClick: (client: Client) => void;
+  onRenewClick?: (client: Client, planId?: number) => void;
 }
 
 const formatDate = (dateString?: string | null) => {
@@ -49,7 +54,14 @@ const formatDate = (dateString?: string | null) => {
   }
 };
 
-export function ClientProfileDrawer({ isOpen, onClose, clientId, onEditClick }: ClientProfileDrawerProps) {
+export function ClientProfileDrawer({
+  isOpen,
+  onClose,
+  clientId,
+  onEditClick,
+  onRenewClick,
+}: ClientProfileDrawerProps) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: profile, isLoading, isError, error, refetch } = useClient360(isOpen ? clientId : undefined);
@@ -58,6 +70,21 @@ export function ClientProfileDrawer({ isOpen, onClose, clientId, onEditClick }: 
   const [selectedGroupId, setSelectedGroupId] = useState<number | null | undefined>(undefined);
   const [availableGroups, setAvailableGroups] = useState<WhatsAppGroup[]>([]);
   const [isSavingGroup, setIsSavingGroup] = useState(false);
+
+  const handleRenew = (planId?: number | null) => {
+    if (!profile?.client) return;
+    onClose();
+    if (onRenewClick) {
+      onRenewClick(profile.client, planId || undefined);
+    } else {
+      navigate('/memberships', {
+        state: {
+          renewClientId: profile.client.id,
+          renewPlanId: planId || undefined,
+        },
+      });
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -311,41 +338,74 @@ export function ClientProfileDrawer({ isOpen, onClose, clientId, onEditClick }: 
                         <Activity size={14} className="text-brand-primary" />
                         Membresía Actual
                       </span>
-                      {current_membership && (
-                        current_membership.days_left > 7 ? (
-                          <StatusBadge status="active" label="Activa" />
-                        ) : current_membership.days_left > 0 ? (
-                          <StatusBadge status="warning" label="Por vencer" />
-                        ) : (
+                      {current_membership ? (
+                        current_membership.status === 'ACTIVE' ? (
+                          current_membership.days_left > 7 ? (
+                            <StatusBadge status="active" label="Vigente" />
+                          ) : current_membership.days_left > 0 ? (
+                            <StatusBadge status="warning" label="Por vencer" />
+                          ) : (
+                            <StatusBadge status="danger" label="Vence hoy" />
+                          )
+                        ) : current_membership.status === 'EXPIRED' ? (
                           <StatusBadge status="danger" label="Vencida" />
+                        ) : current_membership.status === 'FUTURE' ? (
+                          <StatusBadge status="warning" label="Programada" />
+                        ) : (
+                          <StatusBadge status="neutral" label="Cancelada" />
                         )
+                      ) : profile.has_membership_history ? (
+                        <StatusBadge status="warning" label="Sin plan actual" />
+                      ) : (
+                        <StatusBadge status="neutral" label="Sin membresías" />
                       )}
                     </div>
 
                     {current_membership ? (
                       <div className="space-y-3">
-                        <div>
-                          <h4 className="text-lg font-bold text-text-primary tracking-tight">
-                            {current_membership.plan_name}
-                          </h4>
-                          <p className="text-xs text-text-muted mt-0.5">
-                            {current_membership.trainer_name ? `Entrenador: ${current_membership.trainer_name}` : 'Sin entrenador asignado'}
-                          </p>
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <h4 className="text-lg font-bold text-text-primary tracking-tight">
+                              {current_membership.plan_name}
+                            </h4>
+                            <p className="text-xs text-text-muted mt-0.5">
+                              {current_membership.trainer_name ? `Entrenador: ${current_membership.trainer_name}` : 'Sin entrenador asignado'}
+                            </p>
+                          </div>
+                          {current_membership.price != null && (
+                            <span className="font-mono text-xs font-bold text-brand-primary px-2 py-0.5 rounded-lg bg-surface-base border border-border-subtle">
+                              {formatCurrency(Number(current_membership.price))}
+                            </span>
+                          )}
                         </div>
 
                         <div className="p-3 rounded-xl bg-surface-base border border-border-subtle flex items-center justify-between">
-                          <span className="text-xs text-text-secondary">Días restantes:</span>
+                          <span className="text-xs text-text-secondary">
+                            {current_membership.status === 'ACTIVE'
+                              ? 'Vigencia restante:'
+                              : current_membership.status === 'EXPIRED'
+                              ? 'Tiempo transcurrido:'
+                              : current_membership.status === 'FUTURE'
+                              ? 'Inicio programado:'
+                              : 'Estado:'}
+                          </span>
                           <span className={cn(
                             "font-mono font-bold text-sm",
-                            current_membership.days_left > 7
-                              ? "text-emerald-400"
-                              : current_membership.days_left > 0
+                            current_membership.status === 'ACTIVE'
+                              ? (current_membership.days_left > 7 ? "text-emerald-400" : "text-amber-400")
+                              : current_membership.status === 'EXPIRED'
+                              ? "text-rose-400"
+                              : current_membership.status === 'FUTURE'
                               ? "text-amber-400"
-                              : "text-rose-400"
+                              : "text-zinc-400"
                           )}>
-                            {current_membership.days_left > 0
+                            {current_membership.status === 'ACTIVE'
                               ? `${current_membership.days_left} días de vigencia`
-                              : 'Membresía finalizada'}
+                              : current_membership.status === 'EXPIRED'
+                              ? `Venció hace ${Math.abs(current_membership.days_left)} días`
+                              : current_membership.status === 'FUTURE'
+                              ? `Inicia en ${current_membership.days_left} días`
+                              : 'Cancelada'}
                           </span>
                         </div>
 
@@ -356,14 +416,45 @@ export function ClientProfileDrawer({ isOpen, onClose, clientId, onEditClick }: 
                           </div>
                           <div>
                             <span className="text-text-muted block text-[11px]">Vencimiento</span>
-                            <span className="text-text-secondary">{formatDate(current_membership.end_date)}</span>
+                            <span className={cn(
+                              current_membership.status === 'EXPIRED' ? "text-rose-400 font-semibold" : "text-text-secondary"
+                            )}>
+                              {formatDate(current_membership.end_date)}
+                            </span>
                           </div>
                         </div>
+
+                        {current_membership.status === 'EXPIRED' && (
+                          <div className="pt-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRenew(current_membership.membership_plan_id)}
+                              className="w-full gap-1.5 text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 rounded-xl cursor-pointer"
+                            >
+                              <RotateCcw size={13} />
+                              Renovar Membresía Vencida
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ) : (
-                      <div className="py-8 text-center text-text-muted text-xs flex flex-col items-center justify-center">
-                        <Clock size={28} className="text-text-muted/40 mb-2" />
-                        <span>Sin membresía activa en este momento</span>
+                      <div className="py-6 text-center text-text-muted text-xs flex flex-col items-center justify-center gap-2">
+                        <Clock size={28} className="text-text-muted/40" />
+                        <span>
+                          {profile.has_membership_history
+                            ? 'El socio tiene historial pero no cuenta con un plan vigente actualmente.'
+                            : 'El socio nunca ha tenido una membresía asignada.'}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRenew()}
+                          className="mt-2 text-xs gap-1.5 border-border-medium hover:border-brand-primary/50 text-text-secondary hover:text-brand-primary rounded-xl cursor-pointer"
+                        >
+                          <Sparkles size={13} />
+                          {profile.has_membership_history ? 'Asignar Nueva Membresía' : 'Asignar Primera Membresía'}
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -466,53 +557,251 @@ export function ClientProfileDrawer({ isOpen, onClose, clientId, onEditClick }: 
           )}
 
           {activeTab === 'membresias' && (
-            <div className="p-6 rounded-2xl bg-surface-panel/80 border border-border-subtle shadow-subtle space-y-4">
-              <div className="flex items-center gap-2">
-                <Calendar size={18} className="text-brand-primary" />
-                <h3 className="text-base font-bold text-text-primary">Detalle de Membresía Actual</h3>
-              </div>
+            <div className="space-y-6">
+              {/* Sección 1: Membresía Actual / Principal */}
+              <div className="p-6 rounded-2xl bg-surface-panel/80 border border-border-subtle shadow-subtle space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={18} className="text-brand-primary" />
+                    <h3 className="text-base font-bold text-text-primary">Membresía Principal</h3>
+                  </div>
+                  {current_membership ? (
+                    current_membership.status === 'ACTIVE' ? (
+                      current_membership.days_left > 7 ? (
+                        <StatusBadge status="active" label="Vigente" />
+                      ) : current_membership.days_left > 0 ? (
+                        <StatusBadge status="warning" label="Por vencer" />
+                      ) : (
+                        <StatusBadge status="danger" label="Vence hoy" />
+                      )
+                    ) : current_membership.status === 'EXPIRED' ? (
+                      <StatusBadge status="danger" label="Vencida" />
+                    ) : current_membership.status === 'FUTURE' ? (
+                      <StatusBadge status="warning" label="Programada" />
+                    ) : (
+                      <StatusBadge status="neutral" label="Cancelada" />
+                    )
+                  ) : profile.has_membership_history ? (
+                    <StatusBadge status="warning" label="Sin plan actual" />
+                  ) : (
+                    <StatusBadge status="neutral" label="Sin membresías" />
+                  )}
+                </div>
 
-              {current_membership ? (
-                <div className="space-y-4 text-sm">
-                  <div className="p-4 rounded-xl bg-surface-base border border-border-subtle space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-text-primary">{current_membership.plan_name}</span>
-                      <StatusBadge
-                        status={current_membership.status === 'ACTIVE' ? 'active' : 'neutral'}
-                        label={current_membership.status}
-                      />
-                    </div>
+                {current_membership ? (
+                  <div className="space-y-4 text-sm">
+                    <div className="p-4 rounded-xl bg-surface-base border border-border-subtle space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <span className="text-lg font-bold text-text-primary block">{current_membership.plan_name}</span>
+                          <span className="text-xs text-text-muted">
+                            {current_membership.trainer_name ? `Entrenador: ${current_membership.trainer_name}` : 'Sin entrenador asignado'}
+                          </span>
+                        </div>
+                        {current_membership.price != null && (
+                          <span className="font-mono text-sm font-bold text-brand-primary px-2.5 py-1 rounded-lg bg-surface-panel border border-border-subtle">
+                            {formatCurrency(Number(current_membership.price))}
+                          </span>
+                        )}
+                      </div>
 
-                    <div className="grid grid-cols-2 gap-4 text-xs font-mono pt-2 border-t border-border-subtle">
-                      <div>
-                        <span className="text-text-muted block">Fecha de Inicio</span>
-                        <span className="text-text-primary font-semibold">{formatDate(current_membership.start_date)}</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono pt-2 border-t border-border-subtle">
+                        <div>
+                          <span className="text-text-muted block text-[11px]">Fecha de Inicio</span>
+                          <span className="text-text-primary font-semibold">{formatDate(current_membership.start_date)}</span>
+                        </div>
+                        <div>
+                          <span className="text-text-muted block text-[11px]">Fecha de Vencimiento</span>
+                          <span className={cn(
+                            "font-semibold",
+                            current_membership.status === 'EXPIRED' ? "text-rose-400" : "text-text-primary"
+                          )}>
+                            {formatDate(current_membership.end_date)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-text-muted block text-[11px]">
+                            {current_membership.status === 'ACTIVE'
+                              ? 'Días Restantes'
+                              : current_membership.status === 'EXPIRED'
+                              ? 'Días Transcurridos'
+                              : current_membership.status === 'FUTURE'
+                              ? 'Días para Inicio'
+                              : 'Estado'}
+                          </span>
+                          <span className={cn(
+                            "font-bold",
+                            current_membership.status === 'ACTIVE'
+                              ? (current_membership.days_left > 7 ? "text-emerald-400" : "text-amber-400")
+                              : current_membership.status === 'EXPIRED'
+                              ? "text-rose-400"
+                              : current_membership.status === 'FUTURE'
+                              ? "text-amber-400"
+                              : "text-zinc-400"
+                          )}>
+                            {current_membership.status === 'ACTIVE'
+                              ? `${current_membership.days_left} días de vigencia`
+                              : current_membership.status === 'EXPIRED'
+                              ? `Venció hace ${Math.abs(current_membership.days_left)} días`
+                              : current_membership.status === 'FUTURE'
+                              ? `Inicia en ${current_membership.days_left} días`
+                              : 'Cancelada'}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-text-muted block">Fecha de Vencimiento</span>
-                        <span className="text-text-primary font-semibold">{formatDate(current_membership.end_date)}</span>
-                      </div>
-                      <div>
-                        <span className="text-text-muted block">Días Restantes</span>
-                        <span className={cn(
-                          "font-bold",
-                          current_membership.days_left > 7 ? "text-emerald-400" : current_membership.days_left > 0 ? "text-amber-400" : "text-rose-400"
-                        )}>
-                          {current_membership.days_left} días
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-text-muted block">Entrenador Responsable</span>
-                        <span className="text-text-primary">{current_membership.trainer_name || 'Sin entrenador'}</span>
+
+                      <div className="flex items-center justify-end pt-2 border-t border-border-subtle gap-2">
+                        {current_membership.status === 'EXPIRED' ? (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleRenew(current_membership.membership_plan_id)}
+                            className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl cursor-pointer"
+                          >
+                            <RotateCcw size={13} /> Renovar Este Plan
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRenew()}
+                            className="gap-1.5 text-xs border-border-medium hover:border-brand-primary/50 text-text-secondary hover:text-brand-primary rounded-xl cursor-pointer"
+                          >
+                            <Sparkles size={13} /> Nueva Membresía
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
+                ) : (
+                  <div className="py-8 text-center text-text-muted text-xs flex flex-col items-center justify-center gap-3">
+                    <Clock size={32} className="text-text-muted/40" />
+                    <p className="max-w-xs">
+                      {profile.has_membership_history
+                        ? 'El socio registra membresías en el historial pero no tiene un plan activo en este momento.'
+                        : 'El socio nunca ha tenido una membresía asignada en el sistema.'}
+                    </p>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleRenew()}
+                      className="gap-1.5 text-xs rounded-xl bg-brand-primary hover:bg-brand-primary/90 cursor-pointer"
+                    >
+                      <Sparkles size={13} />
+                      {profile.has_membership_history ? 'Asignar Nueva Membresía' : 'Asignar Primera Membresía'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Sección 2: Historial Cronológico de Membresías */}
+              <div className="p-6 rounded-2xl bg-surface-panel/80 border border-border-subtle shadow-subtle space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <History size={18} className="text-brand-primary" />
+                    <h3 className="text-base font-bold text-text-primary">
+                      Historial Cronológico de Membresías
+                    </h3>
+                  </div>
+                  <span className="font-mono text-xs text-text-muted bg-surface-base px-2.5 py-1 rounded-lg border border-border-subtle">
+                    {profile.membership_history?.length || 0} registradas
+                  </span>
                 </div>
-              ) : (
-                <div className="py-12 text-center text-text-muted text-xs">
-                  El socio no cuenta con una membresía activa actualmente.
-                </div>
-              )}
+
+                {profile.membership_history && profile.membership_history.length > 0 ? (
+                  <div className="space-y-3">
+                    {profile.membership_history.map((m, idx) => (
+                      <div
+                        key={m.id || idx}
+                        className="p-4 rounded-xl bg-surface-base border border-border-subtle hover:border-border-medium transition-colors space-y-2.5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-sm text-text-primary">{m.plan_name}</span>
+                            {m.status === 'ACTIVE' && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                Vigente
+                              </span>
+                            )}
+                            {m.status === 'EXPIRED' && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                Vencida
+                              </span>
+                            )}
+                            {m.status === 'FUTURE' && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                Programada
+                              </span>
+                            )}
+                            {m.status === 'CANCELLED' && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
+                                Cancelada
+                              </span>
+                            )}
+                          </div>
+                          {m.price != null && (
+                            <span className="font-mono text-xs font-bold text-text-secondary shrink-0">
+                              {formatCurrency(Number(m.price))}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono text-text-muted pt-1">
+                          <div>
+                            <span className="text-[10px] text-text-muted block">Inicio</span>
+                            <span className="text-text-secondary">{formatDate(m.start_date)}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-text-muted block">Vencimiento</span>
+                            <span className={cn(
+                              m.status === 'EXPIRED' ? "text-rose-400" : "text-text-secondary"
+                            )}>
+                              {formatDate(m.end_date)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-text-muted block">Duración / Detalle</span>
+                            <span className="text-text-secondary">
+                              {m.status === 'ACTIVE'
+                                ? `${m.days_left}d restantes`
+                                : m.status === 'EXPIRED'
+                                ? `Venció hace ${Math.abs(m.days_left)}d`
+                                : m.status === 'FUTURE'
+                                ? `Inicia en ${m.days_left}d`
+                                : 'Cancelada'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-text-muted block">Entrenador</span>
+                            <span className="text-text-secondary truncate block" title={m.trainer_name || 'N/A'}>
+                              {m.trainer_name || 'Sin asignar'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {(m.status === 'EXPIRED' || m.status === 'CANCELLED') && (
+                          <div className="flex justify-end pt-2 border-t border-border-subtle/60">
+                            <button
+                              type="button"
+                              onClick={() => handleRenew(m.membership_plan_id)}
+                              className="inline-flex items-center gap-1.5 text-xs text-brand-primary hover:text-brand-primary/80 font-medium transition-colors cursor-pointer"
+                            >
+                              <RotateCcw size={12} />
+                              Renovar con este plan
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-text-muted text-xs">
+                    {profile.has_membership_history
+                      ? 'No hay registros históricos detallados adicionales para mostrar.'
+                      : 'El socio nunca ha tenido membresías registradas.'}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

@@ -20,6 +20,7 @@ export const useMemberships = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['memberships'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['clients'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['client360'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['cash-registers'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['cash-movements'], refetchType: 'all' });
@@ -32,6 +33,7 @@ export const useMemberships = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['memberships'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['clients'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['client360'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'all' });
     },
   });
@@ -41,6 +43,7 @@ export const useMemberships = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['memberships'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['clients'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['client360'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'all' });
     },
   });

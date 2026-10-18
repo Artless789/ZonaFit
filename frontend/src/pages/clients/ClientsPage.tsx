@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   UserPlus,
@@ -35,6 +36,7 @@ import { cn } from '@shared/utils/cn';
 type FilterType = 'all' | 'active' | 'expiring_membership' | 'expired_membership' | 'pending_balance' | 'inactive';
 
 export function ClientsPage() {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [pageSize] = useState(15);
   const [searchTerm, setSearchTerm] = useState('');
@@ -476,6 +478,16 @@ export function ClientsPage() {
         onClose={() => { setIsProfileOpen(false); setSelectedClient(null); }}
         clientId={selectedClient?.id}
         onEditClick={handleOpenEdit}
+        onRenewClick={(client, planId) => {
+          setIsProfileOpen(false);
+          setSelectedClient(null);
+          navigate('/memberships', {
+            state: {
+              renewClientId: client.id,
+              renewPlanId: planId,
+            },
+          });
+        }}
       />
 
       {/* Excel Import & Comparison Modal */}

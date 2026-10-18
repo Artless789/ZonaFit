@@ -19,52 +19,64 @@ if [ "${RUN_MIGRATIONS}" = "true" ]; then
     echo "Migrations applied successfully."
 fi
 
-# Optional automated client import for Primero de Mayo
+# Optional automated client import for Primero de Mayo (Requires explicit ALLOW_UNATTENDED_STARTUP_SYNC="true")
 if [ "${IMPORT_PRIMERO_DE_MAYO}" = "true" ]; then
-    echo "================================================="
-    echo " Executing Primero de Mayo client import..."
-    echo "================================================="
-    if [ -f "scripts/import_primero_de_mayo_clients.py" ]; then
-        python scripts/import_primero_de_mayo_clients.py
-    elif [ -f "backend/scripts/import_primero_de_mayo_clients.py" ]; then
-        python backend/scripts/import_primero_de_mayo_clients.py
+    if [ "${ALLOW_UNATTENDED_STARTUP_SYNC}" = "true" ]; then
+        echo "================================================="
+        echo " Executing Primero de Mayo client import..."
+        echo "================================================="
+        if [ -f "scripts/import_primero_de_mayo_clients.py" ]; then
+            python scripts/import_primero_de_mayo_clients.py
+        elif [ -f "backend/scripts/import_primero_de_mayo_clients.py" ]; then
+            python backend/scripts/import_primero_de_mayo_clients.py
+        else
+            echo "ERROR: import_primero_de_mayo_clients.py not found!"
+            exit 1
+        fi
+        echo "Primero de Mayo client import completed successfully."
     else
-        echo "ERROR: import_primero_de_mayo_clients.py not found!"
-        exit 1
+        echo "NOTICE: IMPORT_PRIMERO_DE_MAYO=true detected but ALLOW_UNATTENDED_STARTUP_SYNC is not set to 'true'. Skipping import on container startup for data protection."
     fi
-    echo "Primero de Mayo client import completed successfully."
 fi
 
-# Optional automated active memberships import for Primero de Mayo
+# Optional automated active memberships import for Primero de Mayo (Requires explicit ALLOW_UNATTENDED_STARTUP_SYNC="true")
 if [ "${IMPORT_PRIMERO_DE_MAYO_MEMBERSHIPS}" = "true" ]; then
-    echo "================================================="
-    echo " Executing Primero de Mayo active memberships import..."
-    echo "================================================="
-    if [ -f "scripts/import_primero_de_mayo_memberships.py" ]; then
-        python scripts/import_primero_de_mayo_memberships.py
-    elif [ -f "backend/scripts/import_primero_de_mayo_memberships.py" ]; then
-        python backend/scripts/import_primero_de_mayo_memberships.py
+    if [ "${ALLOW_UNATTENDED_STARTUP_SYNC}" = "true" ]; then
+        echo "================================================="
+        echo " Executing Primero de Mayo active memberships import..."
+        echo "================================================="
+        if [ -f "scripts/import_primero_de_mayo_memberships.py" ]; then
+            python scripts/import_primero_de_mayo_memberships.py
+        elif [ -f "backend/scripts/import_primero_de_mayo_memberships.py" ]; then
+            python backend/scripts/import_primero_de_mayo_memberships.py
+        else
+            echo "ERROR: import_primero_de_mayo_memberships.py not found!"
+            exit 1
+        fi
+        echo "Primero de Mayo active memberships import completed successfully."
     else
-        echo "ERROR: import_primero_de_mayo_memberships.py not found!"
-        exit 1
+        echo "NOTICE: IMPORT_PRIMERO_DE_MAYO_MEMBERSHIPS=true detected but ALLOW_UNATTENDED_STARTUP_SYNC is not set to 'true'. Skipping import on container startup for data protection."
     fi
-    echo "Primero de Mayo active memberships import completed successfully."
 fi
 
-# Optional automated active memberships sync for MerwilFit
+# Optional automated active memberships sync for MerwilFit (Requires explicit ALLOW_UNATTENDED_STARTUP_SYNC="true")
 if [ "${SYNC_MERWILFIT_MEMBERSHIPS}" = "true" ]; then
-    echo "================================================="
-    echo " Executing MerwilFit memberships synchronization..."
-    echo "================================================="
-    if [ -f "scripts/sync_merwilfit_memberships.py" ]; then
-        python scripts/sync_merwilfit_memberships.py --production
-    elif [ -f "backend/scripts/sync_merwilfit_memberships.py" ]; then
-        python backend/scripts/sync_merwilfit_memberships.py --production
+    if [ "${ALLOW_UNATTENDED_STARTUP_SYNC}" = "true" ]; then
+        echo "================================================="
+        echo " Executing MerwilFit memberships synchronization..."
+        echo "================================================="
+        if [ -f "scripts/sync_merwilfit_memberships.py" ]; then
+            python scripts/sync_merwilfit_memberships.py --production
+        elif [ -f "backend/scripts/sync_merwilfit_memberships.py" ]; then
+            python backend/scripts/sync_merwilfit_memberships.py --production
+        else
+            echo "ERROR: sync_merwilfit_memberships.py not found!"
+            exit 1
+        fi
+        echo "MerwilFit memberships synchronization completed successfully."
     else
-        echo "ERROR: sync_merwilfit_memberships.py not found!"
-        exit 1
+        echo "NOTICE: SYNC_MERWILFIT_MEMBERSHIPS=true detected but ALLOW_UNATTENDED_STARTUP_SYNC is not set to 'true'. Skipping sync on container startup for data protection."
     fi
-    echo "MerwilFit memberships synchronization completed successfully."
 fi
 
 # If custom command arguments are passed, execute them instead

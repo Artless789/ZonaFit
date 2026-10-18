@@ -4,6 +4,8 @@ import { StatusBadge } from '@shared/ui/StatusBadge';
 import { cn } from '@shared/utils/cn';
 import { AuthorizedImage } from '@shared/ui/AuthorizedImage';
 import { useWhatsAppWeb } from '@/hooks/useWhatsAppWeb';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale/es';
 import {
   TableContainer,
   Table,
@@ -20,6 +22,15 @@ interface ClientsTableProps {
   onEdit: (client: Client) => void;
   onToggleStatus: (client: Client) => void;
 }
+
+const formatDateSafe = (dateStr: string) => {
+  try {
+    const d = new Date(dateStr);
+    return format(d, 'dd MMM yyyy', { locale: es });
+  } catch {
+    return dateStr;
+  }
+};
 
 export function ClientsTable({ clients, onViewProfile, onEdit, onToggleStatus }: ClientsTableProps) {
   const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb(
@@ -59,19 +70,22 @@ export function ClientsTable({ clients, onViewProfile, onEdit, onToggleStatus }:
         <Table>
           <TableHeader className="bg-surface-raised/60 border-b border-border-subtle">
             <TableRow>
-              <TableHead className="w-[32%] text-xs font-semibold text-text-muted uppercase tracking-wider py-3.5">
+              <TableHead className="w-[26%] text-xs font-semibold text-text-muted uppercase tracking-wider py-3.5">
                 Socio / Identidad
               </TableHead>
-              <TableHead className="w-[18%] text-xs font-semibold text-text-muted uppercase tracking-wider py-3.5">
+              <TableHead className="w-[14%] text-xs font-semibold text-text-muted uppercase tracking-wider py-3.5">
                 Documento
               </TableHead>
-              <TableHead className="w-[20%] text-xs font-semibold text-text-muted uppercase tracking-wider py-3.5">
+              <TableHead className="w-[24%] text-xs font-semibold text-text-muted uppercase tracking-wider py-3.5">
+                Membresía
+              </TableHead>
+              <TableHead className="w-[16%] text-xs font-semibold text-text-muted uppercase tracking-wider py-3.5">
                 Contacto
               </TableHead>
-              <TableHead className="w-[15%] text-xs font-semibold text-text-muted uppercase tracking-wider py-3.5">
+              <TableHead className="w-[10%] text-xs font-semibold text-text-muted uppercase tracking-wider py-3.5">
                 Estado Cuenta
               </TableHead>
-              <TableHead className="w-[15%] text-right text-xs font-semibold text-text-muted uppercase tracking-wider py-3.5 pr-5">
+              <TableHead className="w-[10%] text-right text-xs font-semibold text-text-muted uppercase tracking-wider py-3.5 pr-5">
                 Acciones
               </TableHead>
             </TableRow>
@@ -107,12 +121,12 @@ export function ClientsTable({ clients, onViewProfile, onEdit, onToggleStatus }:
                       <button
                         type="button"
                         onClick={() => handleProfileClick(client)}
-                        className="font-semibold text-text-primary text-sm leading-tight hover:text-brand-primary transition-colors text-left truncate max-w-[220px] block cursor-pointer"
+                        className="font-semibold text-text-primary text-sm leading-tight hover:text-brand-primary transition-colors text-left truncate max-w-[200px] block cursor-pointer"
                         title={client.full_name}
                       >
                         {client.full_name}
                       </button>
-                      <div className="text-xs text-text-muted truncate max-w-[220px] mt-0.5 font-mono">
+                      <div className="text-xs text-text-muted truncate max-w-[200px] mt-0.5 font-mono">
                         {client.email || 'Sin correo registrado'}
                       </div>
                     </div>
@@ -127,6 +141,74 @@ export function ClientsTable({ clients, onViewProfile, onEdit, onToggleStatus }:
                   </div>
                 </TableCell>
 
+                {/* Membresía */}
+                <TableCell className="py-3.5">
+                  {client.current_membership ? (
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          className="font-medium text-xs text-text-primary truncate max-w-[140px]"
+                          title={client.current_membership.plan_name}
+                        >
+                          {client.current_membership.plan_name}
+                        </span>
+                        {client.current_membership.status === 'ACTIVE' && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            Vigente
+                          </span>
+                        )}
+                        {client.current_membership.status === 'EXPIRED' && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                            Vencida
+                          </span>
+                        )}
+                        {client.current_membership.status === 'FUTURE' && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            Programada
+                          </span>
+                        )}
+                        {client.current_membership.status === 'CANCELLED' && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
+                            Cancelada
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-[11px] text-text-muted flex items-center gap-1">
+                        {client.current_membership.status === 'ACTIVE' && (
+                          <span>
+                            Vence: {formatDateSafe(client.current_membership.end_date)} ({client.current_membership.days_left}d)
+                          </span>
+                        )}
+                        {client.current_membership.status === 'EXPIRED' && (
+                          <span className="text-rose-400/90 font-medium">
+                            Venció: {formatDateSafe(client.current_membership.end_date)} (hace {Math.abs(client.current_membership.days_left)}d)
+                          </span>
+                        )}
+                        {client.current_membership.status === 'FUTURE' && (
+                          <span className="text-amber-400/90 font-medium">
+                            Inicia: {formatDateSafe(client.current_membership.start_date)}
+                          </span>
+                        )}
+                        {client.current_membership.status === 'CANCELLED' && (
+                          <span className="text-zinc-500">
+                            Finalizada el {formatDateSafe(client.current_membership.end_date)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ) : client.has_membership_history ? (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[11px] font-medium text-amber-400/80">Historial previo</span>
+                      <span className="text-[10px] text-text-muted">Sin plan actual</span>
+                    </div>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-surface-raised text-text-muted border border-border-subtle">
+                      Sin membresía
+                    </span>
+                  )}
+                </TableCell>
+
                 {/* Contacto */}
                 <TableCell className="py-3.5">
                   <div className="flex flex-col gap-0.5">
@@ -134,7 +216,7 @@ export function ClientsTable({ clients, onViewProfile, onEdit, onToggleStatus }:
                       {client.phone}
                     </span>
                     {client.whatsapp_group_name ? (
-                      <span className="text-[11px] text-emerald-400 font-medium truncate max-w-[160px]" title={client.whatsapp_group_name}>
+                      <span className="text-[11px] text-emerald-400 font-medium truncate max-w-[140px]" title={client.whatsapp_group_name}>
                         Grupo: {client.whatsapp_group_name}
                       </span>
                     ) : (
@@ -145,7 +227,7 @@ export function ClientsTable({ clients, onViewProfile, onEdit, onToggleStatus }:
                   </div>
                 </TableCell>
 
-                {/* Estado de Cuenta (Decoupled from memberships & debt) */}
+                {/* Estado de Cuenta */}
                 <TableCell className="py-3.5">
                   {client.is_active ? (
                     <StatusBadge status="active" label="Cuenta Activa" />
