@@ -6,6 +6,7 @@ from sqlalchemy import (
     ForeignKey,
     JSON,
 )
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database.base import Base
@@ -30,11 +31,21 @@ class AuditLog(Base):
         index=True,
     )
 
-    action = Column(String(30), nullable=False)
+    user_name = Column(String(150), nullable=True)
 
-    entity_type = Column(String(100), nullable=False)
+    action = Column(String(60), nullable=False, index=True)
+
+    module = Column(String(50), nullable=True, index=True)
+
+    entity_type = Column(String(100), nullable=False, index=True)
 
     entity_id = Column(Integer, nullable=True)
+
+    entity_name = Column(String(200), nullable=True)
+
+    description = Column(String(500), nullable=True)
+
+    status = Column(String(20), nullable=True, default="SUCCESS")
 
     old_values = Column(JSON, nullable=True)
 
@@ -47,3 +58,5 @@ class AuditLog(Base):
         server_default=func.now(),
         index=True,
     )
+
+    user = relationship("User", foreign_keys=[user_id], lazy="joined")

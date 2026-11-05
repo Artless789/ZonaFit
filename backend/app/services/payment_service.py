@@ -244,6 +244,30 @@ class PaymentService:
             db.flush()
             db.refresh(payment)
 
+            # --- AUDIT LOG ---
+            from app.services.audit_service import AuditService
+            from app.constants.audit_actions import AuditAction, AuditModule
+            c_name = membership.client.full_name if (membership and membership.client) else f"Cliente #{membership.client_id if membership else 'N/A'}"
+            AuditService.log(
+                db=db,
+                gym_id=current_user.gym_id,
+                action=AuditAction.PAYMENT_CREATED,
+                module=AuditModule.PAYMENTS,
+                entity_type="Payment",
+                entity_id=payment.id,
+                entity_name=f"Pago #{payment.id} (${pay_amount:,.0f})",
+                user_id=current_user.id,
+                user_name=current_user.full_name,
+                description=f"{current_user.full_name} registró un pago de ${pay_amount:,.0f} ({payment.payment_method}) para {c_name}",
+                new_values={
+                    "payment_id": payment.id,
+                    "membership_id": payment.membership_id,
+                    "amount": str(pay_amount),
+                    "payment_method": payment.payment_method,
+                    "status": payment.status,
+                },
+            )
+
         # --- NOTIFICATION HOOK: PAYMENT_RECEIVED ---
         try:
             from app.models.client import Client
@@ -415,21 +439,27 @@ class PaymentService:
                         target_ar.status = "PARTIAL"
 
             if current_user:
-                audit = AuditLog(
+                from app.services.audit_service import AuditService
+                from app.constants.audit_actions import AuditAction, AuditModule
+                AuditService.log(
+                    db=db,
                     gym_id=payment.gym_id,
                     user_id=current_user.id,
-                    action="PAYMENT_CANCELLED",
+                    user_name=current_user.full_name,
+                    action=AuditAction.PAYMENT_CANCELLED,
+                    module=AuditModule.PAYMENTS,
                     entity_type="Payment",
                     entity_id=payment.id,
-                    old_values=json.dumps({
+                    entity_name=f"Pago #{payment.id} (${pay_amount:,.0f})",
+                    description=f"{current_user.full_name} anuló el pago #{payment.id} por valor de ${pay_amount:,.0f}",
+                    old_values={
                         "amount": str(pay_amount),
                         "status": "PAID" if was_paid else payment.status,
-                    }),
-                    new_values=json.dumps({
+                    },
+                    new_values={
                         "status": PaymentStatus.CANCELLED,
                         "is_active": False,
-                    }),
+                    },
                     ip_address="system",
                 )
-                db.add(audit)
             db.flush()

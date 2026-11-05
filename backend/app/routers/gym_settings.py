@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_user, require_admin
+from app.core.auth import get_current_user, require_settings_management
 from app.database.database import get_db
 from app.exceptions.conflict_exception import ConflictException
 from app.exceptions.not_found_exception import NotFoundException
@@ -47,12 +47,12 @@ def get_gym_settings(
     response_model=GymSettingsResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create gym settings",
-    description="Creates the institutional configuration for the gym. Can only be done once per gym. Requires admin role.",
+    description="Creates the institutional configuration for the gym. Can only be done once per gym. Requires settings management permissions.",
 )
 def create_gym_settings(
     settings_data: GymSettingsCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_settings_management),
 ):
     if not current_user.gym_id:
         raise HTTPException(
@@ -72,12 +72,12 @@ def create_gym_settings(
     "/",
     response_model=GymSettingsResponse,
     summary="Update gym settings",
-    description="Updates the institutional configuration of the gym. Requires admin role.",
+    description="Updates the institutional configuration of the gym. Requires settings management permissions.",
 )
 def update_gym_settings(
     settings_data: GymSettingsUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_settings_management),
 ):
     if not current_user.gym_id:
         raise HTTPException(
@@ -92,17 +92,17 @@ def update_gym_settings(
             detail=str(e.message),
         )
 
-    return GymSettingsService.update(db, settings, settings_data)
+    return GymSettingsService.update(db, settings, settings_data, current_user=current_user)
 
 @router.post(
     "/complete-onboarding",
     response_model=dict,
     summary="Complete gym onboarding",
-    description="Marks the onboarding process as completed for the authenticated user's gym.",
+    description="Marks the onboarding process as completed for the authenticated user's gym. Requires settings management permissions.",
 )
 def complete_onboarding(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_settings_management),
 ):
     if not current_user.gym_id:
         raise HTTPException(

@@ -49,6 +49,7 @@ class CashRegisterResponse(CashRegisterBase):
     counted_balance: Optional[Decimal] = None
     difference: Optional[Decimal] = None
     status: str
+    close_type: str = "MANUAL"
     closing_notes: Optional[str] = None
     reconciliation_data: Optional[str] = None
 

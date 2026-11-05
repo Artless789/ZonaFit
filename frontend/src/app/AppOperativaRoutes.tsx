@@ -1,6 +1,13 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from '../layouts/AppLayout';
 import { SubscriptionGuard } from '../guards/SubscriptionGuard';
+import { PermissionGuard } from '../guards/PermissionGuard';
+import {
+  canViewReports,
+  canManageUsers,
+  canViewAudit,
+  canManageSettings,
+} from '@shared/utils/permissions';
 import { Login } from '../pages/Login';
 import { lazy, Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -45,12 +52,25 @@ export function AppOperativaRoutes() {
             <Route path="sales" element={<SalesPage />} />
             <Route path="inventory" element={<Navigate to="/sales?tab=inventory" replace />} />
             <Route path="notifications" element={<NotificationsPage />} />
-            <Route path="users" element={<UsersPage />} />
-            <Route path="audit" element={<AuditPage />} />
-            <Route path="reports" element={<ReportsPage />} />
-            <Route path="settings" element={<GymSettingsPage />} />
-            <Route path="settings/subscription" element={<SubscriptionManagementPage />} />
-            <Route path="subscription/checkout" element={<SubscriptionCheckoutPage />} />
+            
+            {/* Protected Management Routes */}
+            <Route element={<PermissionGuard check={canManageUsers} />}>
+              <Route path="users" element={<UsersPage />} />
+            </Route>
+
+            <Route element={<PermissionGuard check={canViewAudit} />}>
+              <Route path="audit" element={<AuditPage />} />
+            </Route>
+
+            <Route element={<PermissionGuard check={canViewReports} />}>
+              <Route path="reports" element={<ReportsPage />} />
+            </Route>
+
+            <Route element={<PermissionGuard check={canManageSettings} />}>
+              <Route path="settings" element={<GymSettingsPage />} />
+              <Route path="settings/subscription" element={<SubscriptionManagementPage />} />
+              <Route path="subscription/checkout" element={<SubscriptionCheckoutPage />} />
+            </Route>
           </Route>
         </Route>
         

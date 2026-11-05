@@ -72,6 +72,28 @@ class InventoryMovementService:
         with DatabaseTransaction(db):
             db.add(movement)
             db.flush()
+
+            from app.services.audit_service import AuditService
+            from app.constants.audit_actions import AuditAction, AuditModule
+            AuditService.log(
+                db=db,
+                gym_id=current_user.gym_id,
+                action=AuditAction.INVENTORY_MOVEMENT,
+                module=AuditModule.INVENTORY,
+                entity_type="Product",
+                entity_id=product.id,
+                entity_name=product.name,
+                user_id=current_user.id,
+                user_name=current_user.full_name,
+                description=f"{current_user.full_name} registró movimiento de inventario ({movement_data.movement_type}: {movement_data.quantity}) en {product.name}",
+                old_values={"stock": stock_before},
+                new_values={
+                    "stock": stock_after,
+                    "movement_type": movement_data.movement_type,
+                    "quantity": movement_data.quantity,
+                    "reason": movement_data.reason,
+                },
+            )
             db.refresh(movement)
 
         return movement

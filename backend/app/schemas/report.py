@@ -1,6 +1,5 @@
 from datetime import date
 from decimal import Decimal
-
 from pydantic import BaseModel
 
 
@@ -77,3 +76,14 @@ class MembershipExpiringResponse(BaseModel):
     client_name: str
     end_date: date
     days_remaining: int
+
+
+# ----------------------------
+# Reporte de Utilidades / Ganancias
+# ----------------------------
+
+class ProfitReportResponse(BaseModel):
+    total_revenue: Decimal
+    total_cost: Decimal
+    gross_profit: Decimal
+    profit_margin_percent: float

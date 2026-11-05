@@ -290,6 +290,12 @@ def delete_membership(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    from app.constants.permissions import Permission, user_has_permission
+    if not user_has_permission(current_user, Permission.CANCEL_MEMBERSHIPS):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes autorización para anular o eliminar membresías.",
+        )
     if not current_user.gym_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

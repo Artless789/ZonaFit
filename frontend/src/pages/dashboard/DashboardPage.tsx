@@ -29,6 +29,7 @@ import { GlassPanel } from '@shared/ui/GlassPanel';
 import { IncomeDetailsDrawer } from './IncomeDetailsDrawer';
 import { ExpiredMembershipsModal } from '../memberships/ExpiredMembershipsModal';
 import { cn } from '@shared/utils/cn';
+import { canViewFinancials, canViewAudit } from '@shared/utils/permissions';
 
 function Sparkline({ data }: { data: number[] }) {
   if (!data || data.length < 2) return null;
@@ -84,6 +85,8 @@ export function DashboardPage() {
   const [renewalFilter, setRenewalFilter] = useState<(typeof renewalFilters)[number]['id']>('today');
 
   const { user } = useAuth();
+  const hasFinancialAccess = canViewFinancials(user);
+  const hasAuditAccess = canViewAudit(user);
   const { openWhatsAppModal, WhatsAppModalComponent } = useWhatsAppWeb();
 
   const dashboard = useDashboard();
@@ -216,61 +219,113 @@ export function DashboardPage() {
     });
   }, [data?.recent_activity]);
 
-  // Brutalist KPI Items (Reference 1:1 with explicit financial semantics: Facturación vs Recaudo vs Cartera)
-  const kpiItems = [
-    {
-      id: 'income',
-      label: 'Ingresos del mes',
-      subtitle: 'Recaudo efectivo del mes',
-      value: formatCurrency(data?.income_this_month),
-      delta: 12.4,
-      hint: 'pagos recibidos este mes',
-      tooltip: 'Dinero efectivamente recaudado durante el mes en curso (efectivo, transferencia y tarjeta)',
-      trend: [42, 48, 45, 52, 58, 55, 62, 60, 68, 72, 70, 78],
-      onClick: () => setIsIncomeDetailsOpen(true),
-    },
-    {
-      id: 'sales',
-      label: 'Ventas de hoy',
-      subtitle: 'Facturación generada hoy',
-      value: formatCurrency(data?.sales_today_amount),
-      delta: data?.sales_today ? 5.2 : -2.1,
-      hint:
-        creditTodayAmount > 0
-          ? `${data?.sales_today || 0} tickets · Recaudo hoy: ${formatCurrency(collectedTodayAmount)} · Crédito hoy: ${formatCurrency(creditTodayAmount)}`
-          : `${data?.sales_today || 0} tickets facturados hoy`,
-      tooltip: 'Facturación total generada hoy (POS + membresías nuevas/renovadas, tanto de contado como a crédito)',
-      trend: [30, 45, 38, 52, 40, 48, 35, 42, 38, 30, 34, 46],
-      onClick: () => navigate(getRoute('/sales')),
-    },
-    {
-      id: 'active',
-      label: 'Clientes activos',
-      subtitle: 'Socios registrados activos',
-      value: String(data?.active_clients ?? 0),
-      delta: 4.1,
-      hint: data?.active_membership_clients ? `${data.active_membership_clients} con plan vigente` : 'cuentas activas',
-      tooltip: 'Total de clientes activos en el gimnasio',
-      trend: [300, 305, 308, 312, 310, 318, 320, 322, 326, 328, 331, 334],
-      onClick: () => navigate(getRoute('/clients')),
-    },
-    {
-      id: 'receivables',
-      label: 'Cartera por cobrar',
-      subtitle: 'Cartera pendiente total',
-      value: formatCurrency(data?.total_receivables),
-      delta: (data?.overdue_receivables || 0) > 0 ? -3.5 : 0,
-      hint:
-        (data?.overdue_receivables || 0) > 0
-          ? `${formatCurrency(data?.overdue_receivables)} en mora · Histórico total`
-          : creditTodayAmount > 0
-          ? `Histórico total · Crédito hoy: ${formatCurrency(creditTodayAmount)}`
-          : 'Cartera histórica total · Sin mora',
-      tooltip: 'Saldo pendiente acumulado de todas las cuentas por cobrar activas (histórico + hoy)',
-      trend: [80, 75, 78, 65, 60, 58, 52, 48, 45, 42, 40, 38],
-      onClick: () => navigate(getRoute('/credits')),
-    },
-  ];
+  // Brutalist KPI Items: Owner has full financials; Employee/Staff has operational desk metrics
+  const kpiItems = useMemo(() => {
+    if (hasFinancialAccess) {
+      return [
+        {
+          id: 'income',
+          label: 'Ingresos del mes',
+          subtitle: 'Recaudo efectivo del mes',
+          value: formatCurrency(data?.income_this_month),
+          delta: 12.4,
+          hint: 'pagos recibidos este mes',
+          tooltip: 'Dinero efectivamente recaudado durante el mes en curso (efectivo, transferencia y tarjeta)',
+          trend: [42, 48, 45, 52, 58, 55, 62, 60, 68, 72, 70, 78],
+          onClick: () => setIsIncomeDetailsOpen(true),
+        },
+        {
+          id: 'sales',
+          label: 'Ventas de hoy',
+          subtitle: 'Facturación generada hoy',
+          value: formatCurrency(data?.sales_today_amount),
+          delta: data?.sales_today ? 5.2 : -2.1,
+          hint:
+            creditTodayAmount > 0
+              ? `${data?.sales_today || 0} tickets · Recaudo hoy: ${formatCurrency(collectedTodayAmount)} · Crédito hoy: ${formatCurrency(creditTodayAmount)}`
+              : `${data?.sales_today || 0} tickets facturados hoy`,
+          tooltip: 'Facturación total generada hoy (POS + membresías nuevas/renovadas, tanto de contado como a crédito)',
+          trend: [30, 45, 38, 52, 40, 48, 35, 42, 38, 30, 34, 46],
+          onClick: () => navigate(getRoute('/sales')),
+        },
+        {
+          id: 'active',
+          label: 'Clientes activos',
+          subtitle: 'Socios registrados activos',
+          value: String(data?.active_clients ?? 0),
+          delta: 4.1,
+          hint: data?.active_membership_clients ? `${data.active_membership_clients} con plan vigente` : 'cuentas activas',
+          tooltip: 'Total de clientes activos en el gimnasio',
+          trend: [300, 305, 308, 312, 310, 318, 320, 322, 326, 328, 331, 334],
+          onClick: () => navigate(getRoute('/clients')),
+        },
+        {
+          id: 'receivables',
+          label: 'Cartera por cobrar',
+          subtitle: 'Cartera pendiente total',
+          value: formatCurrency(data?.total_receivables),
+          delta: (data?.overdue_receivables || 0) > 0 ? -3.5 : 0,
+          hint:
+            (data?.overdue_receivables || 0) > 0
+              ? `${formatCurrency(data?.overdue_receivables)} en mora · Histórico total`
+              : creditTodayAmount > 0
+              ? `Histórico total · Crédito hoy: ${formatCurrency(creditTodayAmount)}`
+              : 'Cartera histórica total · Sin mora',
+          tooltip: 'Saldo pendiente acumulado de todas las cuentas por cobrar activas (histórico + hoy)',
+          trend: [80, 75, 78, 65, 60, 58, 52, 48, 45, 42, 40, 38],
+          onClick: () => navigate(getRoute('/credits')),
+        },
+      ];
+    }
+
+    // Operational KPI items for EMPLOYEE / Receptionist (Strictly no private global financials)
+    return [
+      {
+        id: 'sales',
+        label: 'Ventas de hoy',
+        subtitle: 'Facturación generada hoy',
+        value: formatCurrency(data?.sales_today_amount),
+        delta: data?.sales_today ? 5.2 : -2.1,
+        hint: `${data?.sales_today || 0} tickets registrados hoy`,
+        tooltip: 'Facturación generada hoy en punto de venta y membresías',
+        trend: [30, 45, 38, 52, 40, 48, 35, 42, 38, 30, 34, 46],
+        onClick: () => navigate(getRoute('/sales')),
+      },
+      {
+        id: 'active',
+        label: 'Clientes activos',
+        subtitle: 'Socios registrados activos',
+        value: String(data?.active_clients ?? 0),
+        delta: 4.1,
+        hint: data?.active_membership_clients ? `${data.active_membership_clients} con plan vigente` : 'cuentas activas',
+        tooltip: 'Total de clientes activos en el gimnasio',
+        trend: [300, 305, 308, 312, 310, 318, 320, 322, 326, 328, 331, 334],
+        onClick: () => navigate(getRoute('/clients')),
+      },
+      {
+        id: 'expiring',
+        label: 'Membresías por vencer',
+        subtitle: 'Atención prioritaria',
+        value: String(expiringCount),
+        delta: expiringCount > 0 ? -2.0 : 0,
+        hint: `${expiringCount} socios requieren renovación`,
+        tooltip: 'Membresías que vencen en los próximos días o están vencidas',
+        trend: [10, 12, 8, 14, 15, 11, 9, 13, 10, 8, 12, expiringCount],
+        onClick: () => setIsExpiredModalOpen(true),
+      },
+      {
+        id: 'cash_shift',
+        label: 'Caja del turno',
+        subtitle: 'Efectivo en gaveta',
+        value: formatCurrency(inDrawer),
+        delta: isCajaOpen ? 3.0 : 0,
+        hint: isCajaOpen ? `Turno activo · ${openedAtTime}` : 'Caja cerrada',
+        tooltip: 'Efectivo físico disponible en la caja registradora en el turno actual',
+        trend: [20, 30, 25, 40, 35, 50, 45, 60, 55, 70, 65, 80],
+        onClick: () => navigate(getRoute('/cash-registers')),
+      },
+    ];
+  }, [hasFinancialAccess, data, creditTodayAmount, collectedTodayAmount, expiringCount, inDrawer, isCajaOpen, openedAtTime, navigate, getRoute]);
 
   if (dashboard.isLoading) {
     return (
@@ -412,12 +467,14 @@ export function DashboardPage() {
         </dl>
       </section>
 
-      {/* ========================================================
-          02 — ROW 1: REVENUE CHART (2 COLS) + CASH REGISTER (1 COL)
+            {/* ========================================================
+          02 — MAIN OPERATIONAL WORKSPACE (ROLE-AWARE)
          ======================================================== */}
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        {/* Left 2 Cols: Revenue Chart (Reference 1:1) */}
-        <div className="xl:col-span-2">
+      {hasFinancialAccess ? (
+        <>
+          {/* Propietario / Admin con Finanzas: Tendencia de ingresos + Caja */}
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+            <div className="xl:col-span-2">
           <GlassPanel
             id="revenue"
             index="01"
@@ -509,9 +566,7 @@ export function DashboardPage() {
             </div>
           </GlassPanel>
         </div>
-
-        {/* Right 1 Col: Turno Actual de Caja (Reference 1:1 with explicit scope separation) */}
-        <GlassPanel
+            <GlassPanel
           id="cash"
           index="02"
           eyebrow="Caja · Recaudo recibido en este turno"
@@ -565,18 +620,20 @@ export function DashboardPage() {
                 <dd className="font-mono tabular-nums text-text-secondary">{formatCurrency(preShiftPaymentsToday)}</dd>
               </div>
             )}
-            <div
-              className="flex items-center justify-between pt-3 pb-1 text-sm"
-              title="Cartera histórica total pendiente de cobro acumulada (no pertenece al recaudo del turno)"
-            >
-              <dt className="flex flex-col">
-                <span className="text-text-secondary">Por cobrar (Cartera total)</span>
-                <span className="font-mono text-[10px] text-text-muted">
-                  Histórico acumulado{creditTodayAmount > 0 ? ` · Hoy: ${formatCurrency(creditTodayAmount)}` : ''}
-                </span>
-              </dt>
-              <dd className="font-mono tabular-nums text-brand-primary">{formatCurrency(receivablesAmount)}</dd>
-            </div>
+            {hasFinancialAccess && (
+              <div
+                className="flex items-center justify-between pt-3 pb-1 text-sm"
+                title="Cartera histórica total pendiente de cobro acumulada (no pertenece al recaudo del turno)"
+              >
+                <dt className="flex flex-col">
+                  <span className="text-text-secondary">Por cobrar (Cartera total)</span>
+                  <span className="font-mono text-[10px] text-text-muted">
+                    Histórico acumulado{creditTodayAmount > 0 ? ` · Hoy: ${formatCurrency(creditTodayAmount)}` : ''}
+                  </span>
+                </dt>
+                <dd className="font-mono tabular-nums text-brand-primary">{formatCurrency(receivablesAmount)}</dd>
+              </div>
+            )}
           </dl>
 
           <button
@@ -588,14 +645,11 @@ export function DashboardPage() {
             {isCajaOpen ? 'Hacer cierre de caja' : 'Abrir turno de caja'}
           </button>
         </GlassPanel>
-      </div>
+          </div>
 
-      {/* ========================================================
-          03 — ROW 2: RENEWALS QUEUE (2 COLS) + ACTIVITY FEED (1 COL)
-         ======================================================== */}
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        {/* Left 2 Cols: Cola de Renovaciones (Reference 1:1) */}
-        <div className="xl:col-span-2">
+          {/* Fila 2: Renovaciones prioritarias + Actividad */}
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+            <div className="xl:col-span-2">
           <GlassPanel
             id="renewals"
             index="03"
@@ -761,9 +815,7 @@ export function DashboardPage() {
             )}
           </GlassPanel>
         </div>
-
-        {/* Right 1 Col: Actividad de Hoy (Reference 1:1) */}
-        <GlassPanel
+            <GlassPanel
           id="activity"
           index="04"
           eyebrow="En vivo"
@@ -809,22 +861,342 @@ export function DashboardPage() {
             )}
           </ol>
 
+          {hasAuditAccess && (
+            <button
+              type="button"
+              onClick={() => navigate(getRoute('/audit'))}
+              className="liquid-glass-soft mt-auto flex h-11 items-center justify-center gap-2 rounded-full text-sm font-medium transition-colors hover:bg-white/10 cursor-pointer"
+            >
+              <span>Ver auditoría completa</span>
+              <ArrowRight className="size-4" strokeWidth={1.6} />
+            </button>
+          )}
+        </GlassPanel>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Personal / Recepción: Atención prioritaria de renovaciones + Caja de turno (Sin finanzas globales) */}
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+            <div className="xl:col-span-2">
+          <GlassPanel
+            id="renewals"
+            index="03"
+            eyebrow="Atención prioritaria"
+            title="Cola de renovaciones"
+            action={
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsExpiredModalOpen(true)}
+                  className="flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-rose-300 hover:bg-rose-500/20 transition-colors cursor-pointer"
+                  title="Abrir modal de membresías vencidas"
+                >
+                  <ShieldAlert className="size-3 text-rose-400" />
+                  Membresías Vencidas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate(getRoute('/memberships'))}
+                  className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-text-secondary hover:text-text-primary cursor-pointer"
+                >
+                  Ver todas <ArrowRight className="size-3" />
+                </button>
+              </div>
+            }
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div role="tablist" aria-label="Filtrar vencimientos" className="flex rounded-full border border-white/10 bg-black/30 p-1">
+                {renewalFilters.map((f) => {
+                  const count = expiringMembersList.filter((m) => f.match(m.days_left)).length;
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={renewalFilter === f.id}
+                      onClick={() => setRenewalFilter(f.id)}
+                      className={cn(
+                        'flex items-center gap-2 rounded-full px-4 py-1.5 text-sm transition-colors cursor-pointer',
+                        renewalFilter === f.id ? 'bg-white/15 text-text-primary' : 'text-text-muted hover:text-text-primary',
+                      )}
+                    >
+                      {f.label}
+                      <span className="font-mono text-[10px] text-text-muted">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">
+                En juego <span className="text-text-primary">{formatCurrency(atStakeAmount)}</span>
+              </p>
+            </div>
+
+            {filteredRenewals.length === 0 ? (
+              <div className="py-12 text-center text-text-muted border-t border-white/10">
+                <CalendarCheck className="mx-auto h-8 w-8 mb-2 opacity-30 text-emerald-400" />
+                <p className="text-sm font-medium">No hay renovaciones en este segmento.</p>
+                <p className="text-xs text-text-muted mt-1">Los clientes de este grupo se encuentran al día.</p>
+              </div>
+            ) : (
+              <ul className="flex flex-col border-t border-white/10">
+                {filteredRenewals.map((m) => (
+                  <li
+                    key={m.id}
+                    className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-white/10 py-4 last:border-b-0 md:grid-cols-[auto_1.4fr_1fr_auto_auto]"
+                  >
+                    {m.client_photo_url ? (
+                      <AuthorizedImage
+                        src={m.client_photo_url}
+                        alt={m.client_name}
+                        className="size-10 rounded-full object-cover border border-white/10 shrink-0"
+                        fallback={
+                          <span className="flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-medium text-text-secondary shrink-0">
+                            {initials(m.client_name)}
+                          </span>
+                        }
+                      />
+                    ) : (
+                      <span className="flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-medium text-text-secondary shrink-0">
+                        {initials(m.client_name)}
+                      </span>
+                    )}
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <span className="truncate text-sm font-medium">{m.client_name}</span>
+                      <span className="font-mono text-[11px] text-text-muted">{m.client_phone || 'Sin teléfono'}</span>
+                    </div>
+                    <div className="hidden flex-col gap-1 md:flex">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm text-text-secondary">{m.plan_name}</span>
+                        {m.price !== undefined && m.price !== null && (
+                          <span className="font-mono text-xs font-semibold text-text-primary">
+                            · {formatCurrency(m.price)}
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-mono text-[11px] text-text-muted">
+                        {m.days_left < 0 ? 'Venció' : 'Vence'}: {formatDate(m.end_date)}
+                      </span>
+                    </div>
+                    <span
+                      className={cn(
+                        'hidden rounded-[4px] border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] md:inline-block',
+                        m.days_left === 0
+                          ? 'border-brand-primary/40 bg-brand-primary/15 text-red-300'
+                          : m.days_left < 0
+                          ? 'border-rose-500/40 bg-rose-500/15 text-rose-300'
+                          : 'border-white/15 text-text-secondary',
+                      )}
+                    >
+                      {m.days_left === 0 ? 'Hoy' : m.days_left < 0 ? `Venció hace ${Math.abs(m.days_left)}d` : `${m.days_left} días`}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openWhatsAppModal({
+                            client: {
+                              id: m.client_id || m.id,
+                              full_name: m.client_name,
+                              phone: m.client_phone || null,
+                            },
+                            eventType: m.days_left <= 0 ? 'MEMBERSHIP_EXPIRED' : 'MEMBERSHIP_EXPIRY',
+                            eventLabel: m.days_left <= 0 ? 'Avisar vencida' : 'Recordar vencimiento',
+                            contextData: {
+                              membership_name: m.plan_name,
+                              days_left: m.days_left.toString(),
+                            },
+                          })
+                        }
+                        className="rounded-full p-2.5 text-text-muted transition-colors hover:bg-white/10 hover:text-emerald-300 cursor-pointer"
+                        aria-label={`Escribir a ${m.client_name} por WhatsApp`}
+                      >
+                        <MessageCircle className="size-4" strokeWidth={1.6} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigate(getRoute('/memberships'), {
+                            state: { renewClientId: m.client_id || m.id, renewPlanId: m.plan_id },
+                          })
+                        }
+                        className="rounded-full bg-white/10 px-4 py-2 text-xs font-medium transition-colors hover:bg-brand-primary hover:text-white cursor-pointer"
+                      >
+                        Renovar
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {renewalFilter === 'expired' && (
+              <div className="mt-4 pt-3 border-t border-white/10 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsExpiredModalOpen(true)}
+                  className="flex items-center gap-2 text-xs font-semibold text-rose-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <ShieldAlert size={14} className="text-rose-400" />
+                  <span>Ver cuadrícula de recuperación de vencidas</span>
+                  <ArrowRight size={13} />
+                </button>
+              </div>
+            )}
+          </GlassPanel>
+        </div>
+            <GlassPanel
+          id="cash"
+          index="02"
+          eyebrow="Caja · Recaudo recibido en este turno"
+          title="Turno actual"
+          className="h-full"
+          action={
+            <span
+              className={cn(
+                'flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em]',
+                isCajaOpen
+                  ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
+                  : 'border-white/10 bg-white/5 text-text-muted'
+              )}
+            >
+              <span className={cn('size-1.5 rounded-full', isCajaOpen ? 'bg-emerald-400' : 'bg-text-muted')} />
+              {isCajaOpen ? 'Abierta' : 'Cerrada'}
+            </span>
+          }
+        >
+          <div className="flex flex-col gap-2">
+            <span className="text-4xl font-light tabular-nums tracking-[-0.03em]">
+              {formatCurrency(inDrawer)}
+            </span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">
+              {isCajaOpen
+                ? `Efectivo en gaveta · desde ${openedAtTime} · ${firstName}`
+                : 'Sin turno activo'}
+            </span>
+          </div>
+
+          <dl className="flex flex-col border-t border-white/10">
+            {cashRows.map((row) => (
+              <div key={row.label} className="flex items-center justify-between border-b border-white/10 py-2.5 text-sm">
+                <dt className="text-text-secondary">{row.label}</dt>
+                <dd className="font-mono tabular-nums">{formatCurrency(row.value)}</dd>
+              </div>
+            ))}
+            <div
+              className="flex items-center justify-between border-b border-white/10 py-2.5 text-sm font-medium"
+              title="Suma de Efectivo + Transferencia + Tarjeta recaudados exclusivamente desde la apertura de este turno"
+            >
+              <dt className="text-text-primary">Recaudo total en este turno</dt>
+              <dd className="font-mono tabular-nums text-emerald-400">{formatCurrency(shiftCollectedTotal)}</dd>
+            </div>
+            {preShiftPaymentsToday > 0 && (
+              <div
+                className="flex items-center justify-between border-b border-white/10 py-2 text-xs"
+                title="Pagos del día de hoy registrados antes de abrir este turno de caja"
+              >
+                <dt className="text-text-muted">Recaudo hoy previo al turno</dt>
+                <dd className="font-mono tabular-nums text-text-secondary">{formatCurrency(preShiftPaymentsToday)}</dd>
+              </div>
+            )}
+            {hasFinancialAccess && (
+              <div
+                className="flex items-center justify-between pt-3 pb-1 text-sm"
+                title="Cartera histórica total pendiente de cobro acumulada (no pertenece al recaudo del turno)"
+              >
+                <dt className="flex flex-col">
+                  <span className="text-text-secondary">Por cobrar (Cartera total)</span>
+                  <span className="font-mono text-[10px] text-text-muted">
+                    Histórico acumulado{creditTodayAmount > 0 ? ` · Hoy: ${formatCurrency(creditTodayAmount)}` : ''}
+                  </span>
+                </dt>
+                <dd className="font-mono tabular-nums text-brand-primary">{formatCurrency(receivablesAmount)}</dd>
+              </div>
+            )}
+          </dl>
+
           <button
             type="button"
-            onClick={() => navigate(getRoute('/audit'))}
+            onClick={() => navigate(getRoute('/cash-registers'))}
             className="liquid-glass-soft mt-auto flex h-11 items-center justify-center gap-2 rounded-full text-sm font-medium transition-colors hover:bg-white/10 cursor-pointer"
           >
-            <span>Ver auditoría completa</span>
-            <ArrowRight className="size-4" strokeWidth={1.6} />
+            <Lock className="size-4" strokeWidth={1.6} />
+            {isCajaOpen ? 'Hacer cierre de caja' : 'Abrir turno de caja'}
           </button>
         </GlassPanel>
-      </div>
+          </div>
 
-      {/* Income Breakdown Modal */}
-      <IncomeDetailsDrawer
-        isOpen={isIncomeDetailsOpen}
-        onClose={() => setIsIncomeDetailsOpen(false)}
-      />
+          {/* Fila 2: Actividad operativa reciente */}
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+            <div className="xl:col-span-2">
+              <GlassPanel
+          id="activity"
+          index="04"
+          eyebrow="En vivo"
+          title="Actividad de hoy"
+          className="h-full"
+          action={
+            <span className="relative mt-1 flex size-2">
+              <span className="absolute inset-0 animate-ping rounded-full bg-brand-primary/70" />
+              <span className="relative size-2 rounded-full bg-brand-primary" />
+            </span>
+          }
+        >
+          <ol className="relative flex flex-col">
+            <span aria-hidden="true" className="absolute bottom-4 left-[19px] top-4 w-px bg-white/10" />
+            {recentActivity.map((item) => {
+              return (
+                <li key={item.id} className="relative flex items-start gap-4 py-3">
+                  <span className="liquid-glass-soft relative flex size-10 shrink-0 items-center justify-center rounded-full">
+                    {item.type === 'membership' && <Receipt className="size-4 text-text-primary" strokeWidth={1.6} />}
+                    {item.type === 'pos' && <ShoppingCart className="size-4 text-text-primary" strokeWidth={1.6} />}
+                    {item.type === 'client' && <Users className="size-4 text-text-primary" strokeWidth={1.6} />}
+                    {item.type === 'payment' && <Wallet className="size-4 text-text-primary" strokeWidth={1.6} />}
+                  </span>
+                  <div className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-medium">{item.title}</span>
+                      <span className="font-mono text-[11px] text-text-muted">{item.time}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="truncate text-xs text-text-secondary">{item.detail}</span>
+                      {item.amount !== null && item.amount !== undefined && item.amount > 0 && (
+                        <span className="font-mono text-xs tabular-nums text-text-primary">{formatCurrency(item.amount)}</span>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+            {recentActivity.length === 0 && (
+              <li className="py-8 text-center text-text-muted text-xs">
+                Sin movimientos registrados el día de hoy.
+              </li>
+            )}
+          </ol>
+
+          {hasAuditAccess && (
+            <button
+              type="button"
+              onClick={() => navigate(getRoute('/audit'))}
+              className="liquid-glass-soft mt-auto flex h-11 items-center justify-center gap-2 rounded-full text-sm font-medium transition-colors hover:bg-white/10 cursor-pointer"
+            >
+              <span>Ver auditoría completa</span>
+              <ArrowRight className="size-4" strokeWidth={1.6} />
+            </button>
+          )}
+        </GlassPanel>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Income Breakdown Modal (Only accessible if authorized) */}
+      {hasFinancialAccess && (
+        <IncomeDetailsDrawer
+          isOpen={isIncomeDetailsOpen}
+          onClose={() => setIsIncomeDetailsOpen(false)}
+        />
+      )}
 
       {/* Expired Memberships Recovery Modal */}
       <ExpiredMembershipsModal

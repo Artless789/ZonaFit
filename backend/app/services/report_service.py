@@ -21,6 +21,7 @@ from app.schemas.report import (
     SalesByDateResponse,
     SalesReportResponse,
     TopProductResponse,
+    ProfitReportResponse,
 )
 
 class ReportService:
@@ -277,3 +278,51 @@ class ReportService:
             )
             for membership in memberships
         ]
+    @staticmethod
+    def get_profit_report(
+        db: Session,
+        current_user: User,
+    ) -> ProfitReportResponse:
+        sales_rev = (
+            db.query(func.coalesce(func.sum(Sale.total), Decimal("0.00")))
+            .filter(
+                Sale.gym_id == current_user.gym_id,
+                Sale.status == SaleStatus.COMPLETED,
+                Sale.is_active == True,
+            )
+            .scalar() or Decimal("0.00")
+        )
+
+        mem_rev = (
+            db.query(func.coalesce(func.sum(Membership.price), Decimal("0.00")))
+            .filter(
+                Membership.gym_id == current_user.gym_id,
+                Membership.status.in_([MembershipStatus.ACTIVE, MembershipStatus.EXPIRED]),
+                Membership.is_active == True,
+            )
+            .scalar() or Decimal("0.00")
+        )
+
+        total_revenue = sales_rev + mem_rev
+
+        cogs = (
+            db.query(func.coalesce(func.sum(SaleDetail.quantity * Product.purchase_price), Decimal("0.00")))
+            .join(Product, Product.id == SaleDetail.product_id)
+            .join(Sale, Sale.id == SaleDetail.sale_id)
+            .filter(
+                Sale.gym_id == current_user.gym_id,
+                Sale.status == SaleStatus.COMPLETED,
+                Sale.is_active == True,
+            )
+            .scalar() or Decimal("0.00")
+        )
+
+        gross_profit = total_revenue - cogs
+        margin = float((gross_profit / total_revenue) * 100) if total_revenue > Decimal("0.00") else 0.0
+
+        return ProfitReportResponse(
+            total_revenue=total_revenue,
+            total_cost=cogs,
+            gross_profit=gross_profit,
+            profit_margin_percent=round(margin, 2),
+        )

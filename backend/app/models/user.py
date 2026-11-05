@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, JSON
 
 from app.database.base import Base
 from sqlalchemy.orm import relationship, validates
@@ -15,6 +15,7 @@ class User(Base):
     password = Column(String(255), nullable=False)
 
     role = Column(String(30), nullable=False)
+    permissions = Column(JSON, nullable=True)
 
     is_active = Column(Boolean, default=True)
     gym = relationship("Gym", back_populates="users", foreign_keys=[gym_id])

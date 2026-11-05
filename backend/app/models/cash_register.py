@@ -86,6 +86,12 @@ class CashRegister(Base):
         nullable=False,
     )
 
+    close_type = Column(
+        String(20),
+        default="MANUAL",
+        nullable=False,
+    )
+
     closing_notes = Column(
         Text,
         nullable=True,

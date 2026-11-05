@@ -32,9 +32,18 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { CashRegister, PaymentMethodReconciliation } from '@shared/types/cash_register';
+import { useAuth } from '../../context/AuthContext';
 
 export const CashRegisterPage = () => {
   const { activeRegister, activeSummary, allRegisters, openRegister, closeRegister, createMovement } = useCashRegisters();
+  const { user } = useAuth();
+  const isOwnerOrAdmin = user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
+
+  const latestAutoClosedRegister = useMemo(() => {
+    if (!isOwnerOrAdmin || !allRegisters.data || allRegisters.data.length === 0) return null;
+    const first = allRegisters.data[0];
+    return first.close_type === 'AUTOMATIC' ? first : null;
+  }, [isOwnerOrAdmin, allRegisters.data]);
 
   const [currentTab, setCurrentTab] = useState<'shift' | 'history'>('shift');
   const [selectedHistoricalRegister, setSelectedHistoricalRegister] = useState<CashRegister | null>(null);
@@ -198,6 +207,32 @@ export const CashRegisterPage = () => {
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in slide-in-from-bottom-3 duration-300">
+      {/* Alerta de Cierre Automático para el Propietario / Personal */}
+      {latestAutoClosedRegister && (
+        <div className="p-3.5 rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-200 flex items-start justify-between gap-3 text-xs">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="size-4 text-purple-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold text-purple-300">Aviso de Auditoría de Caja:</span>{' '}
+              El turno anterior (#{latestAutoClosedRegister.id}) fue cerrado automáticamente a medianoche por finalización de jornada.
+              <span className="block text-[11px] text-purple-200/80 mt-0.5 font-mono">
+                Saldo esperado: {formatCurrency(latestAutoClosedRegister.expected_balance)} · Sin arqueo físico registrado.
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setCurrentTab('history');
+              setSelectedHistoricalRegister(latestAutoClosedRegister);
+            }}
+            className="text-[11px] font-semibold text-purple-300 underline hover:text-purple-100 shrink-0 cursor-pointer"
+          >
+            Ver auditoría
+          </button>
+        </div>
+      )}
+
       {/* Editorial Header */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-border-subtle pb-5">
         <div className="space-y-1">
@@ -278,6 +313,7 @@ export const CashRegisterPage = () => {
                 <thead className="text-xs text-text-muted uppercase bg-surface-raised/80 border-b border-border-subtle font-semibold tracking-wider font-mono">
                   <tr>
                     <th className="px-5 py-3.5">Turno</th>
+                    <th className="px-5 py-3.5 text-center">Tipo</th>
                     <th className="px-5 py-3.5">Apertura</th>
                     <th className="px-5 py-3.5">Cierre</th>
                     <th className="px-5 py-3.5 text-right">Base</th>
@@ -292,15 +328,32 @@ export const CashRegisterPage = () => {
                   {allRegisters.data.map((reg) => (
                     <tr key={reg.id} className="hover:bg-surface-panel-hover transition-colors">
                       <td className="px-5 py-3.5 font-mono text-text-secondary font-bold">#{reg.id}</td>
+                      <td className="px-5 py-3.5 text-center">
+                        <span className={`inline-flex items-center gap-1 font-mono text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
+                          reg.close_type === 'AUTOMATIC'
+                            ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                            : 'bg-surface-raised text-text-muted border border-border-subtle'
+                        }`}>
+                          {reg.close_type === 'AUTOMATIC' ? 'Automático' : 'Manual'}
+                        </span>
+                      </td>
                       <td className="px-5 py-3.5 text-xs text-text-secondary font-mono">{formatDate(reg.opened_at)}</td>
                       <td className="px-5 py-3.5 text-xs text-text-secondary font-mono">{reg.closed_at ? formatDate(reg.closed_at) : 'En curso'}</td>
                       <td className="px-5 py-3.5 text-right text-text-primary font-mono font-medium">{formatCurrency(reg.opening_balance)}</td>
-                      <td className="px-5 py-3.5 text-right text-text-primary font-mono font-medium">{reg.counted_balance !== null ? formatCurrency(reg.counted_balance) : '—'}</td>
+                      <td className="px-5 py-3.5 text-right font-mono font-medium">
+                        {reg.counted_balance !== null ? (
+                          <span className="text-text-primary">{formatCurrency(reg.counted_balance)}</span>
+                        ) : reg.close_type === 'AUTOMATIC' ? (
+                          <span className="text-amber-400 text-xs font-sans italic" title="No se realizó conteo físico (Cierre automático)">Sin arqueo</span>
+                        ) : '—'}
+                      </td>
                       <td className="px-5 py-3.5 text-right font-mono font-bold">
                         {reg.difference !== null ? (
                           <span className={reg.difference === 0 ? 'text-emerald-400' : (reg.difference > 0 ? 'text-amber-400' : 'text-rose-400')}>
                             {reg.difference > 0 ? `+${formatCurrency(reg.difference)}` : formatCurrency(reg.difference)}
                           </span>
+                        ) : reg.close_type === 'AUTOMATIC' ? (
+                          <span className="text-text-muted text-xs font-sans italic">N/A</span>
                         ) : '—'}
                       </td>
                       <td className="px-5 py-3.5 text-center">
@@ -827,7 +880,26 @@ export const CashRegisterPage = () => {
           title={`Auditoría de Turno de Caja #${selectedHistoricalRegister.id}`}
         >
           <div className="space-y-4 text-sm font-sans">
-            <div className="grid grid-cols-2 gap-3 bg-surface-base p-3.5 rounded-xl border border-border-subtle font-mono">
+            {selectedHistoricalRegister.close_type === 'AUTOMATIC' && (
+              <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded-xl text-xs text-purple-200 flex items-start gap-2.5">
+                <AlertTriangle size={16} className="text-purple-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-purple-300">Cierre Automático del Sistema</p>
+                  <p className="text-[11px] text-purple-200/80 mt-0.5">
+                    Esta caja fue cerrada automáticamente por el sistema al finalizar la jornada (00:00). 
+                    No se contó dinero físico al momento del cierre; el saldo esperado corresponde al cálculo contable del sistema.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-surface-base p-3.5 rounded-xl border border-border-subtle font-mono">
+              <div>
+                <span className="text-[10px] text-text-muted uppercase block">Tipo de Cierre</span>
+                <span className={`text-xs font-bold ${selectedHistoricalRegister.close_type === 'AUTOMATIC' ? 'text-purple-300' : 'text-text-primary'}`}>
+                  {selectedHistoricalRegister.close_type === 'AUTOMATIC' ? 'AUTOMÁTICO (00:00)' : 'MANUAL (EMPLEADO)'}
+                </span>
+              </div>
               <div>
                 <span className="text-[10px] text-text-muted uppercase block">Apertura</span>
                 <span className="text-xs font-semibold text-text-primary">{formatDate(selectedHistoricalRegister.opened_at)}</span>
@@ -841,8 +913,18 @@ export const CashRegisterPage = () => {
                 <span className="text-sm font-bold text-text-primary">{formatCurrency(selectedHistoricalRegister.opening_balance)}</span>
               </div>
               <div>
+                <span className="text-[10px] text-text-muted uppercase block">Saldo Esperado</span>
+                <span className="text-sm font-bold text-emerald-400">{selectedHistoricalRegister.expected_balance !== null ? formatCurrency(selectedHistoricalRegister.expected_balance) : '—'}</span>
+              </div>
+              <div>
                 <span className="text-[10px] text-text-muted uppercase block">Efectivo Contado</span>
-                <span className="text-sm font-bold text-text-primary">{selectedHistoricalRegister.counted_balance !== null ? formatCurrency(selectedHistoricalRegister.counted_balance) : '—'}</span>
+                <span className="text-sm font-bold text-text-primary">
+                  {selectedHistoricalRegister.counted_balance !== null
+                    ? formatCurrency(selectedHistoricalRegister.counted_balance)
+                    : selectedHistoricalRegister.close_type === 'AUTOMATIC'
+                    ? 'Sin arqueo físico'
+                    : '—'}
+                </span>
               </div>
             </div>
 

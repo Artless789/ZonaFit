@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -20,6 +21,20 @@ import {
 import { cn } from '@shared/utils/cn';
 import { useLicenseStatus } from '@shared/subscription/useLicenseStatus';
 import { useAuth } from '../../context/AuthContext';
+import {
+  canViewReports,
+  canManageUsers,
+  canViewAudit,
+  canManageSettings,
+  UserLike,
+} from '@shared/utils/permissions';
+
+const navItemPermissions: Record<string, (u: UserLike | null | undefined) => boolean> = {
+  '/reports': canViewReports,
+  '/users': canManageUsers,
+  '/audit': canViewAudit,
+  '/settings': canManageSettings,
+};
 
 interface NavGroup {
   title?: string;
@@ -76,7 +91,19 @@ export function Sidebar({
   const location = useLocation();
   const isDemo = location.pathname.startsWith('/demo');
   const { data: subscription } = useLicenseStatus();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+
+  const filteredNavGroups = useMemo(() => {
+    return navGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => {
+          const check = navItemPermissions[item.path];
+          return check ? check(user) : true;
+        }),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [user]);
 
   const getPlanInfo = () => {
     if (!subscription) return null;
@@ -175,7 +202,7 @@ export function Sidebar({
 
         {/* Navigation List grouped */}
         <nav className="flex flex-1 flex-col gap-5 md:gap-6 overflow-y-auto px-3 py-4 md:py-5 custom-scrollbar" aria-label="Navegación principal">
-          {navGroups.map((group, groupIdx) => (
+          {filteredNavGroups.map((group, groupIdx) => (
             <div key={group.title || groupIdx} className="flex flex-col gap-1">
               {group.title && (
                 <p className={cn('eyebrow px-3 pb-2 text-[10px] select-none', isCollapsed && 'md:hidden')}>

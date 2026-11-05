@@ -21,6 +21,7 @@ export interface User {
   gym_id?: string;
   onboarding_completed?: boolean;
   subscription?: SubscriptionSummary | null;
+  permissions?: Record<string, boolean> | null;
 }
 
 export const authService = {

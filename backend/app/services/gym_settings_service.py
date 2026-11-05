@@ -63,13 +63,44 @@ class GymSettingsService:
         db: Session,
         settings: GymSettings,
         settings_data: GymSettingsUpdate,
+        current_user: User = None,
     ) -> GymSettings:
         update_data = settings_data.model_dump(exclude_unset=True)
+        old_values = {
+            "trade_name": settings.trade_name,
+            "legal_name": settings.legal_name,
+            "phone": settings.phone,
+            "address": settings.address,
+        }
 
         with DatabaseTransaction(db):
             for key, value in update_data.items():
                 setattr(settings, key, value)
             db.flush()
+
+            if current_user:
+                from app.services.audit_service import AuditService
+                from app.constants.audit_actions import AuditAction, AuditModule
+                new_values = {
+                    "trade_name": settings.trade_name,
+                    "legal_name": settings.legal_name,
+                    "phone": settings.phone,
+                    "address": settings.address,
+                }
+                AuditService.log(
+                    db=db,
+                    gym_id=settings.gym_id,
+                    action=AuditAction.GYM_SETTINGS_UPDATED,
+                    module=AuditModule.SETTINGS,
+                    entity_type="GymSettings",
+                    entity_id=settings.id,
+                    entity_name=settings.trade_name or "Configuración del Gimnasio",
+                    user_id=current_user.id,
+                    user_name=current_user.full_name,
+                    description=f"{current_user.full_name} actualizó la configuración del gimnasio",
+                    old_values=old_values,
+                    new_values=new_values,
+                )
             db.refresh(settings)
 
         return settings

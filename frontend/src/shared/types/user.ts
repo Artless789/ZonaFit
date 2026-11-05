@@ -5,6 +5,7 @@ export interface User {
   email: string;
   role: string;
   is_active: boolean;
+  permissions?: Record<string, boolean> | null;
 }
 
 export interface UserCreate {
@@ -12,6 +13,7 @@ export interface UserCreate {
   email: string;
   password?: string;
   role: string;
+  permissions?: Record<string, boolean> | null;
 }
 
 export interface UserUpdate {
@@ -19,4 +21,5 @@ export interface UserUpdate {
   email?: string;
   role?: string;
   is_active?: boolean;
+  permissions?: Record<string, boolean> | null;
 }

@@ -37,6 +37,7 @@ export interface CashRegister {
   counted_balance: number | null;
   difference: number | null;
   status: string;
+  close_type?: 'MANUAL' | 'AUTOMATIC' | string;
   closing_notes: string | null;
   reconciliation_data?: string | null;
 }

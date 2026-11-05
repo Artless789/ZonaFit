@@ -118,6 +118,7 @@ def register(
 
 def _build_user_profile(db: Session, user: User) -> dict:
     from app.services.subscription_service import SubscriptionService
+    from app.constants.permissions import normalize_role, DEFAULT_ROLE_PERMISSIONS, Role
 
     subscription_info = None
     if user.gym_id:
@@ -130,6 +131,11 @@ def _build_user_profile(db: Session, user: User) -> dict:
                 "is_lifetime": sub.is_lifetime,
             }
 
+    norm_role = normalize_role(user.role)
+    effective_perms = DEFAULT_ROLE_PERMISSIONS.get(norm_role, {}).copy()
+    if user.permissions and isinstance(user.permissions, dict):
+        effective_perms.update(user.permissions)
+
     return {
         "id": user.id,
         "name": user.full_name,
@@ -138,7 +144,8 @@ def _build_user_profile(db: Session, user: User) -> dict:
         "role": user.role,
         "gym_id": user.gym_id,
         "onboarding_completed": user.gym.onboarding_completed if user.gym else True,
-        "subscription": subscription_info
+        "subscription": subscription_info,
+        "permissions": effective_perms,
     }
 
 
@@ -199,6 +206,25 @@ def login(
         
         rt = RefreshToken(user_id=user.id, token_hash=token_hash, expires_at=expires_at)
         db.add(rt)
+
+        if user.gym_id:
+            from app.services.audit_service import AuditService
+            from app.constants.audit_actions import AuditAction, AuditModule
+            client_ip = request.client.host if request.client else None
+            AuditService.log(
+                db=db,
+                gym_id=user.gym_id,
+                action=AuditAction.LOGIN,
+                module=AuditModule.AUTH,
+                entity_type="User",
+                user_id=user.id,
+                user_name=user.full_name,
+                entity_id=user.id,
+                entity_name=user.full_name,
+                description=f"{user.full_name} inició sesión en el sistema",
+                ip_address=client_ip,
+            )
+
         db.commit()
 
         _set_refresh_cookie(response, raw_refresh, secure_policy, samesite_policy)
@@ -411,6 +437,24 @@ def logout(
                 rt = db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
                 if rt and not rt.revoked_at:
                     rt.revoked_at = now
+                    u = db.query(User).filter(User.id == rt.user_id).first()
+                    if u and u.gym_id:
+                        from app.services.audit_service import AuditService
+                        from app.constants.audit_actions import AuditAction, AuditModule
+                        client_ip = request.client.host if request.client else None
+                        AuditService.log(
+                            db=db,
+                            gym_id=u.gym_id,
+                            action=AuditAction.LOGOUT,
+                            module=AuditModule.AUTH,
+                            entity_type="User",
+                            user_id=u.id,
+                            user_name=u.full_name,
+                            entity_id=u.id,
+                            entity_name=u.full_name,
+                            description=f"{u.full_name} cerró sesión en el sistema",
+                            ip_address=client_ip,
+                        )
             db.commit()
         finally:
             db.info.pop('bypass_rls', None)

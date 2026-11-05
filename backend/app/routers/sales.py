@@ -182,6 +182,11 @@ def delete_sale(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if current_user.role.upper() in ("STAFF", "EMPLOYEE"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes autorización para anular o eliminar ventas.",
+        )
     sale = SaleService.get_by_id(
         db,
         current_user,

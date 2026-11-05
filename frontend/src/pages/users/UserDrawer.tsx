@@ -1,11 +1,12 @@
 import { Select, SelectItem } from '@shared/ui/Select';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@shared/ui/Button';
 import { Drawer } from '@shared/ui/Drawer';
 import { Input } from '@shared/ui/Input';
+import { Checkbox } from '@shared/ui/Checkbox';
 import { useToast } from '@shared/ui/Toast';
 import { useUsers } from '../../hooks/useUsers';
 import type { User } from '@shared/types/user';
@@ -35,6 +36,22 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
   const { user: currentUser } = useAuth();
   const isEditing = !!user;
 
+  const [adminPermissions, setAdminPermissions] = useState<Record<string, boolean>>({
+    view_financials: true,
+    view_reports: true,
+    view_audit: true,
+    manage_settings: false,
+    manage_inventory: true,
+    manage_users: true,
+  });
+
+  const togglePermission = (key: string) => {
+    setAdminPermissions((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
   const {
     register,
     handleSubmit,
@@ -63,6 +80,25 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
       setValue('role', (user.role === 'ADMIN' || user.role === 'STAFF') ? user.role : 'STAFF');
       setValue('is_active', user.is_active);
       setValue('password', '');
+      if (user.permissions && typeof user.permissions === 'object') {
+        setAdminPermissions({
+          view_financials: user.permissions.view_financials ?? true,
+          view_reports: user.permissions.view_reports ?? true,
+          view_audit: user.permissions.view_audit ?? true,
+          manage_settings: user.permissions.manage_settings ?? false,
+          manage_inventory: user.permissions.manage_inventory ?? true,
+          manage_users: user.permissions.manage_users ?? true,
+        });
+      } else {
+        setAdminPermissions({
+          view_financials: true,
+          view_reports: true,
+          view_audit: true,
+          manage_settings: false,
+          manage_inventory: true,
+          manage_users: true,
+        });
+      }
     } else {
       reset({
         full_name: '',
@@ -71,11 +107,20 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
         password: '',
         is_active: true,
       });
+      setAdminPermissions({
+        view_financials: true,
+        view_reports: true,
+        view_audit: true,
+        manage_settings: false,
+        manage_inventory: true,
+        manage_users: true,
+      });
     }
   }, [user, isOpen, setValue, reset]);
 
   const onSubmit = async (data: UserFormValues) => {
     try {
+      const payloadPermissions = (data.role === 'ADMIN' && isOwnerOrSuper) ? adminPermissions : undefined;
       if (isEditing) {
         if (!user) return;
         await updateUser.mutateAsync({
@@ -85,6 +130,7 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
             email: data.email,
             role: data.role,
             is_active: data.is_active,
+            permissions: payloadPermissions,
           }
         });
         toast({ type: 'success', title: 'Usuario Actualizado', message: 'Datos guardados correctamente.' });
@@ -98,6 +144,7 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
           email: data.email,
           role: data.role,
           password: data.password,
+          permissions: payloadPermissions,
         });
         toast({ type: 'success', title: 'Usuario Creado', message: 'El usuario fue creado exitosamente.' });
       }
@@ -194,6 +241,61 @@ export const UserDrawer = ({ isOpen, onClose, user }: UserDrawerProps) => {
                 </p>
               )}
             </div>
+
+            {/* Configuración de Permisos para ADMIN por parte del Dueño */}
+            {watchRole === 'ADMIN' && isOwnerOrSuper && (
+              <div className="p-3.5 rounded-xl bg-bg-surface/60 border border-border-light space-y-3 mt-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-xs text-text-primary">
+                    Configuración de Permisos (Administrador)
+                  </span>
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-amber-400/90 bg-amber-400/10 px-2 py-0.5 rounded-md">
+                    Control Propietario
+                  </span>
+                </div>
+                <p className="text-xs text-text-muted">
+                  Puedes restringir qué información y módulos puede ver este administrador.
+                </p>
+                <div className="space-y-2 pt-1 border-t border-border-light/60">
+                  <Checkbox
+                    id="perm-view-financials"
+                    label="Ver ingresos mensuales y finanzas privadas"
+                    checked={adminPermissions.view_financials}
+                    onChange={() => togglePermission('view_financials')}
+                  />
+                  <Checkbox
+                    id="perm-view-reports"
+                    label="Ver reportes y estadísticas globales"
+                    checked={adminPermissions.view_reports}
+                    onChange={() => togglePermission('view_reports')}
+                  />
+                  <Checkbox
+                    id="perm-view-audit"
+                    label="Consultar historial de auditoría del sistema"
+                    checked={adminPermissions.view_audit}
+                    onChange={() => togglePermission('view_audit')}
+                  />
+                  <Checkbox
+                    id="perm-manage-inventory"
+                    label="Gestionar inventario y productos"
+                    checked={adminPermissions.manage_inventory}
+                    onChange={() => togglePermission('manage_inventory')}
+                  />
+                  <Checkbox
+                    id="perm-manage-users"
+                    label="Crear y gestionar cuentas de empleados"
+                    checked={adminPermissions.manage_users}
+                    onChange={() => togglePermission('manage_users')}
+                  />
+                  <Checkbox
+                    id="perm-manage-settings"
+                    label="Modificar configuración general del gimnasio"
+                    checked={adminPermissions.manage_settings}
+                    onChange={() => togglePermission('manage_settings')}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {isEditing && (

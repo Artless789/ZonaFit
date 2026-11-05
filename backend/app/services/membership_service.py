@@ -210,6 +210,49 @@ class MembershipService:
                 db.add(accounts_receivable)
                 db.flush()
 
+            # --- AUDIT LOG ---
+            has_prior_memberships = bool(
+                db.query(Membership.id)
+                .filter(
+                    Membership.client_id == client.id,
+                    Membership.gym_id == current_user.gym_id,
+                    Membership.id != membership.id,
+                )
+                .first()
+            )
+            from app.services.audit_service import AuditService
+            from app.constants.audit_actions import AuditAction, AuditModule
+            action = AuditAction.MEMBERSHIP_RENEWED if has_prior_memberships else AuditAction.MEMBERSHIP_CREATED
+            desc = (
+                f"{current_user.full_name} renovó la membresía ({plan.name}) para {client.full_name}"
+                if has_prior_memberships
+                else f"{current_user.full_name} registró una nueva membresía ({plan.name}) para {client.full_name}"
+            )
+            AuditService.log(
+                db=db,
+                gym_id=current_user.gym_id,
+                action=action,
+                module=AuditModule.MEMBERSHIPS,
+                entity_type="Membership",
+                entity_id=membership.id,
+                entity_name=f"{plan.name} - {client.full_name}",
+                user_id=current_user.id,
+                user_name=current_user.full_name,
+                description=desc,
+                new_values={
+                    "membership_id": membership.id,
+                    "client_id": client.id,
+                    "client_name": client.full_name,
+                    "plan_id": plan.id,
+                    "plan_name": plan.name,
+                    "price": str(membership.price),
+                    "paid_amount": str(paid_amount),
+                    "pending_balance": str(pending_balance),
+                    "start_date": str(start_date),
+                    "end_date": str(end_date),
+                },
+            )
+
             db.refresh(membership)
 
         # --- NOTIFICATION HOOK: MEMBERSHIP_SOLD & PAYMENT_RECEIVED ---
@@ -548,21 +591,29 @@ class MembershipService:
                     ar.is_active = False
 
             if current_user:
-                audit = AuditLog(
+                from app.services.audit_service import AuditService
+                from app.constants.audit_actions import AuditAction, AuditModule
+                c_name = membership.client.full_name if membership.client else f"Cliente #{membership.client_id}"
+                p_name = membership.membership_plan.name if membership.membership_plan else f"Plan #{membership.membership_plan_id}"
+                AuditService.log(
+                    db=db,
                     gym_id=membership.gym_id,
                     user_id=current_user.id,
-                    action="MEMBERSHIP_CANCELLED",
+                    user_name=current_user.full_name,
+                    action=AuditAction.MEMBERSHIP_CANCELLED,
+                    module=AuditModule.MEMBERSHIPS,
                     entity_type="Membership",
                     entity_id=membership.id,
-                    old_values=json.dumps({
-                        "status": old_status,
+                    entity_name=f"{p_name} - {c_name}",
+                    description=f"{current_user.full_name} canceló la membresía #{membership.id} ({p_name}) de {c_name}",
+                    old_values={
+                        "status": str(old_status),
                         "price": str(membership.price),
-                    }),
-                    new_values=json.dumps({
-                        "status": MembershipStatus.CANCELLED,
+                    },
+                    new_values={
+                        "status": str(MembershipStatus.CANCELLED),
                         "is_active": False,
-                    }),
+                    },
                     ip_address="system",
                 )
-                db.add(audit)
             db.flush()

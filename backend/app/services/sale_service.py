@@ -212,6 +212,34 @@ class SaleService:
                         payment_id=payment.id
                     )
 
+                from app.services.audit_service import AuditService
+                from app.constants.audit_actions import AuditAction, AuditModule
+                c_name = sale.client.full_name if sale.client else ""
+                desc = (
+                    f"{current_user.full_name} registró una venta de contado por ${sale.total:,.0f} para {c_name}"
+                    if c_name
+                    else f"{current_user.full_name} registró una venta de contado por ${sale.total:,.0f}"
+                )
+                AuditService.log(
+                    db=db,
+                    gym_id=current_user.gym_id,
+                    user_id=current_user.id,
+                    user_name=current_user.full_name,
+                    action=AuditAction.SALE_CREATED,
+                    module=AuditModule.SALES,
+                    entity_type="Sale",
+                    entity_id=sale.id,
+                    entity_name=f"Venta #{sale.id} (${sale.total:,.0f})",
+                    description=desc,
+                    new_values={
+                        "sale_id": sale.id,
+                        "total": str(sale.total),
+                        "sale_type": "CASH",
+                        "payment_method": request.payment_method,
+                    },
+                    ip_address="system",
+                )
+
             elif request.sale_type.upper() == "CREDIT":
                 if not sale.client_id:
                     raise ValueError("Credit sales require an associated client.")
@@ -276,20 +304,27 @@ class SaleService:
                             payment_id=payment.id
                         )
                 
-                audit = AuditLog(
+                from app.services.audit_service import AuditService
+                from app.constants.audit_actions import AuditAction, AuditModule
+                c_name = sale.client.full_name if sale.client else f"Cliente #{sale.client_id}"
+                AuditService.log(
+                    db=db,
                     gym_id=current_user.gym_id,
                     user_id=current_user.id,
-                    action="CREDIT_SALE_CREATED",
+                    user_name=current_user.full_name,
+                    action=AuditAction.CREDIT_SALE_CREATED,
+                    module=AuditModule.SALES,
                     entity_type="Sale",
                     entity_id=sale.id,
-                    new_values=json.dumps({
-                        "total": str(sale.total), 
+                    entity_name=f"Venta a crédito #{sale.id} (${sale.total:,.0f})",
+                    description=f"{current_user.full_name} registró una venta a crédito por ${sale.total:,.0f} para {c_name}",
+                    new_values={
+                        "total": str(sale.total),
                         "due_date": str(request.due_date),
-                        "initial_payment": str(paid_amount)
-                    }),
-                    ip_address="system"
+                        "initial_payment": str(paid_amount),
+                    },
+                    ip_address="system",
                 )
-                db.add(audit)
             else:
                 raise ValueError("Invalid sale_type. Must be CASH or CREDIT.")
 
@@ -440,6 +475,34 @@ class SaleService:
                         payment_id=payment.id,
                     )
 
+                from app.services.audit_service import AuditService
+                from app.constants.audit_actions import AuditAction, AuditModule
+                c_name = sale.client.full_name if sale.client else ""
+                desc = (
+                    f"{current_user.full_name} registró una venta de contado por ${sale.total:,.0f} para {c_name}"
+                    if c_name
+                    else f"{current_user.full_name} registró una venta de contado por ${sale.total:,.0f}"
+                )
+                AuditService.log(
+                    db=db,
+                    gym_id=current_user.gym_id,
+                    user_id=current_user.id,
+                    user_name=current_user.full_name,
+                    action=AuditAction.SALE_CREATED,
+                    module=AuditModule.SALES,
+                    entity_type="Sale",
+                    entity_id=sale.id,
+                    entity_name=f"Venta #{sale.id} (${sale.total:,.0f})",
+                    description=desc,
+                    new_values={
+                        "sale_id": sale.id,
+                        "total": str(sale.total),
+                        "sale_type": "CASH",
+                        "payment_method": data.payment_method,
+                    },
+                    ip_address="system",
+                )
+
             elif sale_type_upper == "CREDIT":
                 if data.initial_payment > sale.total:
                     raise BusinessException(f"Initial payment ({data.initial_payment}) cannot exceed the total sale amount ({sale.total}).")
@@ -490,20 +553,27 @@ class SaleService:
                             payment_id=payment.id,
                         )
 
-                audit = AuditLog(
+                from app.services.audit_service import AuditService
+                from app.constants.audit_actions import AuditAction, AuditModule
+                c_name = sale.client.full_name if sale.client else f"Cliente #{sale.client_id}"
+                AuditService.log(
+                    db=db,
                     gym_id=current_user.gym_id,
                     user_id=current_user.id,
-                    action="CREDIT_SALE_CREATED",
+                    user_name=current_user.full_name,
+                    action=AuditAction.CREDIT_SALE_CREATED,
+                    module=AuditModule.SALES,
                     entity_type="Sale",
                     entity_id=sale.id,
-                    new_values=json.dumps({
+                    entity_name=f"Venta a crédito #{sale.id} (${sale.total:,.0f})",
+                    description=f"{current_user.full_name} registró una venta a crédito por ${sale.total:,.0f} para {c_name}",
+                    new_values={
                         "total": str(sale.total),
                         "due_date": str(data.due_date),
                         "initial_payment": str(paid_amount),
-                    }),
+                    },
                     ip_address="system",
                 )
-                db.add(audit)
 
             db.flush()
             db.refresh(sale)
@@ -605,21 +675,33 @@ class SaleService:
                 ar.is_active = False
 
             if current_user:
-                audit = AuditLog(
+                from app.services.audit_service import AuditService
+                from app.constants.audit_actions import AuditAction, AuditModule
+                c_name = sale.client.full_name if sale.client else (f"Cliente #{sale.client_id}" if sale.client_id else "")
+                desc = (
+                    f"{current_user.full_name} canceló la venta #{sale.id} por ${sale.total:,.0f} de {c_name}"
+                    if c_name
+                    else f"{current_user.full_name} canceló la venta #{sale.id} por ${sale.total:,.0f}"
+                )
+                AuditService.log(
+                    db=db,
                     gym_id=sale.gym_id,
                     user_id=current_user.id,
-                    action="SALE_CANCELLED",
+                    user_name=current_user.full_name,
+                    action=AuditAction.SALE_CANCELLED,
+                    module=AuditModule.SALES,
                     entity_type="Sale",
                     entity_id=sale.id,
-                    old_values=json.dumps({
+                    entity_name=f"Venta #{sale.id} (${sale.total:,.0f})",
+                    description=desc,
+                    old_values={
                         "status": old_status,
                         "total": str(sale.total),
-                    }),
-                    new_values=json.dumps({
+                    },
+                    new_values={
                         "status": SaleStatus.CANCELLED,
                         "is_active": False,
-                    }),
+                    },
                     ip_address="system",
                 )
-                db.add(audit)
             db.flush()

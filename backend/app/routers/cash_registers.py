@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, require_cash_operation, require_cash_history
 from app.database.database import get_db
 from app.models.user import User
 from app.schemas.cash_register import (
@@ -14,7 +14,7 @@ from app.schemas.cash_register import (
     CashMovementCreate
 )
 from app.services.cash_register_service import CashRegisterService
-
+from app.constants.permissions import Permission, user_has_permission
 from app.core.idempotency import IdempotentRoute
 
 router = APIRouter(
@@ -36,7 +36,7 @@ def get_active_register(
 @router.get("/active/summary", response_model=CashRegisterSummaryResponse)
 def get_active_summary(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_cash_operation),
 ):
     try:
         return CashRegisterService.get_register_summary(db, current_user)
@@ -49,6 +49,15 @@ def get_register_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # Verify if caller is authorized: either has history permission or is querying the active register
+    active_reg = CashRegisterService.get_active(db, current_user.gym_id)
+    if not (active_reg and active_reg.id == register_id):
+        if not user_has_permission(current_user, Permission.VIEW_CASH_HISTORY):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes autorización para consultar arqueos de cajas históricas.",
+            )
+
     try:
         return CashRegisterService.get_register_summary(db, current_user, register_id)
     except ValueError as e:
@@ -58,7 +67,7 @@ def get_register_summary(
 def open_register(
     data: CashRegisterCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_cash_operation),
 ):
     try:
         return CashRegisterService.open_register(db, current_user, data)
@@ -70,7 +79,7 @@ def close_register(
     register_id: int,
     data: CashRegisterClose,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_cash_operation),
 ):
     try:
         return CashRegisterService.close_register(db, current_user, register_id, data)
@@ -81,7 +90,7 @@ def close_register(
 def create_manual_movement(
     data: CashMovementCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_cash_operation),
 ):
     try:
         return CashRegisterService.create_manual_movement(db, current_user, data)
@@ -91,7 +100,7 @@ def create_manual_movement(
 @router.get("/", response_model=List[CashRegisterResponse])
 def get_all_registers(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_cash_history),
 ):
     return CashRegisterService.get_all(db, current_user.gym_id)
 
@@ -99,6 +108,6 @@ def get_all_registers(
 def get_movements(
     register_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_cash_operation),
 ):
     return CashRegisterService.get_movements(db, register_id, current_user.gym_id)

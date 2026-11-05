@@ -73,6 +73,27 @@ class ProductService:
             with DatabaseTransaction(db):
                 db.add(product)
                 db.flush()
+
+                from app.services.audit_service import AuditService
+                from app.constants.audit_actions import AuditAction, AuditModule
+                AuditService.log(
+                    db=db,
+                    gym_id=current_user.gym_id,
+                    action=AuditAction.PRODUCT_CREATED,
+                    module=AuditModule.INVENTORY,
+                    entity_type="Product",
+                    entity_id=product.id,
+                    entity_name=product.name,
+                    user_id=current_user.id,
+                    user_name=current_user.full_name,
+                    description=f"{current_user.full_name} creó el producto {product.name}",
+                    new_values={
+                        "name": product.name,
+                        "sku": product.sku,
+                        "sale_price": str(product.sale_price),
+                        "stock": product.stock,
+                    },
+                )
                 db.refresh(product)
         except IntegrityError:
             raise ConflictException("SKU already exists.")
@@ -142,8 +163,16 @@ class ProductService:
         db: Session,
         product: Product,
         product_data: ProductUpdate,
+        current_user: User = None,
     ):
         update_data = product_data.model_dump(exclude_unset=True)
+        old_values = {
+            "name": product.name,
+            "sku": product.sku,
+            "sale_price": str(product.sale_price),
+            "purchase_price": str(product.purchase_price) if product.purchase_price else None,
+            "stock": product.stock,
+        }
 
         if "sku" in update_data and update_data["sku"] != product.sku:
             existing_product = (
@@ -163,6 +192,31 @@ class ProductService:
                 for key, value in update_data.items():
                     setattr(product, key, value)
                 db.flush()
+
+                if current_user:
+                    from app.services.audit_service import AuditService
+                    from app.constants.audit_actions import AuditAction, AuditModule
+                    new_values = {
+                        "name": product.name,
+                        "sku": product.sku,
+                        "sale_price": str(product.sale_price),
+                        "purchase_price": str(product.purchase_price) if product.purchase_price else None,
+                        "stock": product.stock,
+                    }
+                    AuditService.log(
+                        db=db,
+                        gym_id=product.gym_id,
+                        action=AuditAction.PRODUCT_UPDATED,
+                        module=AuditModule.INVENTORY,
+                        entity_type="Product",
+                        entity_id=product.id,
+                        entity_name=product.name,
+                        user_id=current_user.id,
+                        user_name=current_user.full_name,
+                        description=f"{current_user.full_name} modificó el producto {product.name}",
+                        old_values=old_values,
+                        new_values=new_values,
+                    )
                 db.refresh(product)
         except IntegrityError:
             raise ConflictException("SKU already exists.")
@@ -173,6 +227,24 @@ class ProductService:
     def delete(
         db: Session,
         product: Product,
+        current_user: User = None,
     ):
         with DatabaseTransaction(db):
             product.is_active = False
+            if current_user:
+                from app.services.audit_service import AuditService
+                from app.constants.audit_actions import AuditAction, AuditModule
+                AuditService.log(
+                    db=db,
+                    gym_id=product.gym_id,
+                    action=AuditAction.PRODUCT_DEACTIVATED,
+                    module=AuditModule.INVENTORY,
+                    entity_type="Product",
+                    entity_id=product.id,
+                    entity_name=product.name,
+                    user_id=current_user.id,
+                    user_name=current_user.full_name,
+                    description=f"{current_user.full_name} desactivó el producto {product.name}",
+                    old_values={"is_active": True},
+                    new_values={"is_active": False},
+                )

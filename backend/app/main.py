@@ -119,6 +119,39 @@ def startup_backfill_photos():
         logging.getLogger(__name__).warning("Startup photo backfill skipped: %s", e)
 
 
+@app.on_event("startup")
+async def startup_midnight_cash_scheduler():
+    """
+    Initializes the background worker for automatic midnight cash register closure.
+    Performs an immediate recovery catch-up sweep upon startup.
+    Can be toggled via ENABLE_MIDNIGHT_CASH_SCHEDULER environment variable.
+    """
+    import os
+    import logging
+    _logger = logging.getLogger(__name__)
+
+    if os.getenv("ENABLE_MIDNIGHT_CASH_SCHEDULER", "true").lower() not in ("true", "1", "yes"):
+        _logger.info("Midnight cash scheduler is disabled via ENABLE_MIDNIGHT_CASH_SCHEDULER=false")
+        return
+
+    try:
+        from app.services.cash_scheduler import start_cash_scheduler
+        await start_cash_scheduler(check_interval_seconds=60)
+    except Exception as e:
+        _logger.error("Failed to start midnight cash scheduler: %s", e)
+
+
+@app.on_event("shutdown")
+async def shutdown_midnight_cash_scheduler():
+    """Stops the background worker for automatic cash register closure gracefully."""
+    try:
+        from app.services.cash_scheduler import stop_cash_scheduler
+        await stop_cash_scheduler()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Error stopping midnight cash scheduler: %s", e)
+
+
 from pathlib import Path
 _frontend_dist_env = os.getenv("FRONTEND_DIST", "/app/frontend/dist")
 _frontend_dist_path = Path(_frontend_dist_env)

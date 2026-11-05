@@ -111,6 +111,7 @@ def update_product(
         db,
         product,
         product_data,
+        current_user=current_user,
     )
 
 
@@ -138,4 +139,5 @@ def delete_product(
     ProductService.delete(
         db,
         product,
+        current_user=current_user,
     )

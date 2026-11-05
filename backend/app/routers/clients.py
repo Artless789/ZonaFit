@@ -188,17 +188,23 @@ def create_client(
         db.flush()
 
         from app.services.audit_service import AuditService
+        from app.constants.audit_actions import AuditAction, AuditModule
         AuditService.log(
             db=db,
             gym_id=current_user.gym_id,
-            action="CLIENT_CREATED",
-            entity_type="CLIENT",
+            action=AuditAction.CLIENT_CREATED,
+            module=AuditModule.CLIENTS,
+            entity_type="Client",
             user_id=current_user.id,
+            user_name=current_user.full_name,
             entity_id=new_client.id,
+            entity_name=new_client.full_name,
+            description=f"{current_user.full_name} registró al cliente {new_client.full_name}",
             new_values={
                 "full_name": new_client.full_name,
                 "document": new_client.document,
                 "email": new_client.email,
+                "phone": new_client.phone,
             },
             ip_address=None,
         )
@@ -762,8 +768,35 @@ def update_client(
                 detail="El grupo de WhatsApp no existe o pertenece a otro gimnasio.",
             )
 
+    old_values = {
+        "full_name": client.full_name,
+        "document": client.document,
+        "phone": client.phone,
+        "email": client.email,
+        "is_active": client.is_active,
+    }
+
     for key, value in update_data.items():
         setattr(client, key, value)
+
+    new_values = {k: getattr(client, k) for k in old_values.keys()}
+
+    from app.services.audit_service import AuditService
+    from app.constants.audit_actions import AuditAction, AuditModule
+    AuditService.log(
+        db=db,
+        gym_id=current_user.gym_id,
+        action=AuditAction.CLIENT_UPDATED,
+        module=AuditModule.CLIENTS,
+        entity_type="Client",
+        entity_id=client.id,
+        entity_name=client.full_name,
+        user_id=current_user.id,
+        user_name=current_user.full_name,
+        description=f"{current_user.full_name} modificó los datos del cliente {client.full_name}",
+        old_values=old_values,
+        new_values=new_values,
+    )
 
     db.commit()
     db.refresh(client)
@@ -801,6 +834,23 @@ def delete_client(
         )
 
     client.is_active = False
+
+    from app.services.audit_service import AuditService
+    from app.constants.audit_actions import AuditAction, AuditModule
+    AuditService.log(
+        db=db,
+        gym_id=current_user.gym_id,
+        action=AuditAction.CLIENT_DEACTIVATED,
+        module=AuditModule.CLIENTS,
+        entity_type="Client",
+        entity_id=client.id,
+        entity_name=client.full_name,
+        user_id=current_user.id,
+        user_name=current_user.full_name,
+        description=f"{current_user.full_name} desactivó al cliente {client.full_name}",
+        old_values={"is_active": True},
+        new_values={"is_active": False},
+    )
 
     db.commit()
 

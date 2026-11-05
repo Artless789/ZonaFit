@@ -2,11 +2,13 @@ import calendar
 from decimal import Decimal
 from datetime import datetime, timedelta, timezone, time
 from typing import Optional
+from fastapi import HTTPException, status
 from sqlalchemy import func, or_, case
 from sqlalchemy.orm import Session, joinedload
 
 from app.constants.membership_status import MembershipStatus
 from app.constants.sale_status import SaleStatus
+from app.constants.permissions import Permission, user_has_permission
 from app.models.client import Client
 from app.models.membership import Membership
 from app.models.sale import Sale
@@ -35,7 +37,8 @@ class DashboardService:
         try:
             from app.models.gym_settings import GymSettings
             settings = db.query(GymSettings).filter(GymSettings.gym_id == gym_id).first()
-            tz_str = settings.timezone if settings and settings.timezone else "America/Bogota"
+            import os
+            tz_str = settings.timezone if settings and settings.timezone else os.getenv("DEFAULT_TIMEZONE", "America/Bogota")
             from zoneinfo import ZoneInfo
             return ZoneInfo(tz_str)
         except Exception:
@@ -383,6 +386,20 @@ class DashboardService:
 
         daily_revenue_trend = [DailyIncome(**item) for item in trend_days.values()]
 
+        # Role-based financial protection
+        has_financial_access = user_has_permission(current_user, Permission.VIEW_FINANCIALS)
+        if not has_financial_access:
+            sales_today_amount = Decimal("0.00")
+            collected_today_amount = Decimal("0.00")
+            credit_today_amount = Decimal("0.00")
+            income_this_month = Decimal("0.00")
+            total_receivables = Decimal("0.00")
+            overdue_receivables = Decimal("0.00")
+            receivables = []
+            daily_revenue_trend = []
+            for a in recent_activity:
+                a.amount = None
+
         return DashboardResponse(
             sales_today=sales_today,
             sales_today_amount=sales_today_amount,
@@ -407,6 +424,12 @@ class DashboardService:
         month: Optional[int] = None,
         year: Optional[int] = None,
     ) -> IncomeDetailsResponse:
+        if not user_has_permission(current_user, Permission.VIEW_FINANCIALS):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes autorización para consultar el desglose financiero mensual.",
+            )
+
         gym_tz = DashboardService._get_gym_timezone(db, current_user.gym_id)
         now_local = datetime.now(gym_tz)
         target_year = year if (year is not None and 2000 <= year <= 2100) else now_local.year

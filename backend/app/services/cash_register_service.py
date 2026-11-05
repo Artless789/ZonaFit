@@ -1,4 +1,4 @@
-from decimal import Decimal
+﻿from decimal import Decimal
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 from sqlalchemy.exc import IntegrityError
@@ -17,9 +17,201 @@ from app.exceptions.business_exception import BusinessException
 from datetime import datetime, timedelta, timezone, time
 from zoneinfo import ZoneInfo
 
+import os
+import threading
+
+_close_lock = threading.Lock()
+
 class CashRegisterService:
     @staticmethod
-    def get_active(db: Session, gym_id: int) -> CashRegister:
+    def calculate_expected_cash(db: Session, register: CashRegister) -> Decimal:
+        """Calculates total expected cash in drawer based on opening balance and valid movements."""
+        movements = db.query(CashMovement).filter(
+            CashMovement.cash_register_id == register.id,
+            CashMovement.gym_id == register.gym_id
+        ).all()
+        incomes = sum((m.amount for m in movements if m.type == "IN"), Decimal("0.00"))
+        outcomes = sum((m.amount for m in movements if m.type == "OUT"), Decimal("0.00"))
+        return register.opening_balance + incomes - outcomes
+
+    @staticmethod
+    def close_expired_registers(
+        db: Session,
+        target_gym_id: int | None = None,
+        as_of_time: datetime | None = None
+    ) -> list[CashRegister]:
+        """
+        Automatically closes cash registers that remained open past midnight (00:00 local time)
+        based on each gym's configured timezone. Idempotent, transaction-safe and concurrency-protected.
+        """
+        from app.models.gym import Gym
+        from app.models.gym_settings import GymSettings
+        from app.models.user import User
+        from app.services.audit_service import AuditService
+        from app.constants.audit_actions import AuditAction, AuditModule
+        from app.constants.permissions import Role
+        import json
+        import logging
+
+        logger = logging.getLogger("zonafit.cash_register_service")
+
+        with _close_lock:
+            if target_gym_id:
+                gyms = db.query(Gym).filter(Gym.id == target_gym_id).all()
+            else:
+                gyms = db.query(Gym).filter(Gym.is_active == True).all()
+
+            closed_registers: list[CashRegister] = []
+            is_pg = db.bind and db.bind.dialect.name == "postgresql"
+
+            for gym in gyms:
+                # Advisory lock on PostgreSQL per gym to avoid concurrent closures by different workers
+                if is_pg:
+                    from sqlalchemy import text
+                    try:
+                        lock_acquired = db.execute(
+                            text("SELECT pg_try_advisory_xact_lock(hashtext(:key))"),
+                            {"key": f"cash_close_gym_{gym.id}"}
+                        ).scalar()
+                        if not lock_acquired:
+                            continue
+                    except Exception as e:
+                        logger.debug("Advisory lock check skipped/failed: %s", e)
+
+                # Resolve gym timezone (default America/Bogota)
+                settings = db.query(GymSettings).filter(GymSettings.gym_id == gym.id).first()
+                tz_str = (settings.timezone if settings and settings.timezone else os.getenv("DEFAULT_TIMEZONE", "America/Bogota")).strip()
+                try:
+                    gym_tz = ZoneInfo(tz_str)
+                except Exception:
+                    gym_tz = ZoneInfo("America/Bogota")
+
+                # Reference time
+                ref_time = as_of_time if as_of_time else datetime.now(timezone.utc)
+                now_local = ref_time.astimezone(gym_tz)
+                today_start_local = datetime.combine(now_local.date(), time.min, tzinfo=gym_tz)
+                today_start_utc = today_start_local.astimezone(timezone.utc)
+
+                # Query open registers opened prior to today's midnight in gym timezone
+                query = (
+                    db.query(CashRegister)
+                    .filter(
+                        CashRegister.gym_id == gym.id,
+                        CashRegister.status == "OPEN",
+                        CashRegister.opened_at < today_start_utc
+                    )
+                )
+                if is_pg:
+                    query = query.with_for_update(skip_locked=True)
+
+                expired_registers = query.all()
+
+                try:
+                    for reg in expired_registers:
+                        if reg.status != "OPEN":
+                            continue
+
+                        expected_balance = CashRegisterService.calculate_expected_cash(db, reg)
+
+                        reg_opened_local = reg.opened_at.astimezone(gym_tz)
+                        shift_end_local = datetime.combine(reg_opened_local.date() + timedelta(days=1), time.min, tzinfo=gym_tz)
+                        shift_end_utc = shift_end_local.astimezone(timezone.utc)
+                        closing_time = min(shift_end_utc, ref_time.astimezone(timezone.utc))
+
+                        # Cash movement summary for reconciliation record without physical count
+                        movements = db.query(CashMovement).filter(
+                            CashMovement.cash_register_id == reg.id,
+                            CashMovement.gym_id == reg.gym_id
+                        ).all()
+                        cash_incomes = sum((m.amount for m in movements if m.type == "IN" and m.category in ["SALE", "MEMBERSHIP_PAYMENT", "CREDIT_PAYMENT"]), Decimal("0.00"))
+                        reversals = sum((m.amount for m in movements if m.type == "OUT" and m.category == "REVERSAL"), Decimal("0.00"))
+                        net_cash_sales = max(Decimal("0.00"), cash_incomes - reversals)
+
+                        reconciliation_json = json.dumps([
+                            {
+                                "method": "CASH",
+                                "registered_amount": float(net_cash_sales),
+                                "verified_amount": None,
+                                "difference": None,
+                                "status": "SIN_ARQUEO_FISICO"
+                            }
+                        ])
+
+                        reg.status = "CLOSED"
+                        reg.close_type = "AUTOMATIC"
+                        reg.closed_by = None
+                        reg.closed_at = closing_time
+                        reg.expected_balance = expected_balance
+                        reg.counted_balance = None
+                        reg.difference = None
+                        reg.closing_notes = "Cierre autom\u00e1tico por finalizaci\u00f3n de jornada (00:00). Pendiente de arqueo f\u00edsico."
+                        reg.reconciliation_data = reconciliation_json
+                        db.flush()
+
+                        # Audit log
+                        AuditService.log(
+                            db=db,
+                            gym_id=reg.gym_id,
+                            action=AuditAction.CASH_REGISTER_CLOSED,
+                            module=AuditModule.CASH_REGISTER,
+                            entity_type="CashRegister",
+                            entity_id=reg.id,
+                            entity_name=f"Caja #{reg.id}",
+                            user_id=None,
+                            user_name="Sistema (Autom?tico)",
+                            description=(
+                                f"Sistema ejecut? cierre autom?tico de caja #{reg.id} por finalizaci?n de jornada (00:00). "
+                                f"Efectivo esperado: ${expected_balance:,.0f} (Sin conteo f?sico)."
+                            ),
+                            old_values={"status": "OPEN"},
+                            new_values={
+                                "status": "CLOSED",
+                                "close_type": "AUTOMATIC",
+                                "expected_balance": str(expected_balance),
+                                "counted_balance": None,
+                                "difference": None,
+                                "closed_at": str(closing_time),
+                                "reason": "Cierre autom?tico por finalizaci?n de jornada",
+                            },
+                        )
+
+                        # Queue notification in same transaction
+                        target_phone = settings.official_phone if settings and settings.official_phone else None
+                        if target_phone:
+                            try:
+                                from app.models.notification import Notification
+                                from app.constants.notification_statuses import NotificationStatus
+                                notification = Notification(
+                                    gym_id=reg.gym_id,
+                                    event_type="CASH_AUTO_CLOSED",
+                                    channel="WHATSAPP",
+                                    recipient=target_phone,
+                                    message_body=(
+                                        f"Aviso Merwil ZonaFit: La caja #{reg.id} fue cerrada autom?ticamente "
+                                        f"al finalizar la jornada (00:00). Efectivo esperado por sistema: ${expected_balance:,.0f}. "
+                                        f"Recuerde realizar el arqueo f?sico correspondiente."
+                                    ),
+                                    status=NotificationStatus.PENDING,
+                                )
+                                db.add(notification)
+                            except Exception as ex:
+                                logger.warning("Error queueing auto-close notification: %s", ex)
+
+                        closed_registers.append(reg)
+
+                    if expired_registers:
+                        db.commit()
+                except Exception as ex:
+                    db.rollback()
+                    logger.error("Error auto-closing registers for gym %s: %s", gym.id, ex)
+                    raise
+
+            return closed_registers
+
+    @staticmethod
+    def get_active(db: Session, gym_id: int) -> CashRegister | None:
+        # Just-in-time check to close any register whose day already ended
+        CashRegisterService.close_expired_registers(db, target_gym_id=gym_id)
         return (
             db.query(CashRegister)
             .filter(
@@ -31,6 +223,7 @@ class CashRegisterService:
 
     @staticmethod
     def open_register(db: Session, current_user: User, data: CashRegisterCreate) -> CashRegister:
+        CashRegisterService.close_expired_registers(db, target_gym_id=current_user.gym_id)
         active = CashRegisterService.get_active(db, current_user.gym_id)
         if active:
             raise ValueError("Ya existe una caja abierta.")
@@ -45,6 +238,25 @@ class CashRegisterService:
             with DatabaseTransaction(db):
                 db.add(register)
                 db.flush()
+
+                from app.services.audit_service import AuditService
+                from app.constants.audit_actions import AuditAction, AuditModule
+                AuditService.log(
+                    db=db,
+                    gym_id=current_user.gym_id,
+                    action=AuditAction.CASH_REGISTER_OPENED,
+                    module=AuditModule.CASH_REGISTER,
+                    entity_type="CashRegister",
+                    entity_id=register.id,
+                    entity_name=f"Caja #{register.id}",
+                    user_id=current_user.id,
+                    user_name=current_user.full_name,
+                    description=f"{current_user.full_name} realizó apertura de caja #{register.id} con base de ${register.opening_balance:,.0f}",
+                    new_values={
+                        "register_id": register.id,
+                        "opening_balance": str(register.opening_balance),
+                    },
+                )
                 db.refresh(register)
         except IntegrityError:
             raise ValueError("Ya existe una caja abierta.")
@@ -90,6 +302,27 @@ class CashRegisterService:
                 type=data.type,
                 category=data.category,
                 description=data.description
+            )
+            from app.services.audit_service import AuditService
+            from app.constants.audit_actions import AuditAction, AuditModule
+            AuditService.log(
+                db=db,
+                gym_id=current_user.gym_id,
+                action=AuditAction.CASH_MOVEMENT_CREATED,
+                module=AuditModule.CASH_REGISTER,
+                entity_type="CashMovement",
+                entity_id=movement.id,
+                entity_name=f"Movimiento #{movement.id}",
+                user_id=current_user.id,
+                user_name=current_user.full_name,
+                description=f"{current_user.full_name} registró movimiento de caja ({movement.type}: ${movement.amount:,.0f}) - {movement.description or movement.category}",
+                new_values={
+                    "cash_register_id": active.id,
+                    "type": movement.type,
+                    "category": movement.category,
+                    "amount": str(movement.amount),
+                    "description": movement.description,
+                },
             )
             db.refresh(movement)
             return movement
@@ -274,6 +507,7 @@ class CashRegisterService:
 
         with DatabaseTransaction(db):
             register.status = "CLOSED"
+            register.close_type = "MANUAL"
             register.closed_by = current_user.id
             register.closed_at = datetime.now(timezone.utc)
             register.expected_balance = expected
@@ -282,6 +516,29 @@ class CashRegisterService:
             register.closing_notes = data.closing_notes
             register.reconciliation_data = reconciliation_json
             db.flush()
+
+            from app.services.audit_service import AuditService
+            from app.constants.audit_actions import AuditAction, AuditModule
+            AuditService.log(
+                db=db,
+                gym_id=current_user.gym_id,
+                action=AuditAction.CASH_REGISTER_CLOSED,
+                module=AuditModule.CASH_REGISTER,
+                entity_type="CashRegister",
+                entity_id=register.id,
+                entity_name=f"Caja #{register.id}",
+                user_id=current_user.id,
+                user_name=current_user.full_name,
+                description=f"{current_user.full_name} realizó cierre de caja #{register.id} (Efectivo contado: ${register.counted_balance:,.0f}, Diferencia: ${register.difference:,.0f})",
+                old_values={"status": "OPEN"},
+                new_values={
+                    "status": "CLOSED",
+                    "expected_balance": str(expected),
+                    "counted_balance": str(data.counted_balance),
+                    "difference": str(difference),
+                    "closing_notes": data.closing_notes,
+                },
+            )
             db.refresh(register)
         
         return register
